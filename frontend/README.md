@@ -1,0 +1,81 @@
+# Frontend — Borratina Digital
+
+React + Vite. Consume la API de `../backend`.
+
+## Puesta en marcha
+
+```bash
+npm install
+npm run dev     # http://localhost:5173
+```
+
+Necesita el backend corriendo en `http://localhost:3000`. En desarrollo no hace
+falta configurar nada: Vite redirige `/api` al backend (ver `vite.config.js`), así
+que no hay CORS ni URLs hardcodeadas.
+
+## Las dos pantallas
+
+**Vendedor** (`/cargar`) — deliberadamente simple, es lo único que ve: formulario
+de carga, el comprobante que se imprime al cargar, y el listado de sus propias
+jugadas. Sin estadísticas: eso es del admin.
+
+Al escribir dos dígitos el foco salta solo al siguiente número, porque un vendedor
+carga muchas jugadas seguidas.
+
+**Admin** — panel con el pozo, evolución de ventas e historial (`/admin`), gestión
+de sorteos (`/admin/sorteos`), buscador de jugadas con corregir y anular
+(`/admin/jugadas`) y alta de cuentas (`/admin/usuarios`).
+
+## Estructura
+
+```
+src/
+├── main.jsx           # montaje: router + contexto de auth
+├── App.jsx            # rutas y layout
+├── api.js             # cliente HTTP, token, manejo de 401
+├── auth.jsx           # contexto de sesión
+├── utilidades.js      # formato de números, pesos, fechas y períodos
+├── estilos.css        # tokens de color y estilos
+├── componentes/
+│   ├── comunes.jsx        # Bolillas, Chip, fichas, mensajes
+│   ├── Comprobante.jsx    # el ticket del comprador (imprimible)
+│   └── GraficoVentas.jsx  # evolución diaria + su tabla equivalente
+└── paginas/
+    ├── Login.jsx
+    ├── Vendedor.jsx
+    ├── AdminDashboard.jsx
+    ├── AdminSorteos.jsx
+    ├── AdminJugadas.jsx
+    └── AdminUsuarios.jsx
+```
+
+## Lo que hay que tener en cuenta al tocar esto
+
+**Las rutas por rol son comodidad, no seguridad.** `<Protegida soloAdmin>` evita
+mostrar pantallas que no corresponden, pero quien decide es el backend, que valida
+el rol en cada endpoint. Nunca confiar en el `rol` del frontend para nada que
+importe.
+
+**El token se revalida al abrir la app.** Si está vencido o la cuenta fue dada de
+baja, `GET /auth/me` falla y la sesión se cierra sola. Cualquier 401 en cualquier
+request dispara lo mismo.
+
+**Los colores del gráfico salen de una paleta validada** para daltonismo y
+contraste (≥3:1 sobre la superficie en modo claro y oscuro). Los tokens están en
+`estilos.css`; el gráfico los lee como variables CSS, así que cambiar un color se
+hace en un solo lugar. Si se agregan series, hay que revalidar la paleta antes:
+dos hues elegidos a ojo suelen ser indistinguibles para quien tiene deuteranopía.
+
+**El estado nunca se comunica solo con color.** Los `Chip` llevan siempre la
+palabra al lado del punto de color, y el gráfico tiene una vista de tabla
+equivalente.
+
+**Se imprime solo el comprobante.** La regla `@media print` de `estilos.css`
+esconde todo lo que tenga la clase `no-imprimir`.
+
+## Deploy en Vercel
+
+- Framework: Vite. Build: `npm run build`. Output: `dist`.
+- Variable `VITE_API_URL` con la URL del backend en Render (sin barra final).
+  Sin ella, el front pega a `/api` del mismo dominio, que en Vercel no existe.
+- El `CORS_ORIGIN` del backend tiene que incluir el dominio de Vercel.

@@ -1,0 +1,478 @@
+/* Estilos de la borratina digital.
+   Los tokens de color salen de una paleta validada para daltonismo y contraste.
+   El azul de serie pasa 3:1 sobre ambas superficies. */
+
+:root {
+  color-scheme: light;
+
+  --plano: #f9f9f7;
+  --superficie: #fcfcfb;
+  --tinta: #0b0b0b;
+  --tinta-2: #52514e;
+  --tinta-apagada: #898781;
+  --linea: #e1e0d9;
+  --eje: #c3c2b7;
+  --borde: rgba(11, 11, 11, 0.1);
+
+  --serie-1: #2a78d6;
+  --serie-1-suave: #cde2fb;
+
+  /* Estado: siempre acompañados de texto, nunca color solo. */
+  --ok: #0ca30c;
+  --aviso: #fab219;
+  --grave: #d03b3b;
+  --exito-texto: #006300;
+
+  --radio: 10px;
+  --sombra: 0 1px 2px rgba(11, 11, 11, 0.06), 0 4px 12px rgba(11, 11, 11, 0.04);
+  --fuente: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme='light'])) {
+    color-scheme: dark;
+
+    --plano: #0d0d0d;
+    --superficie: #1a1a19;
+    --tinta: #ffffff;
+    --tinta-2: #c3c2b7;
+    --tinta-apagada: #898781;
+    --linea: #2c2c2a;
+    --eje: #383835;
+    --borde: rgba(255, 255, 255, 0.1);
+
+    --serie-1: #3987e5;
+    --serie-1-suave: #184f95;
+
+    --exito-texto: #0ca30c;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--fuente);
+  background: var(--plano);
+  color: var(--tinta);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+h1, h2, h3 {
+  margin: 0;
+  line-height: 1.25;
+  font-weight: 650;
+}
+h1 { font-size: 1.5rem; }
+h2 { font-size: 1.15rem; }
+h3 { font-size: 1rem; }
+
+/* ---------- Estructura ---------- */
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.cabecera {
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borde);
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cabecera .marca {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-right: auto;
+}
+
+.cabecera .quien {
+  color: var(--tinta-2);
+  font-size: 0.875rem;
+}
+
+.nav {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0 1.25rem;
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borde);
+  overflow-x: auto;
+}
+
+.nav a {
+  padding: 0.6rem 0.9rem;
+  color: var(--tinta-2);
+  text-decoration: none;
+  font-size: 0.9rem;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+.nav a:hover { color: var(--tinta); }
+.nav a.activo {
+  color: var(--serie-1);
+  border-bottom-color: var(--serie-1);
+  font-weight: 600;
+}
+
+.contenido {
+  flex: 1;
+  padding: 1.5rem 1.25rem 3rem;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.encabezado-seccion {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+/* ---------- Tarjetas ---------- */
+
+.tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 1.25rem;
+  box-shadow: var(--sombra);
+}
+
+.tarjeta + .tarjeta { margin-top: 1rem; }
+
+.grilla {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+/* ---------- Fichas de dato ---------- */
+
+.ficha .etiqueta {
+  color: var(--tinta-2);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.35rem;
+}
+
+.ficha .valor {
+  font-size: 2rem;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+}
+
+.ficha .pie {
+  color: var(--tinta-apagada);
+  font-size: 0.8rem;
+  margin-top: 0.2rem;
+}
+
+.hero {
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+/* ---------- Formularios ---------- */
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--tinta-2);
+  margin-bottom: 0.3rem;
+  font-weight: 550;
+}
+
+input, select {
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  font: inherit;
+  color: var(--tinta);
+  background: var(--plano);
+  border: 1px solid var(--eje);
+  border-radius: 8px;
+}
+
+input:focus, select:focus {
+  outline: 2px solid var(--serie-1);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.campo + .campo { margin-top: 0.9rem; }
+
+.fila {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.fila > * { flex: 1; min-width: 130px; }
+
+button {
+  font: inherit;
+  font-weight: 600;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: var(--serie-1);
+  color: #fff;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { filter: brightness(1.08); }
+button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+button.secundario {
+  background: transparent;
+  color: var(--tinta);
+  border-color: var(--eje);
+}
+button.peligro {
+  background: transparent;
+  color: var(--grave);
+  border-color: var(--grave);
+}
+button.chico {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.82rem;
+}
+
+/* ---------- Números de la jugada ---------- */
+
+.numeros {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.numeros input {
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  padding: 0.55rem 0.2rem;
+}
+
+.bolilla {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.1rem;
+  height: 2.1rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--serie-1-suave);
+  color: var(--tinta);
+  font-weight: 680;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+}
+
+.bolillas {
+  display: inline-flex;
+  gap: 0.3rem;
+}
+
+/* ---------- Estados ---------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid var(--borde);
+  color: var(--tinta-2);
+  white-space: nowrap;
+}
+/* El punto de color acompaña siempre al texto: nunca identifica por sí solo. */
+.chip::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+.chip.abierto { color: var(--exito-texto); }
+.chip.cerrado { color: var(--tinta-2); }
+.chip.finalizado { color: var(--serie-1); }
+.chip.anulada { color: var(--grave); }
+.chip.gano { color: var(--exito-texto); }
+
+.aviso, .error, .exito {
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  border: 1px solid;
+  margin-bottom: 1rem;
+}
+.error {
+  color: var(--grave);
+  border-color: var(--grave);
+  background: color-mix(in srgb, var(--grave) 8%, transparent);
+}
+.exito {
+  color: var(--exito-texto);
+  border-color: var(--exito-texto);
+  background: color-mix(in srgb, var(--exito-texto) 8%, transparent);
+}
+.aviso {
+  color: var(--tinta-2);
+  border-color: var(--eje);
+  background: transparent;
+}
+
+.vacio {
+  color: var(--tinta-apagada);
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+/* ---------- Tablas ---------- */
+
+.tabla-scroll { overflow-x: auto; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th {
+  text-align: left;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tinta-apagada);
+  font-weight: 600;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--eje);
+  white-space: nowrap;
+}
+
+td {
+  padding: 0.6rem;
+  border-bottom: 1px solid var(--linea);
+  vertical-align: middle;
+}
+
+tbody tr:last-child td { border-bottom: none; }
+td.num { font-variant-numeric: tabular-nums; text-align: right; }
+.codigo {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+/* ---------- Login ---------- */
+
+.login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+.login .tarjeta { width: 100%; max-width: 380px; }
+.login h1 { margin-bottom: 0.25rem; }
+.login .subtitulo {
+  color: var(--tinta-2);
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+.login button { width: 100%; margin-top: 1.25rem; }
+
+/* ---------- Comprobante ---------- */
+
+.comprobante {
+  border: 2px dashed var(--eje);
+  border-radius: var(--radio);
+  padding: 1.25rem;
+  background: var(--superficie);
+  max-width: 400px;
+}
+.comprobante .titulo {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--tinta-apagada);
+  text-align: center;
+}
+.comprobante .codigo-grande {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: center;
+  margin: 0.4rem 0 1rem;
+}
+.comprobante dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.4rem 1rem;
+  font-size: 0.88rem;
+}
+.comprobante dt { color: var(--tinta-2); }
+.comprobante dd { margin: 0; text-align: right; font-weight: 550; }
+.comprobante .separador {
+  border: none;
+  border-top: 1px dashed var(--eje);
+  margin: 1rem 0;
+}
+
+/* ---------- Gráfico ---------- */
+
+.grafico-caja { width: 100%; height: 260px; }
+
+.tooltip {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  box-shadow: var(--sombra);
+  font-size: 0.85rem;
+}
+.tooltip .dia {
+  color: var(--tinta-2);
+  font-size: 0.78rem;
+  margin-bottom: 0.2rem;
+}
+.tooltip .dato {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+.tooltip .punto {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--serie-1);
+}
+
+/* ---------- Impresión: solo el comprobante ---------- */
+
+@media print {
+  body { background: #fff; }
+  .cabecera, .nav, .no-imprimir { display: none !important; }
+  .contenido { padding: 0; max-width: none; }
+  .comprobante {
+    max-width: none;
+    border-color: #000;
+    box-shadow: none;
+  }
+}
