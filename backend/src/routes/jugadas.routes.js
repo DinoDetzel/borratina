@@ -4,12 +4,13 @@ import { query } from '../db.js';
 import { AppError } from '../middleware/errors.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { validarNumeros } from '../utils/numeros.js';
+import { armarComprobante, normalizarCodigo } from '../utils/comprobante.js';
 
 const router = Router();
 
 /** Columnas públicas de una jugada, con y sin el alias `j` de los JOIN. */
 const COLUMNAS = [
-  'id', 'sorteo_id', 'vendedor_id',
+  'id', 'codigo', 'sorteo_id', 'vendedor_id',
   'comprador_nombre', 'comprador_telefono',
   'numero_1', 'numero_2', 'numero_3', 'numero_4',
   'anulada', 'anulada_por', 'anulada_at', 'editada_por',
@@ -46,22 +47,46 @@ router.post('/', requireAuth, async (req, res) => {
   // INSERT ... SELECT en un solo paso: si el admin cierra el sorteo justo entre
   // la lectura y la escritura, no se cuela ninguna jugada. Inserta 0 filas si no
   // hay sorteo abierto.
-  const { rows } = await query(
-    `INSERT INTO jugadas
-       (sorteo_id, vendedor_id, comprador_nombre, comprador_telefono,
-        numero_1, numero_2, numero_3, numero_4)
-     SELECT s.id, $1, $2, $3, $4, $5, $6, $7
-     FROM sorteos s
-     WHERE s.estado = 'abierto'
-     RETURNING ${CAMPOS}`,
-    [req.user.id, nombre, telefono, ...numeros],
-  );
+  //
+  // El código de comprobante lo genera la base por DEFAULT. Es aleatorio, así que
+  // puede chocar con uno existente: reintentamos unas pocas veces. Con 30^8
+  // combinaciones posibles llegar al segundo intento ya es rarísimo.
+  const INTENTOS = 5;
+  let jugada;
 
-  if (!rows[0]) {
-    throw new AppError(409, 'No hay ningún sorteo con la carga abierta.');
+  for (let intento = 1; intento <= INTENTOS; intento += 1) {
+    try {
+      const { rows } = await query(
+        `INSERT INTO jugadas
+           (sorteo_id, vendedor_id, comprador_nombre, comprador_telefono,
+            numero_1, numero_2, numero_3, numero_4)
+         SELECT s.id, $1, $2, $3, $4, $5, $6, $7
+         FROM sorteos s
+         WHERE s.estado = 'abierto'
+         RETURNING ${CAMPOS}`,
+        [req.user.id, nombre, telefono, ...numeros],
+      );
+
+      if (!rows[0]) {
+        throw new AppError(409, 'No hay ningún sorteo con la carga abierta.');
+      }
+      jugada = rows[0];
+      break;
+    } catch (err) {
+      const chocoElCodigo = err.code === '23505' && err.constraint === 'jugadas_codigo_key';
+      if (!chocoElCodigo || intento === INTENTOS) throw err;
+    }
   }
 
-  res.status(201).json({ jugada: rows[0] });
+  const { rows: sorteos } = await query(
+    'SELECT periodo, estado, precio_jugada FROM sorteos WHERE id = $1',
+    [jugada.sorteo_id],
+  );
+
+  res.status(201).json({
+    jugada,
+    comprobante: armarComprobante({ ...jugada, vendedor: req.user.nombre }, sorteos[0]),
+  });
 });
 
 /**
@@ -105,6 +130,10 @@ router.get('/', requireAuth, async (req, res) => {
     agregar('j.comprador_nombre ILIKE ?', `%${req.query.comprador}%`);
   }
 
+  if (req.query.codigo) {
+    agregar('j.codigo = ?', normalizarCodigo(req.query.codigo));
+  }
+
   // Búsqueda por combinación: se normaliza igual que al guardar.
   if (req.query.numeros) {
     const crudos = String(req.query.numeros).split(',').map((n) => n.trim());
@@ -139,6 +168,55 @@ router.get('/', requireAuth, async (req, res) => {
     total,
     limit,
     offset,
+  });
+});
+
+/**
+ * GET /api/jugadas/comprobante/:codigo → busca una jugada por su comprobante.
+ *
+ * Es lo que se usa cuando un comprador se presenta con el papel en la mano.
+ * Acepta el código con o sin guion y en minúsculas.
+ *
+ * Va antes que /:id, si no Express interpretaría "comprobante" como un id.
+ */
+router.get('/comprobante/:codigo', requireAuth, async (req, res) => {
+  const codigo = normalizarCodigo(req.params.codigo);
+
+  const { rows } = await query(
+    `SELECT ${CAMPOS_J}, u.nombre AS vendedor,
+            s.periodo, s.estado AS sorteo_estado, s.precio_jugada,
+            s.numero_1 AS ganador_1, s.numero_2 AS ganador_2,
+            s.numero_3 AS ganador_3, s.numero_4 AS ganador_4
+     FROM jugadas j
+     JOIN usuarios u ON u.id = j.vendedor_id
+     JOIN sorteos s ON s.id = j.sorteo_id
+     WHERE j.codigo = $1`,
+    [codigo],
+  );
+  const fila = rows[0];
+
+  if (!fila) throw new AppError(404, 'No existe ninguna jugada con ese código.');
+  if (req.user.rol !== 'admin' && fila.vendedor_id !== req.user.id) {
+    throw new AppError(404, 'No existe ninguna jugada con ese código.');
+  }
+
+  // Si el sorteo ya se sorteó, de paso le decimos si ganó.
+  const sorteado = fila.sorteo_estado === 'finalizado';
+  const gano = sorteado
+    && !fila.anulada
+    && fila.numero_1 === fila.ganador_1
+    && fila.numero_2 === fila.ganador_2
+    && fila.numero_3 === fila.ganador_3
+    && fila.numero_4 === fila.ganador_4;
+
+  res.json({
+    comprobante: armarComprobante(fila, {
+      periodo: fila.periodo,
+      estado: fila.sorteo_estado,
+      precio_jugada: fila.precio_jugada,
+    }),
+    sorteado,
+    gano: sorteado ? gano : null,
   });
 });
 

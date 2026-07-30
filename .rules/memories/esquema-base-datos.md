@@ -1,9 +1,42 @@
 # memories/esquema-base-datos.md — Esquema de base de datos
 
-> **Estado: v2 — CERRADO.** El ajuste pendiente del borrador v1 quedó resuelto:
-> el usuario confirmó que **el orden de los números no importa**. Los 4 números se
-> guardan normalizados en orden ascendente. Este esquema está implementado en
-> `backend/db/migrations/001_init.sql`, que es ahora la fuente de verdad ejecutable.
+> **Estado: v3.** El ajuste pendiente del borrador v1 quedó resuelto: el usuario
+> confirmó que **el orden de los números no importa**, así que los 4 números se
+> guardan normalizados en orden ascendente. La v3 agrega el **código de
+> comprobante** de cada jugada.
+>
+> La fuente de verdad ejecutable son las migraciones en
+> `backend/db/migrations/`; este documento explica el porqué de cada decisión.
+
+## Migraciones
+
+| Archivo | Qué agrega |
+|---|---|
+| `001_init.sql` | Esquema base: usuarios, sorteos, jugadas, índices |
+| `002_codigo_comprobante.sql` | `jugadas.codigo`: identificador único del comprobante |
+
+## Código de comprobante
+
+```sql
+-- Alfabeto sin caracteres ambiguos: sin 0/O, sin 1/I/L, sin U.
+CREATE OR REPLACE FUNCTION generar_codigo_jugada() RETURNS TEXT AS $$ ... $$;
+
+ALTER TABLE jugadas
+    ADD COLUMN codigo VARCHAR(9) NOT NULL DEFAULT generar_codigo_jugada();
+ALTER TABLE jugadas
+    ADD CONSTRAINT jugadas_codigo_key UNIQUE (codigo);
+```
+
+Decisiones:
+- **Lo genera la base, no la aplicación.** Con el `DEFAULT` es imposible insertar
+  una jugada sin comprobante, y el formato queda definido en un solo lugar.
+- **Aleatorio y no correlativo**: el `id` serial no sirve como comprobante porque
+  se pueden adivinar los ajenos contando de a uno.
+- Al ser aleatorio puede colisionar; el `UNIQUE` lo detecta y la ruta de carga
+  reintenta. Con 30⁸ combinaciones, llegar al segundo intento es rarísimo.
+- `normalizarCodigo()` en `src/utils/comprobante.js` acepta el código en
+  minúsculas y sin guion, y rechaza con un mensaje explícito los caracteres que
+  el alfabeto no usa.
 
 ## Cambios respecto de v1
 

@@ -66,15 +66,39 @@ Todo cuelga de `/api`. Salvo `login` y `health`, todos piden
 ### Jugadas
 | Método | Ruta | Rol | Qué hace |
 |---|---|---|---|
-| POST | `/jugadas` | cualquiera | Carga una jugada en el sorteo abierto |
+| POST | `/jugadas` | cualquiera | Carga una jugada y emite el comprobante |
 | GET | `/jugadas` | cualquiera | Listado (el vendedor solo ve las suyas) |
+| GET | `/jugadas/comprobante/:codigo` | cualquiera | Recupera una jugada por su comprobante |
 | GET | `/jugadas/:id` | cualquiera | Una jugada |
 | PATCH | `/jugadas/:id` | admin | Corrige una jugada |
 | POST | `/jugadas/:id/anular` | admin | Anula (reversible, no borra) |
 | POST | `/jugadas/:id/restaurar` | admin | Revierte una anulación |
 
 Filtros de `GET /jugadas`: `sorteo_id`, `vendedor_id` (solo admin), `comprador`,
-`numeros` (ej: `numeros=7,23,45,88`), `incluir_anuladas`, `limit`, `offset`.
+`codigo`, `numeros` (ej: `numeros=7,23,45,88`), `incluir_anuladas`, `limit`,
+`offset`.
+
+#### Comprobante
+
+`POST /jugadas` devuelve `{ jugada, comprobante }`. El comprobante son datos, no
+HTML: el maquetado (imprimir, mandar por WhatsApp) es del frontend.
+
+```json
+{
+  "codigo": "EE2E-Y7J4",
+  "numeros": ["07", "23", "45", "88"],
+  "comprador": { "nombre": "Dora Silva", "telefono": "351-9876" },
+  "sorteo": { "periodo": "2026-08", "estado": "abierto" },
+  "importe": 600,
+  "vendedor": "Vendedor Uno",
+  "fecha": "2026-07-30T22:02:14.006Z",
+  "anulada": false
+}
+```
+
+`GET /jugadas/comprobante/:codigo` lo recupera después, para cuando el comprador
+se presenta con el papel en la mano. Acepta el código con o sin guion y en
+minúsculas. Si el sorteo ya está finalizado, agrega `sorteado: true` y `gano`.
 
 ### Dashboard (todo admin)
 | Método | Ruta | Qué hace |
@@ -101,6 +125,12 @@ guardar una jugada que nunca podría ganar.
 sigue viendo solo lo suyo.
 
 **Anular no borra.** Se marca la fila y se registra qué admin lo hizo y cuándo.
+
+**El código de comprobante lo genera Postgres, no Node.** Está como `DEFAULT` de
+la columna, así que no hay forma de insertar una jugada sin comprobante y el
+formato vive en un solo lugar (`generar_codigo_jugada()`, migración 002). Si
+alguna vez se cambia el alfabeto, hay que cambiarlo también en `ALFABETO` de
+`src/utils/comprobante.js`, que es lo que valida la entrada.
 
 **El pozo se congela al finalizar.** Mientras el sorteo está abierto se calcula en
 vivo; al cargar el resultado se persiste en `sorteos.pozo_total` para que anular

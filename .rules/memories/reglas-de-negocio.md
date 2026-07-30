@@ -74,6 +74,24 @@ pozo_total = cantidad de jugadas NO anuladas × precio_jugada
 - El sistema **no registra si el premio fue efectivamente pagado**. Eso se maneja
   fuera (ver [[decisiones-de-diseno]]).
 
+## El comprobante
+
+- Al cargar una jugada, el sistema emite un **comprobante** que el vendedor le
+  entrega al comprador.
+- Cada jugada tiene un **código único e irrepetible**, con formato `XXXX-XXXX`
+  (8 caracteres). Es el identificador que figura en el comprobante.
+- El código es **aleatorio, no correlativo**: si fuera un número secuencial,
+  cualquiera podría adivinar los comprobantes ajenos probando números cercanos.
+- El alfabeto excluye `0`, `1`, `I`, `L`, `O` y `U`, porque se confunden entre sí
+  al leerlos de un papel o dictarlos por teléfono.
+- El comprobante incluye: código, los 4 números jugados (formateados a dos
+  dígitos), nombre y teléfono del comprador, período del sorteo, importe pagado,
+  vendedor y fecha de carga.
+- Presentando el código se puede recuperar la jugada. Si el sorteo ya se
+  finalizó, además se informa si esa jugada ganó.
+- La visibilidad es la misma que para el resto: un vendedor solo puede consultar
+  los comprobantes de las jugadas que él cargó; el admin, todos.
+
 ## Anulación y corrección
 
 - Una jugada cargada **no puede ser modificada ni anulada por el vendedor**.
