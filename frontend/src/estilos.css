@@ -413,9 +413,10 @@ td.num { font-variant-numeric: tabular-nums; text-align: right; }
 }
 .comprobante .codigo-grande {
   font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-  font-size: 1.9rem;
+  /* El código son 13 caracteres: se achica solo antes que desbordar el ticket. */
+  font-size: clamp(1.1rem, 6.5vw, 1.6rem);
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-align: center;
   margin: 0.4rem 0 1rem;
 }

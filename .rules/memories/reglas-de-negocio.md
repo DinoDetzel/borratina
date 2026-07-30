@@ -78,12 +78,25 @@ pozo_total = cantidad de jugadas NO anuladas × precio_jugada
 
 - Al cargar una jugada, el sistema emite un **comprobante** que el vendedor le
   entrega al comprador.
-- Cada jugada tiene un **código único e irrepetible**, con formato `XXXX-XXXX`
-  (8 caracteres). Es el identificador que figura en el comprobante.
-- El código es **aleatorio, no correlativo**: si fuera un número secuencial,
-  cualquiera podría adivinar los comprobantes ajenos probando números cercanos.
-- El alfabeto excluye `0`, `1`, `I`, `L`, `O` y `U`, porque se confunden entre sí
-  al leerlos de un papel o dictarlos por teléfono.
+- Cada jugada tiene un **código único e irrepetible** con formato `AAMMDD-XXXXXX`:
+
+  ```
+  260815-K7M3XQ
+  └──┬──┘ └──┬──┘
+     │       └── aleatorio, 6 caracteres
+     └────────── se cargó el 15/08/2026
+  ```
+
+- Los primeros seis dígitos son la **fecha en que se cargó la jugada**, no la de
+  hoy: un comprobante regenerado o cargado con fecha anterior conserva la de la
+  venta.
+- La segunda parte es **aleatoria, no correlativa**: si fuera un número
+  secuencial, cualquiera podría adivinar los comprobantes ajenos probando
+  números cercanos.
+- El alfabeto de la parte aleatoria excluye `0`, `1`, `I`, `L`, `O` y `U`, porque
+  se confunden entre sí al leerlos de un papel o dictarlos por teléfono. **La
+  parte de la fecha sí lleva dígitos**, incluidos 0 y 1: ahí el contexto
+  desambigua, y por eso cada mitad se valida por separado.
 - El comprobante incluye: código, los 4 números jugados (formateados a dos
   dígitos), nombre y teléfono del comprador, período del sorteo, importe pagado,
   vendedor y fecha de carga.

@@ -121,7 +121,7 @@ export default function AdminJugadas() {
                 id="f-codigo"
                 value={filtros.codigo}
                 onChange={(e) => cambiar('codigo', e.target.value)}
-                placeholder="A7K3-M9XQ"
+                placeholder="260815-K7M3XQ"
               />
             </div>
 

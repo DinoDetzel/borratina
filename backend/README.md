@@ -85,7 +85,7 @@ HTML: el maquetado (imprimir, mandar por WhatsApp) es del frontend.
 
 ```json
 {
-  "codigo": "EE2E-Y7J4",
+  "codigo": "260815-K7M3XQ",
   "numeros": ["07", "23", "45", "88"],
   "comprador": { "nombre": "Dora Silva", "telefono": "351-9876" },
   "sorteo": { "periodo": "2026-08", "estado": "abierto" },
@@ -132,11 +132,17 @@ igual.
 
 **Anular no borra.** Se marca la fila y se registra qué admin lo hizo y cuándo.
 
-**El código de comprobante lo genera Postgres, no Node.** Está como `DEFAULT` de
-la columna, así que no hay forma de insertar una jugada sin comprobante y el
-formato vive en un solo lugar (`generar_codigo_jugada()`, migración 002). Si
-alguna vez se cambia el alfabeto, hay que cambiarlo también en `ALFABETO` de
-`src/utils/comprobante.js`, que es lo que valida la entrada.
+**El código de comprobante lo genera Postgres, no Node.** El formato es
+`AAMMDD-XXXXXX`: los primeros seis dígitos son la fecha de carga, los últimos seis
+son aleatorios. Lo pone un trigger `BEFORE INSERT` (`generar_codigo_jugada()`,
+migración 004) y no un `DEFAULT`, porque depende de `created_at` y un `DEFAULT` no
+puede leer otra columna de la misma fila. Así no hay forma de insertar una jugada
+sin comprobante y el formato vive en un solo lugar.
+
+Si alguna vez se cambia el alfabeto, hay que cambiarlo también en `ALFABETO` de
+`src/utils/comprobante.js`, que es lo que valida la entrada. Ojo con validar el
+código entero contra el alfabeto: la parte de la fecha lleva `0` y `1`, que el
+alfabeto no incluye, así que cada mitad se valida por separado.
 
 **El pozo se congela al finalizar.** Mientras el sorteo está abierto se calcula en
 vivo; al cargar el resultado se persiste en `sorteos.pozo_total` para que anular

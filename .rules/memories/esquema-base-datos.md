@@ -15,6 +15,7 @@
 | `001_init.sql` | Esquema base: usuarios, sorteos, jugadas, índices |
 | `002_codigo_comprobante.sql` | `jugadas.codigo`: identificador único del comprobante |
 | `003_usuario_login.sql` | `usuarios.usuario`: credencial de ingreso; el email pasa a opcional |
+| `004_codigo_con_fecha.sql` | El código del comprobante pasa a `AAMMDD-XXXXXX` y lo pone un trigger |
 
 ## Credencial de ingreso
 
@@ -45,16 +46,31 @@ ALTER TABLE jugadas
     ADD CONSTRAINT jugadas_codigo_key UNIQUE (codigo);
 ```
 
+Formato actual (migración 004): **`AAMMDD-XXXXXX`**, donde los primeros seis
+dígitos son la fecha de carga y los últimos seis son aleatorios.
+
 Decisiones:
-- **Lo genera la base, no la aplicación.** Con el `DEFAULT` es imposible insertar
-  una jugada sin comprobante, y el formato queda definido en un solo lugar.
+- **Lo genera la base, no la aplicación**, así el formato vive en un solo lugar y
+  es imposible insertar una jugada sin comprobante.
+- **Lo pone un trigger `BEFORE INSERT`, ya no un `DEFAULT`.** El código depende de
+  `created_at`, que es otra columna de la misma fila, y un `DEFAULT` no puede
+  leerla. El trigger corre después de aplicados los defaults, así que ya ve la
+  fecha definitiva — incluso cuando se inserta un `created_at` explícito.
 - **Aleatorio y no correlativo**: el `id` serial no sirve como comprobante porque
   se pueden adivinar los ajenos contando de a uno.
 - Al ser aleatorio puede colisionar; el `UNIQUE` lo detecta y la ruta de carga
-  reintenta. Con 30⁸ combinaciones, llegar al segundo intento es rarísimo.
+  reintenta. Con 30⁶ combinaciones **por día**, llegar al segundo intento es
+  rarísimo.
 - `normalizarCodigo()` en `src/utils/comprobante.js` acepta el código en
-  minúsculas y sin guion, y rechaza con un mensaje explícito los caracteres que
-  el alfabeto no usa.
+  minúsculas, sin guion y con separadores arbitrarios. Valida **las dos mitades
+  por separado**: la fecha son seis dígitos donde el 0 y el 1 son legítimos,
+  mientras que la parte aleatoria nunca los lleva. Validar el código entero
+  contra el alfabeto rechazaría cualquier fecha con un cero.
+
+> La migración 004 regeneró todos los códigos existentes. Fue aceptable porque
+> todavía no se había entregado ningún comprobante real. **Una vez en uso, este
+> tipo de migración deja de serlo**: invalidaría los papeles que la gente tiene
+> en la mano.
 
 ## Cambios respecto de v1
 
