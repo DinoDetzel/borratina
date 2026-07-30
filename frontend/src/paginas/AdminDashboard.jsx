@@ -142,7 +142,7 @@ export default function AdminDashboard() {
                     <td>
                       {v.nombre}
                       <div style={{ color: 'var(--tinta-apagada)', fontSize: '0.8rem' }}>
-                        {v.email}
+                        {v.usuario}
                       </div>
                     </td>
                     <td className="num">{numero(v.cantidad_jugadas)}</td>

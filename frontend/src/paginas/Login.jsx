@@ -6,7 +6,7 @@ import { MensajeError } from '../componentes/comunes.jsx';
 export default function Login() {
   const { iniciarSesion } = useAuth();
 
-  const [email, setEmail] = useState('');
+  const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -18,7 +18,7 @@ export default function Login() {
 
     try {
       // El redirect lo resuelve App al cambiar el usuario del contexto.
-      await iniciarSesion(email, password);
+      await iniciarSesion(usuario, password);
     } catch (err) {
       setError(err.message);
       setEnviando(false);
@@ -34,13 +34,18 @@ export default function Login() {
         <MensajeError>{error}</MensajeError>
 
         <div className="campo">
-          <label htmlFor="email">Email</label>
+          <label htmlFor="usuario">Usuario</label>
           <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            id="usuario"
+            value={usuario}
+            onChange={(e) => setUsuario(e.target.value)}
             autoComplete="username"
+            // El backend normaliza a minúsculas igual, pero que el campo no
+            // "autocorrija" evita que el teclado del teléfono ponga mayúscula
+            // en la primera letra y parezca que la credencial está mal.
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck="false"
             required
             autoFocus
           />

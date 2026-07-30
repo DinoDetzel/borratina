@@ -65,14 +65,14 @@ router.get('/por-vendedor', async (req, res) => {
   const sorteoId = await resolverSorteoId(req.query.sorteo_id);
 
   const { rows } = await query(
-    `SELECT u.id, u.nombre, u.email,
+    `SELECT u.id, u.nombre, u.usuario,
             COUNT(j.id) AS cantidad_jugadas,
             COUNT(j.id) * s.precio_jugada AS recaudacion
      FROM jugadas j
      JOIN usuarios u ON u.id = j.vendedor_id
      JOIN sorteos s ON s.id = j.sorteo_id
      WHERE j.sorteo_id = $1 AND j.anulada = false
-     GROUP BY u.id, u.nombre, u.email, s.precio_jugada
+     GROUP BY u.id, u.nombre, u.usuario, s.precio_jugada
      ORDER BY cantidad_jugadas DESC, u.nombre`,
     [sorteoId],
   );

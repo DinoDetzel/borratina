@@ -32,11 +32,11 @@ Contra Supabase, `DATABASE_SSL=true`.
 
 ### Usuarios que crea el seed
 
-| Rol | Email | Contraseña |
+| Rol | Usuario | Contraseña |
 |---|---|---|
-| admin | `admin@borratina.test` | `admin1234` |
-| vendedor | `vendedor1@borratina.test` | `vende1234` |
-| vendedor | `vendedor2@borratina.test` | `vende1234` |
+| admin | `admin` | `admin1234` |
+| vendedor | `vendedor1` | `vende1234` |
+| vendedor | `vendedor2` | `vende1234` |
 
 ## Endpoints
 
@@ -46,7 +46,7 @@ Todo cuelga de `/api`. Salvo `login` y `health`, todos piden
 ### Auth
 | Método | Ruta | Rol | Qué hace |
 |---|---|---|---|
-| POST | `/auth/login` | — | Devuelve `{ token, usuario }` |
+| POST | `/auth/login` | — | `{ usuario, password }` → `{ token, usuario }` |
 | GET | `/auth/me` | cualquiera | Datos del usuario logueado |
 | GET | `/auth/usuarios` | admin | Lista usuarios |
 | POST | `/auth/usuarios` | admin | Da de alta un vendedor o admin |
@@ -123,6 +123,12 @@ guardar una jugada que nunca podría ganar.
 **Los permisos se validan acá, no en el frontend.** El filtro por vendedor en
 `GET /jugadas` se impone en el servidor: un vendedor que mande `?vendedor_id=3`
 sigue viendo solo lo suyo.
+
+**Se entra con nombre de usuario, no con email.** Son pocos vendedores y las
+cuentas las crea el admin, así que pedir un email para entrar era burocracia. El
+email quedó como dato de contacto **opcional**. El usuario se normaliza a
+minúsculas al crear la cuenta y al buscarla, así que `Dino` y `dino ` entran
+igual.
 
 **Anular no borra.** Se marca la fila y se registra qué admin lo hizo y cuándo.
 

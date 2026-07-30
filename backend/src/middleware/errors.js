@@ -24,7 +24,9 @@ const ERRORES_PG = {
 const MENSAJES_POR_CONSTRAINT = {
   idx_sorteo_abierto_unico: 'Ya hay un sorteo con la carga abierta. Cerralo antes de abrir otro.',
   sorteos_periodo_key: 'Ya existe un sorteo para ese período.',
+  usuarios_usuario_key: 'Ya existe una cuenta con ese nombre de usuario.',
   usuarios_email_key: 'Ya existe un usuario con ese email.',
+  chk_usuarios_usuario: 'El nombre de usuario solo puede llevar letras, números, punto, guion o guion bajo.',
   chk_jugadas_orden: 'Los números deben guardarse ordenados. Es un bug: no se normalizaron antes de insertar.',
   chk_sorteos_orden: 'Los números del resultado deben guardarse ordenados. Es un bug: no se normalizaron antes de insertar.',
   chk_sorteos_finalizado: 'No se puede finalizar un sorteo sin cargar el resultado.',

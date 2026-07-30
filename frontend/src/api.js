@@ -62,8 +62,8 @@ const qs = (params = {}) => {
 };
 
 export const api = {
-  login: (email, password) =>
-    pedir('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  login: (usuario, password) =>
+    pedir('/auth/login', { method: 'POST', body: JSON.stringify({ usuario, password }) }),
   yo: () => pedir('/auth/me'),
 
   usuarios: {

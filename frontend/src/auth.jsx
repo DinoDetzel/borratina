@@ -24,8 +24,8 @@ export function ProveedorAuth({ children }) {
   // Si cualquier request devuelve 401, cerramos sesión en toda la app.
   useEffect(() => alExpirarSesion(() => setUsuario(null)), []);
 
-  const iniciarSesion = async (email, password) => {
-    const { token, usuario } = await api.login(email, password);
+  const iniciarSesion = async (nombreUsuario, password) => {
+    const { token, usuario } = await api.login(nombreUsuario, password);
     guardarToken(token);
     setUsuario(usuario);
     return usuario;

@@ -57,6 +57,19 @@ Registro de decisiones de producto tomadas durante el diseño inicial del proyec
   comparación posicional barata y el índice compuesto sigue sirviendo.
 - Esto cierra el pendiente que arrastraba el esquema desde el borrador v1.
 
+## Ingreso al sistema
+
+- **Se entra con un nombre de usuario corto, no con email** (confirmado 2026-07-30).
+  Son pocos vendedores y las cuentas las crea el admin a mano: pedir un email
+  para entrar era burocracia sin beneficio.
+- El **email queda como dato de contacto opcional**. No se eliminó la columna:
+  borrar datos no tiene vuelta atrás y no había nada que ganar.
+- Formato del usuario: 3 a 30 caracteres, minúsculas, números, punto, guion o
+  guion bajo. Sin espacios ni acentos, porque es una credencial que se tipea.
+  Para mostrar en pantalla se sigue usando la columna `nombre`.
+- Se normaliza a minúsculas al crear la cuenta y al buscarla, así que la
+  diferencia de mayúsculas nunca deja a nadie afuera.
+
 ## Acceso a datos
 
 - **`pg` (driver oficial) con SQL plano y queries parametrizadas.** Sin ORM.

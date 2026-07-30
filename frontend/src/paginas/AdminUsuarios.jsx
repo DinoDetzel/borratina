@@ -5,7 +5,7 @@ import { useAuth } from '../auth.jsx';
 import { Cargando, Chip, MensajeError, MensajeExito, Vacio } from '../componentes/comunes.jsx';
 import { fechaHora } from '../utilidades.js';
 
-const NUEVO = { nombre: '', email: '', password: '', rol: 'vendedor' };
+const NUEVO = { nombre: '', usuario: '', email: '', password: '', rol: 'vendedor' };
 
 export default function AdminUsuarios() {
   const { usuario: yo } = useAuth();
@@ -91,13 +91,25 @@ export default function AdminUsuarios() {
               />
             </div>
             <div>
-              <label htmlFor="u-email">Email</label>
+              <label htmlFor="u-usuario">Usuario</label>
+              <input
+                id="u-usuario"
+                value={nuevo.usuario}
+                onChange={(e) => setNuevo({ ...nuevo, usuario: e.target.value })}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
+                placeholder="juanp"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="u-email">Email (opcional)</label>
               <input
                 id="u-email"
                 type="email"
                 value={nuevo.email}
                 onChange={(e) => setNuevo({ ...nuevo, email: e.target.value })}
-                required
               />
             </div>
             <div>
@@ -129,7 +141,8 @@ export default function AdminUsuarios() {
             </div>
           </div>
           <p style={{ color: 'var(--tinta-apagada)', fontSize: '0.8rem', marginBottom: 0 }}>
-            Mínimo 8 caracteres.
+            El usuario es con el que entra a la app: entre 3 y 30 caracteres, sin espacios ni
+            acentos. La contraseña, mínimo 8 caracteres.
           </p>
         </form>
       </div>
@@ -145,6 +158,7 @@ export default function AdminUsuarios() {
               <thead>
                 <tr>
                   <th>Nombre</th>
+                  <th>Usuario</th>
                   <th>Email</th>
                   <th>Rol</th>
                   <th>Estado</th>
@@ -161,7 +175,8 @@ export default function AdminUsuarios() {
                         <span style={{ color: 'var(--tinta-apagada)' }}> (vos)</span>
                       )}
                     </td>
-                    <td>{u.email}</td>
+                    <td className="codigo">{u.usuario}</td>
+                    <td>{u.email ?? <span style={{ color: 'var(--tinta-apagada)' }}>—</span>}</td>
                     <td>{u.rol}</td>
                     <td>
                       <Chip estado={u.activo ? 'abierto' : 'anulada'}>

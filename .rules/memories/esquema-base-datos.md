@@ -14,6 +14,24 @@
 |---|---|
 | `001_init.sql` | Esquema base: usuarios, sorteos, jugadas, índices |
 | `002_codigo_comprobante.sql` | `jugadas.codigo`: identificador único del comprobante |
+| `003_usuario_login.sql` | `usuarios.usuario`: credencial de ingreso; el email pasa a opcional |
+
+## Credencial de ingreso
+
+```sql
+ALTER TABLE usuarios ADD COLUMN usuario VARCHAR(30) NOT NULL;  -- backfill desde el email
+ALTER TABLE usuarios ADD CONSTRAINT usuarios_usuario_key UNIQUE (usuario);
+ALTER TABLE usuarios ADD CONSTRAINT chk_usuarios_usuario
+    CHECK (usuario ~ '^[a-z0-9._-]{3,30}$');
+ALTER TABLE usuarios ALTER COLUMN email DROP NOT NULL;
+```
+
+- El backfill toma la parte del email anterior al `@`, y desempata con el `id` si
+  dos emails distintos comparten esa parte.
+- El email sigue siendo `UNIQUE`, pero ahora acepta `NULL`: en Postgres los NULL
+  no colisionan entre sí en un índice único, así que puede haber varias cuentas
+  sin email.
+- El `CHECK` exige minúsculas; la normalización la hace la app antes de insertar.
 
 ## Código de comprobante
 
