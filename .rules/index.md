@@ -24,9 +24,9 @@ el resultado del sorteo mensual.
 | Reglas de negocio del juego | ✅ Definidas — orden de números libre (confirmado) |
 | Decisiones de diseño (roles, permisos, flujos) | ✅ Cerradas |
 | Esquema de base de datos | ✅ v2 cerrado — implementado en `backend/db/migrations/001_init.sql` |
-| Backend (API) | 🟡 En curso — Express + `pg`, SQL plano |
+| Backend (API) | ✅ Operativo — Express + `pg`, probado end-to-end contra Postgres |
 | Frontend | ⬜ No iniciado |
-| Autenticación | 🟡 JWT implementado en el backend |
+| Autenticación | ✅ JWT + middlewares de rol en el backend |
 
 ## Reglas maestras
 

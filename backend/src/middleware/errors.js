@@ -16,6 +16,8 @@ const ERRORES_PG = {
   '23505': { status: 409, mensaje: 'Ya existe un registro con esos datos.' },
   '23503': { status: 400, mensaje: 'Referencia inválida: el registro relacionado no existe.' },
   '23514': { status: 400, mensaje: 'Los datos no cumplen una restricción de la base.' },
+  // Un id que no es un número, por ejemplo /api/jugadas/abc
+  '22P02': { status: 400, mensaje: 'Alguno de los parámetros tiene un formato inválido.' },
 };
 
 /** Mensajes más específicos según qué constraint concreta reventó. */
