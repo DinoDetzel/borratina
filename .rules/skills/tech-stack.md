@@ -79,8 +79,36 @@ Convenciones:
 - La normalización de números vive **solo** en `utils/numeros.js`; las rutas no ordenan
   a mano.
 
+## Estructura del frontend
+
+```
+frontend/
+├── vite.config.js           # proxy de /api al backend en desarrollo
+└── src/
+    ├── main.jsx             # router + contexto de auth
+    ├── App.jsx              # rutas y layout
+    ├── api.js               # cliente HTTP, token, manejo de 401
+    ├── auth.jsx             # contexto de sesión
+    ├── utilidades.js        # formato de números, pesos, fechas
+    ├── estilos.css          # tokens de color y estilos
+    ├── componentes/         # comunes, Comprobante, GraficoVentas
+    └── paginas/             # Login, Vendedor, Admin*
+```
+
+Convenciones:
+- Router: `react-router-dom`. Gráficos: `recharts`. Estilos: CSS plano con
+  variables, sin framework de UI.
+- Las rutas por rol (`<Protegida soloAdmin>`) son comodidad de navegación, **no
+  seguridad**: quien valida es el backend en cada endpoint.
+- Los colores del gráfico salen de una paleta validada para daltonismo y
+  contraste. Si se agregan series, revalidar antes de elegir hues a ojo.
+- El estado nunca se comunica solo con color: los chips llevan la palabra al
+  lado del punto, y el gráfico tiene vista de tabla equivalente.
+
 ## Pendiente de definir
 
-- Estructura de carpetas del frontend.
-- Estrategia de testing.
+- Estrategia de testing (hoy no hay tests automatizados; la verificación fue
+  manual contra un Postgres real y un navegador real).
 - Manejo de variables de entorno / secretos entre Vercel, Render y Supabase.
+- El bundle del frontend pesa ~616 kB sin comprimir (183 kB gzip), casi todo
+  Recharts. Si molesta, se parte con `import()` dinámico del gráfico.

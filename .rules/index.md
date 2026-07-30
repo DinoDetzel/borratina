@@ -25,8 +25,9 @@ el resultado del sorteo mensual.
 | Decisiones de diseño (roles, permisos, flujos) | ✅ Cerradas |
 | Esquema de base de datos | ✅ v2 cerrado — implementado en `backend/db/migrations/001_init.sql` |
 | Backend (API) | ✅ Operativo — Express + `pg`, probado end-to-end contra Postgres |
-| Frontend | ⬜ No iniciado |
-| Autenticación | ✅ JWT + middlewares de rol en el backend |
+| Frontend | ✅ Operativo — React + Vite, verificado en navegador |
+| Autenticación | ✅ JWT + middlewares de rol en el backend, sesión persistida en el front |
+| Comprobantes | ✅ Código único por jugada, imprimible |
 
 ## Reglas maestras
 
