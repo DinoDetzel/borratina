@@ -17,6 +17,9 @@ const USUARIOS = [
   { nombre: 'Vendedor Dos', usuario: 'vendedor2', password: 'vende1234', rol: 'vendedor' },
 ];
 
+/** Lo que sale una jugada. El admin lo define al abrir cada sorteo. */
+const PRECIO_JUGADA = 2000;
+
 const periodoActual = () => new Date().toISOString().slice(0, 7); // 'AAAA-MM'
 
 async function main() {
@@ -35,7 +38,7 @@ async function main() {
       `INSERT INTO sorteos (periodo, precio_jugada, estado)
        VALUES ($1, $2, 'abierto')
        ON CONFLICT (periodo) DO NOTHING`,
-      [periodoActual(), 500],
+      [periodoActual(), PRECIO_JUGADA],
     );
   });
 
@@ -43,7 +46,7 @@ async function main() {
   for (const u of USUARIOS) {
     console.log(`  ${u.rol.padEnd(8)} ${u.usuario.padEnd(10)} /  ${u.password}`);
   }
-  console.log(`\nSorteo abierto del período ${periodoActual()} a $500 la jugada.`);
+  console.log(`\nSorteo abierto del período ${periodoActual()} a $${PRECIO_JUGADA} la jugada.`);
 }
 
 main()
