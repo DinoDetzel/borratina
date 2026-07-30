@@ -63,9 +63,11 @@ CREATE TABLE sorteos (
     )
 );
 
--- Como máximo un sorteo con la carga abierta en todo el sistema
+-- Como máximo un sorteo con la carga abierta en todo el sistema: al indexar de
+-- forma única solo las filas con estado 'abierto', ese valor puede aparecer
+-- una sola vez en toda la tabla.
 CREATE UNIQUE INDEX idx_sorteo_abierto_unico
-    ON sorteos ((true)) WHERE estado = 'abierto';
+    ON sorteos (estado) WHERE estado = 'abierto';
 
 -- Jugadas cargadas por vendedores
 CREATE TABLE jugadas (
