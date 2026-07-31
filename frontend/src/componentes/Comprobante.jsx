@@ -150,8 +150,13 @@ export default function Comprobante({ comprobante }) {
                 }}
               >
                 {/* El día del sorteo es el día en que cierra la carga. La hora
-                    no va: en el papel no significa nada. */}
-                {fechaDia(sorteo.sortea_el)}
+                    no va: en el papel no significa nada.
+
+                    Si la fecha no viniera, el casillero queda en blanco como en
+                    el talonario impreso. `fechaDia` pondría un guion, que en una
+                    tabla significa "sin dato" pero en un comprobante impreso
+                    parece un error. */}
+                {sorteo.sortea_el ? fechaDia(sorteo.sortea_el) : ''}
               </span>
             </div>
             <div
