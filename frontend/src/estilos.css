@@ -1,56 +1,75 @@
 /* Estilos de la borratina digital.
-   Los tokens de color salen de una paleta validada para daltonismo y contraste.
-   El azul de serie pasa 3:1 sobre ambas superficies. */
+
+   El sistema de diseño está declarado tal cual abajo, en :root, y todo lo demás
+   lo consume desde ahí. Los nombres viejos (--tinta, --linea, --serie-1…)
+   siguen existiendo apuntando al sistema: así el rediseño no obliga a tocar
+   cada regla, y el día que cambie un color se cambia en un solo lugar.
+
+   Look cálido de club: crema en vez de blanco, esquinas moderadas, sin
+   gradientes ni sombras, y los títulos en condensada para darle carácter. */
 
 :root {
   color-scheme: light;
 
-  --plano: #f9f9f7;
-  --superficie: #fcfcfb;
-  --tinta: #0b0b0b;
-  --tinta-2: #52514e;
-  --tinta-apagada: #898781;
-  --linea: #e1e0d9;
-  --eje: #c3c2b7;
-  --borde: rgba(11, 11, 11, 0.1);
+  /* ---- Sistema de diseño ---- */
+  --primary: #c2472f;         /* terracota: botones, títulos, encabezados */
+  --primary-dark: #8f3220;    /* hover, y los números que hay que mirar */
+  --accent: #f2a93b;          /* dorado: lo que hay que destacar */
+  --bg: #faf8f4;              /* crema */
+  --surface: #ffffff;
+  --text: #2b2b2b;
+  --text-secondary: #7f8c8d;
+  --success: #2e8b57;
+  --success-bg: #e7f3ec;
+  --border: #e8e1d6;          /* borde cálido, no gris puro */
 
-  --serie-1: #2a78d6;
-  --serie-1-suave: #cde2fb;
+  /* Dos tonos que el sistema no nombra pero la app necesita:
+     - el terracota aguado, para el fondo de las bolillas y las barras;
+     - el gris cálido de las pastillas neutras (anulada, cerrado). */
+  --primary-suave: #f7e3dd;
+  --neutro-bg: #f2eee7;
+
+  --radio: 12px;              /* tarjetas */
+  --radio-chico: 8px;         /* botones e inputs */
+  --alto-control: 38px;
+
+  --fuente: 'Inter', system-ui, -apple-system, sans-serif;
+  --fuente-titulos: 'Oswald', 'Inter', system-ui, sans-serif;
+
+  /* ---- Nombres que ya usaba la app ---- */
+  --plano: var(--bg);
+  --superficie: var(--surface);
+  --tinta: var(--text);
+  --tinta-2: var(--text-secondary);
+  --tinta-apagada: var(--text-secondary);
+  --linea: var(--border);
+  --eje: var(--border);
+  --borde: var(--border);
+
+  --serie-1: var(--primary);
+  --serie-1-suave: var(--primary-suave);
 
   /* Estado: siempre acompañados de texto, nunca color solo. */
-  --ok: #0ca30c;
-  --aviso: #fab219;
-  --grave: #d03b3b;
-  --exito-texto: #006300;
+  --ok: var(--success);
+  --exito-texto: var(--success);
+  --aviso: var(--accent);
+  /* No hay un rojo de peligro aparte: el primario ya es rojo y dos rojos
+     distintos en la misma pantalla no se distinguen. Lo destructivo se marca
+     con el tono oscuro y, sobre todo, con el cartel de confirmación. */
+  --grave: var(--primary-dark);
 
-  --radio: 10px;
-  --sombra: 0 1px 2px rgba(11, 11, 11, 0.06), 0 4px 12px rgba(11, 11, 11, 0.04);
-  --fuente: system-ui, -apple-system, 'Segoe UI', sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:where(:not([data-theme='light'])) {
-    color-scheme: dark;
-
-    --plano: #0d0d0d;
-    --superficie: #1a1a19;
-    --tinta: #ffffff;
-    --tinta-2: #c3c2b7;
-    --tinta-apagada: #898781;
-    --linea: #2c2c2a;
-    --eje: #383835;
-    --borde: rgba(255, 255, 255, 0.1);
-
-    --serie-1: #3987e5;
-    --serie-1-suave: #184f95;
-
-    --exito-texto: #0ca30c;
-  }
+  /* El sistema pide explícitamente que no haya sombras. */
+  --sombra: none;
 }
 
 * {
   box-sizing: border-box;
 }
+
+/* Los enlaces toman el color de la marca: el azul del navegador no tiene nada
+   que ver con esta paleta. */
+a { color: var(--primary); }
+a:hover { color: var(--primary-dark); }
 
 body {
   margin: 0;
@@ -61,14 +80,19 @@ body {
   line-height: 1.5;
 }
 
+/* Los títulos van en condensada: es lo que le da el aire de tablero de club.
+   El interletrado apenas abierto evita que se lean apretados en mayúsculas. */
 h1, h2, h3 {
   margin: 0;
-  line-height: 1.25;
-  font-weight: 650;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: var(--primary);
 }
-h1 { font-size: 1.5rem; }
-h2 { font-size: 1.15rem; }
-h3 { font-size: 1rem; }
+h1 { font-size: 1.7rem; font-weight: 700; }
+h2 { font-size: 1.25rem; }
+h3 { font-size: 1.05rem; }
 
 /* ---------- Estructura ---------- */
 
@@ -89,8 +113,11 @@ h3 { font-size: 1rem; }
 }
 
 .cabecera .marca {
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-family: var(--fuente-titulos);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--primary);
   margin-right: auto;
 }
 
@@ -161,11 +188,10 @@ h3 { font-size: 1rem; }
 /* ---------- Tarjetas ---------- */
 
 .tarjeta {
-  background: var(--superficie);
-  border: 1px solid var(--borde);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radio);
-  padding: 1.25rem;
-  box-shadow: var(--sombra);
+  padding: 18px;
 }
 
 .tarjeta + .tarjeta { margin-top: 1rem; }
@@ -184,30 +210,39 @@ h3 { font-size: 1rem; }
 
 /* ---------- Fichas de dato ---------- */
 
+/* Tarjeta de métrica: la etiqueta chica arriba y el número grande abajo, en
+   condensada y en el tono oscuro, que es el que hace que se lea primero. */
 .ficha .etiqueta {
-  color: var(--tinta-2);
-  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 0.35rem;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.3rem;
 }
 
 .ficha .valor {
-  font-size: 2rem;
-  font-weight: 680;
-  letter-spacing: -0.02em;
+  font-family: var(--fuente-titulos);
+  font-size: 2.1rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  color: var(--primary-dark);
 }
 
 .ficha .pie {
-  color: var(--tinta-apagada);
+  color: var(--text-secondary);
   font-size: 0.8rem;
-  margin-top: 0.2rem;
+  margin-top: 0.25rem;
 }
 
 .hero {
-  font-size: 3rem;
+  font-family: var(--fuente-titulos);
+  font-size: 3.2rem;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  color: var(--primary-dark);
 }
 
 /* ---------- Tarjeta partida en dos ----------
@@ -314,32 +349,36 @@ h3 { font-size: 1rem; }
 label {
   display: block;
   font-size: 0.85rem;
-  color: var(--tinta-2);
-  margin-bottom: 0.3rem;
-  font-weight: 550;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+  font-weight: 500;
 }
 
 input, select {
   width: 100%;
-  padding: 0.6rem 0.7rem;
+  min-height: var(--alto-control);
+  padding: 0 0.7rem;
   font: inherit;
-  color: var(--tinta);
-  background: var(--plano);
-  border: 1px solid var(--eje);
-  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radio-chico);
 }
 
+/* El foco se marca con el borde primario y nada más: el sistema pide que no
+   haya glow ni sombra. */
 input:focus, select:focus {
-  outline: 2px solid var(--serie-1);
-  outline-offset: 1px;
-  border-color: transparent;
+  outline: none;
+  border-color: var(--primary);
 }
+
+input::placeholder { color: var(--text-secondary); opacity: 0.75; }
 
 /* Un campo bloqueado tiene que verse bloqueado antes de que alguien intente
    escribir en él y se pregunte por qué no pasa nada. */
 input:disabled, select:disabled {
-  color: var(--tinta-apagada);
-  border-style: dashed;
+  background: var(--neutro-bg);
+  color: var(--text-secondary);
   cursor: not-allowed;
 }
 
@@ -384,150 +423,88 @@ button,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font: inherit;
+  min-height: var(--alto-control);
+  font-family: var(--fuente);
+  font-size: 0.95rem;
   font-weight: 600;
-  padding: 0.6rem 1rem;
-  border-radius: 8px;
+  padding: 0 1.1rem;
+  border-radius: var(--radio-chico);
   border: 1px solid transparent;
-  background: var(--serie-1);
+  background: var(--primary);
   color: #fff;
   text-decoration: none;
   cursor: pointer;
 }
 button:hover:not(:disabled),
-.boton:hover { filter: brightness(1.08); }
-button:disabled { opacity: 0.55; cursor: not-allowed; }
+.boton:hover { background: var(--primary-dark); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* Secundario: blanco con borde, y al pasar por encima apenas se tiñe. */
 .secundario {
-  background: transparent;
-  color: var(--tinta);
-  border-color: var(--eje);
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
 }
-.peligro {
-  background: transparent;
-  color: var(--grave);
-  border-color: var(--grave);
-}
-/* El rojo lleno se reserva para el botón que efectivamente borra algo, que
-   siempre está dentro de un cartel de confirmación. En una fila, un botón así
-   se apreta sin querer. */
-.peligro.lleno {
-  background: var(--grave);
-  color: #fff;
-  border-color: var(--grave);
-}
-
-.chico {
-  padding: 0.3rem 0.6rem;
-  font-size: 0.82rem;
-}
+.secundario:hover:not(:disabled) { background: var(--neutro-bg); }
 
 /* Acción de texto, sin caja. Para filas con varias acciones, donde un botón
    con borde por cada una convierte la tabla en una pared de cajitas. */
 .enlace {
+  min-height: 0;
   background: none;
   border: none;
   padding: 0.15rem 0;
-  color: var(--serie-1);
-  font-size: 0.85rem;
-  font-weight: 550;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .enlace:hover:not(:disabled) {
-  filter: none;
-  text-decoration: underline;
+  background: none;
+  color: var(--text);
 }
-.enlace.peligro { color: var(--grave); }
+
+/* Lo destructivo no tiene un rojo propio: el primario ya es rojo y dos rojos
+   distintos no se distinguen. Se marca con el tono oscuro, y el freno de verdad
+   es el cartel de confirmación. */
+.peligro {
+  background: var(--surface);
+  color: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+.peligro:hover:not(:disabled) { background: var(--primary-suave); }
+
+.enlace.peligro {
+  background: none;
+  border: none;
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+.enlace.peligro:hover:not(:disabled) { background: none; color: #6f2618; }
+
+/* Relleno: se reserva para el botón que efectivamente borra algo, que siempre
+   está dentro de un cartel de confirmación. */
+.peligro.lleno {
+  background: var(--primary-dark);
+  color: #fff;
+  border-color: var(--primary-dark);
+}
+.peligro.lleno:hover:not(:disabled) { background: #6f2618; }
+
+.chico {
+  min-height: 30px;
+  padding: 0 0.7rem;
+  font-size: 0.85rem;
+}
 
 /* Volver a la pantalla de la que se vino. */
 .volver {
   font-size: 0.85rem;
-  color: var(--tinta-2);
+  color: var(--text-secondary);
   text-decoration: none;
 }
-.volver:hover { color: var(--tinta); }
-
-/* ---------- Cartel modal ---------- */
-
-.dialogo {
-  width: min(430px, calc(100vw - 2rem));
-  padding: 0;
-  border: 1px solid var(--linea);
-  border-radius: 14px;
-  background: var(--superficie);
-  color: var(--tinta);
-  box-shadow: 0 8px 16px rgba(11, 11, 11, 0.08), 0 24px 60px rgba(11, 11, 11, 0.16);
-  overflow: hidden;
-}
-.dialogo::backdrop {
-  background: rgba(11, 11, 11, 0.45);
-  backdrop-filter: blur(2px);
-}
-
-/* Una línea de color arriba dice de qué se trata el cartel antes de leerlo.
-   Es lo único que cambia entre uno de rutina y uno que borra algo. */
-.dialogo::before {
-  content: '';
-  display: block;
-  height: 3px;
-  background: var(--serie-1);
-}
-.dialogo.peligroso::before { background: var(--grave); }
-
-.dialogo h2 {
-  margin: 0;
-  padding: 1.15rem 1.4rem 0.6rem;
-  font-size: 1.15rem;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-}
-
-.dialogo .cuerpo {
-  padding: 0 1.4rem 1.3rem;
-  color: var(--tinta-2);
-  line-height: 1.5;
-}
-.dialogo .cuerpo p { margin: 0 0 0.8rem; }
-.dialogo .cuerpo p:last-child { margin-bottom: 0; }
-.dialogo .cuerpo label { color: var(--tinta); }
-.dialogo .cuerpo .error { margin-bottom: 1rem; }
-
-/* Cancelar contra el borde izquierdo y la acción contra el derecho: el peso
-   queda de un lado solo y no hay que leer dos botones gemelos para elegir. */
-.dialogo .acciones {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.85rem 1.4rem;
-  background: var(--plano);
-  border-top: 1px solid var(--linea);
-}
-
-.dialogo .acciones button.secundario {
-  border-color: transparent;
-  color: var(--tinta-2);
-  padding-left: 0;
-}
-.dialogo .acciones button.secundario:hover:not(:disabled) {
-  color: var(--tinta);
-  filter: none;
-}
-
-/* En el celular el cartel se apoya abajo, donde llega el pulgar. */
-@media (max-width: 700px) {
-  .dialogo {
-    margin: auto auto 0;
-    width: 100%;
-    max-width: none;
-    border-radius: 16px 16px 0 0;
-  }
-  .dialogo .acciones {
-    padding-bottom: calc(0.85rem + env(safe-area-inset-bottom));
-  }
-  /* El pulgar necesita blanco: el botón que hace algo ocupa el ancho que le
-     sobra al de cancelar, que queda chico a propósito. */
-  .dialogo .acciones button[type='submit'] { flex: 1; }
-}
+.volver:hover { color: var(--primary); }
 
 /* ---------- Barra de filtros ----------
    Lo que acota la búsqueda a la izquierda, lo que la dispara contra el borde
@@ -540,7 +517,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   gap: 0.75rem 1.5rem;
   margin-top: 1rem;
   padding-top: 0.9rem;
-  border-top: 1px solid var(--linea);
+  border-top: 1px solid var(--border);
 }
 
 /* Una casilla con su texto al lado, en una sola línea. */
@@ -549,13 +526,15 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   align-items: center;
   gap: 0.45rem;
   margin-bottom: 0;
-  color: var(--tinta);
-  font-weight: 450;
+  color: var(--text);
+  font-weight: 400;
   cursor: pointer;
 }
 .casilla input[type='checkbox'] {
   width: auto;
+  min-height: 0;
   margin: 0;
+  accent-color: var(--primary);
   cursor: pointer;
 }
 
@@ -568,13 +547,93 @@ tr.apagada > td:not(:last-child) { opacity: 0.55; }
 
 .acciones-fila {
   display: flex;
-  gap: 0.3rem;
+  gap: 0.5rem;
   justify-content: flex-end;
   white-space: nowrap;
 }
 
 /* Sin caja que las separe, las acciones de texto necesitan más aire entre sí. */
-.acciones-fila .enlace + .enlace { margin-left: 0.65rem; }
+.acciones-fila .enlace + .enlace { margin-left: 0.75rem; }
+
+/* ---------- Cartel modal ---------- */
+
+.dialogo {
+  width: min(430px, calc(100vw - 2rem));
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radio);
+  background: var(--surface);
+  color: var(--text);
+  overflow: hidden;
+}
+.dialogo::backdrop {
+  background: rgba(43, 43, 43, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+/* Una línea de color arriba dice de qué se trata el cartel antes de leerlo.
+   Es lo único que cambia entre uno de rutina y uno que borra algo. */
+.dialogo::before {
+  content: '';
+  display: block;
+  height: 3px;
+  background: var(--primary);
+}
+.dialogo.peligroso::before { background: var(--primary-dark); }
+
+.dialogo h2 {
+  margin: 0;
+  padding: 1.15rem 1.4rem 0.6rem;
+}
+
+.dialogo .cuerpo {
+  padding: 0 1.4rem 1.3rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.dialogo .cuerpo p { margin: 0 0 0.8rem; }
+.dialogo .cuerpo p:last-child { margin-bottom: 0; }
+.dialogo .cuerpo label { color: var(--text); }
+.dialogo .cuerpo .error { margin-bottom: 1rem; }
+
+/* Cancelar contra el borde izquierdo y la acción contra el derecho: el peso
+   queda de un lado solo y no hay que leer dos botones gemelos para elegir. */
+.dialogo .acciones {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.4rem;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+.dialogo .acciones button.secundario {
+  background: none;
+  border-color: transparent;
+  color: var(--text-secondary);
+  padding-left: 0;
+}
+.dialogo .acciones button.secundario:hover:not(:disabled) {
+  background: none;
+  color: var(--text);
+}
+
+/* En el celular el cartel se apoya abajo, donde llega el pulgar. */
+@media (max-width: 700px) {
+  .dialogo {
+    margin: auto auto 0;
+    width: 100%;
+    max-width: none;
+    border-radius: var(--radio) var(--radio) 0 0;
+  }
+  .dialogo .acciones {
+    padding-bottom: calc(0.85rem + env(safe-area-inset-bottom));
+  }
+  /* El pulgar necesita blanco: el botón que hace algo ocupa el ancho que le
+     sobra al de cancelar, que queda chico a propósito. */
+  .dialogo .acciones button[type='submit'] { flex: 1; }
+}
 
 /* ---------- Números de la jugada ---------- */
 
@@ -585,8 +644,9 @@ tr.apagada > td:not(:last-child) { opacity: 0.55; }
 
 .numeros input {
   text-align: center;
-  font-size: 1.4rem;
-  font-weight: 650;
+  font-family: var(--fuente-titulos);
+  font-size: 1.5rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   padding: 0.55rem 0.2rem;
 }
@@ -666,10 +726,12 @@ tr.apagada > td:not(:last-child) { opacity: 0.55; }
 /* Resumen del sorteo arriba de la carga: el pozo se ve, pero sin comerse la
    pantalla en un teléfono. */
 .pozo-vendedor {
-  font-size: clamp(1.6rem, 7vw, 2.6rem);
+  font-family: var(--fuente-titulos);
+  font-size: clamp(1.8rem, 8vw, 2.8rem);
   font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
+  letter-spacing: 0.01em;
+  line-height: 1.05;
+  color: var(--primary-dark);
 }
 
 /* Los datos propios del vendedor, en una línea en vez de dos tarjetas. */
@@ -693,17 +755,18 @@ tr.apagada > td:not(:last-child) { opacity: 0.55; }
   height: 2.1rem;
   padding: 0 0.4rem;
   border-radius: 999px;
-  background: var(--serie-1-suave);
-  color: var(--tinta);
-  font-weight: 680;
+  background: var(--primary-suave);
+  color: var(--primary-dark);
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 
 /* Un número de la jugada que está en el extracto. El color no va solo: los
    cuatro acertados llevan además el chip "Ganadora" al lado. */
 .bolilla.acierto {
-  background: var(--ok);
+  background: var(--success);
   color: #fff;
 }
 
@@ -751,57 +814,74 @@ tr.apagada > td:not(:last-child) { opacity: 0.55; }
 
 /* ---------- Estados ---------- */
 
+/* Pastilla de estado: fondo suave y texto del mismo tono. El punto de color
+   acompaña siempre al texto, nunca identifica por sí solo. */
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.15rem 0.55rem;
+  gap: 0.35rem;
+  padding: 0.15rem 0.6rem;
   border-radius: 999px;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 600;
-  border: 1px solid var(--borde);
-  color: var(--tinta-2);
+  border: none;
+  background: var(--neutro-bg);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
-/* El punto de color acompaña siempre al texto: nunca identifica por sí solo. */
 .chip::before {
   content: '';
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 999px;
   background: currentColor;
 }
-.chip.abierto { color: var(--exito-texto); }
-.chip.cerrado { color: var(--tinta-2); }
-.chip.finalizado { color: var(--serie-1); }
-.chip.anulada { color: var(--grave); }
-.chip.gano { color: var(--exito-texto); }
+
+/* Lo positivo o confirmado. */
+.chip.abierto,
+.chip.gano {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+/* Lo que ya pasó, sin carga negativa. */
+.chip.cerrado,
+.chip.anulada {
+  background: var(--neutro-bg);
+  color: var(--text-secondary);
+}
+
+/* Un sorteo con resultado: es un hito, no un estado neutro. */
+.chip.finalizado {
+  background: var(--primary-suave);
+  color: var(--primary-dark);
+}
 
 .aviso, .error, .exito {
   padding: 0.7rem 0.9rem;
-  border-radius: 8px;
+  border-radius: var(--radio-chico);
   font-size: 0.9rem;
   border: 1px solid;
   margin-bottom: 1rem;
 }
 .error {
-  color: var(--grave);
-  border-color: var(--grave);
-  background: color-mix(in srgb, var(--grave) 8%, transparent);
+  color: var(--primary-dark);
+  border-color: var(--primary-suave);
+  background: var(--primary-suave);
 }
 .exito {
-  color: var(--exito-texto);
-  border-color: var(--exito-texto);
-  background: color-mix(in srgb, var(--exito-texto) 8%, transparent);
+  color: var(--success);
+  border-color: var(--success-bg);
+  background: var(--success-bg);
 }
 .aviso {
-  color: var(--tinta-2);
-  border-color: var(--eje);
-  background: transparent;
+  color: var(--text-secondary);
+  border-color: var(--border);
+  background: var(--surface);
 }
 
 .vacio {
-  color: var(--tinta-apagada);
+  color: var(--text-secondary);
   text-align: center;
   padding: 2rem 1rem;
 }
@@ -816,21 +896,23 @@ table {
   font-size: 0.9rem;
 }
 
+/* Encabezados chicos y apagados; sin bordes verticales, solo la línea de abajo
+   separando filas. */
 th {
   text-align: left;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--tinta-apagada);
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
   font-weight: 600;
-  padding: 0.5rem 0.6rem;
-  border-bottom: 1px solid var(--eje);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 
 td {
-  padding: 0.6rem;
-  border-bottom: 1px solid var(--linea);
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
 

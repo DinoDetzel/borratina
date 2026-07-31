@@ -57,3 +57,24 @@
   font-display: swap;
   src: url('./fuentes/barlow-semi-condensed-700.woff2') format('woff2');
 }
+
+/* Inter y Oswald, las del sistema de diseño. Son fuentes variables: un solo
+   archivo cubre todos los pesos. Igual que las del comprobante viajan con la
+   app y no desde el CDN de Google: el vendedor entra desde la calle y la app
+   tiene que verse igual sin conexión. Solo subconjunto latino. */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fuentes/inter-variable.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 200 700;
+  font-display: swap;
+  src: url('./fuentes/oswald-variable.woff2') format('woff2');
+}

@@ -143,11 +143,31 @@ importe.
 baja, `GET /auth/me` falla y la sesión se cierra sola. Cualquier 401 en cualquier
 request dispara lo mismo.
 
-**Los colores del gráfico salen de una paleta validada** para daltonismo y
-contraste (≥3:1 sobre la superficie en modo claro y oscuro). Los tokens están en
-`estilos.css`; el gráfico los lee como variables CSS, así que cambiar un color se
-hace en un solo lugar. Si se agregan series, hay que revalidar la paleta antes:
-dos hues elegidos a ojo suelen ser indistinguibles para quien tiene deuteranopía.
+**El sistema de diseño está declarado en `:root`, en `estilos.css`, y todo lo
+demás lo consume desde ahí.** Los nombres viejos (`--tinta`, `--linea`,
+`--serie-1`…) siguen existiendo apuntando a los del sistema: así el rediseño no
+obligó a tocar cada regla, y cambiar un color se sigue haciendo en un solo lugar.
+
+El look es de club: crema en vez de blanco, terracota como primario, bordes
+cálidos, esquinas moderadas y **sin sombras** — la separación la dan el borde y
+el fondo. Los títulos y los números grandes van en **Oswald** (condensada, es lo
+que le da el carácter de tablero) y el resto en **Inter**. Las dos viajan con la
+app, no desde el CDN de Google, por lo mismo que las del comprobante.
+
+**No hay un rojo de peligro aparte.** El primario ya es rojo y dos rojos
+distintos en la misma pantalla no se distinguen, así que lo destructivo se marca
+con el tono oscuro y, sobre todo, con el cartel de confirmación. Las acciones de
+fila son de texto, no botones con borde.
+
+**La app es de tema claro.** El modo oscuro se retiró con el rediseño: la paleta
+nueva se define sobre un fondo crema y no tiene equivalentes oscuros; inventarlos
+habría sido diseñar otra cosa.
+
+**El color del gráfico está validado** para contraste (≥3:1 sobre la superficie)
+con `scripts/validate_palette.js` de la skill de dataviz. El gráfico lee
+`--serie-1` como variable CSS, así que cambiar el color se hace en un solo lugar.
+Si se agregan series, hay que revalidar la paleta antes: dos tonos elegidos a ojo
+suelen ser indistinguibles para quien tiene deuteranopía.
 
 **El estado nunca se comunica solo con color.** Los `Chip` llevan siempre la
 palabra al lado del punto de color, y el gráfico tiene una vista de tabla

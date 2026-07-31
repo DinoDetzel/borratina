@@ -358,7 +358,7 @@ export default function AdminJugadas() {
                       <div className="acciones-fila">
                         {j.anulada ? (
                           <button
-                            className="secundario chico"
+                            className="enlace"
                             onClick={() =>
                               accion(() => api.jugadas.restaurar(j.id), 'Jugada restaurada.')
                             }
@@ -368,7 +368,7 @@ export default function AdminJugadas() {
                         ) : (
                           <>
                             <button
-                              className="secundario chico"
+                              className="enlace"
                               onClick={() =>
                                 setEditando({
                                   id: j.id,
@@ -385,7 +385,7 @@ export default function AdminJugadas() {
                               Corregir
                             </button>
                             <button
-                              className="peligro chico"
+                              className="enlace peligro"
                               onClick={() =>
                                 accion(() => api.jugadas.anular(j.id), 'Jugada anulada.')
                               }
