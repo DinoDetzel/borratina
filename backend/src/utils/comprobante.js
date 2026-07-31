@@ -83,6 +83,10 @@ export function armarComprobante(jugada, sorteo) {
       // El pozo se imprime en el comprobante: es el premio que el comprador
       // está comprando y tiene que quedarle por escrito.
       pozo: sorteo.pozo,
+      // El día que se sortea es el día en que cierra la carga. Se manda la
+      // fecha completa y el frontend imprime solo el día: la hora del cierre es
+      // asunto interno y en el papel no significa nada.
+      sortea_el: sorteo.finaliza_at,
     },
     importe: sorteo.precio_jugada,
     vendedor: jugada.vendedor ?? null,

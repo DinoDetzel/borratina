@@ -1,4 +1,4 @@
-import { formatearNumero, pesos, periodoLargo } from '../utilidades.js';
+import { fechaDia, formatearNumero, pesos } from '../utilidades.js';
 
 /**
  * El comprobante que se le entrega al comprador: el talonario del club,
@@ -147,10 +147,11 @@ export default function Comprobante({ comprobante }) {
                   lineHeight: 1,
                   color: crema,
                   letterSpacing: 1,
-                  textTransform: 'uppercase',
                 }}
               >
-                {periodoLargo(sorteo.periodo)}
+                {/* El día del sorteo es el día en que cierra la carga. La hora
+                    no va: en el papel no significa nada. */}
+                {fechaDia(sorteo.sortea_el)}
               </span>
             </div>
             <div
