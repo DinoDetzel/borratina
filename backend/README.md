@@ -155,6 +155,24 @@ no servía ni para entrar ni para avisar nada. La columna existió hasta la
 migración 009. El usuario se normaliza a minúsculas al crear la cuenta y al
 buscarla, así que `Dino` y `dino ` entran igual.
 
+**Después del sorteo no se tocan los números de una jugada.** `PATCH /jugadas/:id`
+rechaza el cambio de números si el sorteo está finalizado. Con el extracto a la
+vista, corregir una jugada es elegir quién gana: alcanzaba con copiarle los
+números al extracto para convertir un sorteo vacante en un premio cobrado. El
+nombre y el teléfono del comprador se corrigen siempre, porque no cambian quién
+gana y hay que poder arreglar un apellido mal escrito cuando el comprador se
+presenta a cobrar.
+
+La condición viaja dentro del `UPDATE` (`EXISTS ... estado <> 'finalizado'`) y no
+en un chequeo previo, por lo mismo que la ventana de carga: si el extracto se
+carga justo entre la lectura y la escritura, no se cuela una corrección con el
+resultado ya a la vista.
+
+Antes del sorteo la corrección es legítima —nadie sabe qué va a salir— y guarda
+`numeros_anteriores` (migración 011): una corrección no puede pisar el dato en
+silencio, porque si alguien discute que sus números eran otros hay que tener con
+qué contestarle.
+
 **El extracto se puede corregir, y queda registrado.** Son 20 números que alguien
 tipea leyendo la pizarra: un dedazo en uno solo cambia quién cobra, así que
 `PATCH /sorteos/:id/resultado` permite arreglarlo aunque el sorteo esté

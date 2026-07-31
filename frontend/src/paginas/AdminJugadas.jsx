@@ -95,12 +95,14 @@ export default function AdminJugadas() {
 
   async function guardarEdicion(evento) {
     evento.preventDefault();
-    const { id, numeros, comprador_nombre, comprador_telefono } = editando;
+    const { id, numeros, comprador_nombre, comprador_telefono, sorteado } = editando;
 
     await accion(
       () =>
         api.jugadas.editar(id, {
-          numeros: numeros.map(Number),
+          // Con el sorteo ya sorteado no se mandan: el backend los rechaza, y
+          // mandarlos igual haría fallar una corrección de nombre legítima.
+          ...(sorteado ? {} : { numeros: numeros.map(Number) }),
           comprador_nombre,
           comprador_telefono: comprador_telefono || null,
         }),
@@ -245,6 +247,9 @@ export default function AdminJugadas() {
                     inputMode="numeric"
                     value={valor}
                     aria-label={`Número ${i + 1}`}
+                    // Con el extracto cargado, cambiar los números es elegir
+                    // quién gana. Lo impide el backend; acá ni se ofrece.
+                    disabled={editando.sorteado}
                     onChange={(e) => {
                       const limpio = e.target.value.replace(/\D/g, '').slice(0, 2);
                       setEditando((prev) => ({
@@ -255,6 +260,18 @@ export default function AdminJugadas() {
                   />
                 ))}
               </div>
+
+              <p
+                style={{
+                  color: 'var(--tinta-apagada)',
+                  fontSize: '0.8rem',
+                  margin: '0.4rem 0 0',
+                }}
+              >
+                {editando.sorteado
+                  ? 'Este sorteo ya se sorteó: los números no se tocan más. El nombre y el teléfono sí se pueden corregir.'
+                  : 'Se guarda lo que decían antes, por si después hay que mostrarlo.'}
+              </p>
             </div>
 
             <div className="fila" style={{ marginTop: '0.9rem' }}>
@@ -361,6 +378,7 @@ export default function AdminJugadas() {
                                   ),
                                   comprador_nombre: j.comprador_nombre,
                                   comprador_telefono: j.comprador_telefono,
+                                  sorteado: j.sorteo_estado === 'finalizado',
                                 })
                               }
                             >

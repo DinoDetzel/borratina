@@ -14,7 +14,7 @@ const COLUMNAS = [
   'id', 'codigo', 'sorteo_id', 'vendedor_id',
   'comprador_nombre', 'comprador_telefono',
   'numero_1', 'numero_2', 'numero_3', 'numero_4',
-  'anulada', 'anulada_por', 'anulada_at', 'editada_por',
+  'anulada', 'anulada_por', 'anulada_at', 'editada_por', 'numeros_anteriores',
   'created_at', 'updated_at',
 ];
 const CAMPOS = COLUMNAS.join(', ');
@@ -202,7 +202,9 @@ router.get('/', requireAuth, async (req, res) => {
     // `gano` viene en NULL mientras el sorteo no esté finalizado: es distinto de
     // "no ganó". Con un extracto de 20 números, comparar a ojo es inviable, así
     // que la pantalla necesita el dato ya resuelto.
-    `SELECT ${CAMPOS_J}, u.nombre AS vendedor,
+    // `sorteo_estado` va explícito y no deducido de `gano`: la pantalla lo
+    // necesita para saber si todavía se pueden corregir los números.
+    `SELECT ${CAMPOS_J}, u.nombre AS vendedor, s.estado AS sorteo_estado,
             CASE WHEN s.estado = 'finalizado'
                  THEN (j.anulada = false AND ${condicionGanadora('j', 's')})
                  ELSE NULL
@@ -297,8 +299,37 @@ router.get('/:id', requireAuth, async (req, res) => {
 });
 
 /**
+ * Por qué no entró la corrección: la jugada no existe, o su sorteo ya se
+ * sorteó. Se averigua recién en el camino de error.
+ */
+async function errorDeCorreccion(jugadaId) {
+  const { rows } = await query(
+    `SELECT s.periodo FROM jugadas j JOIN sorteos s ON s.id = j.sorteo_id WHERE j.id = $1`,
+    [jugadaId],
+  );
+  if (!rows[0]) return new AppError(404, 'No existe esa jugada.');
+
+  return new AppError(
+    409,
+    `El sorteo de ${rows[0].periodo} ya tiene el extracto cargado: los números de una jugada ` +
+      'no se pueden cambiar después del sorteo, porque eso cambia quién cobra. ' +
+      'El nombre y el teléfono sí se pueden corregir.',
+  );
+}
+
+/**
  * PATCH /api/jugadas/:id → corrige una jugada cargada por error. Solo admin.
  * Body: { numeros?, comprador_nombre?, comprador_telefono? }
+ *
+ * **Los números no se pueden cambiar una vez sorteado.** Con el extracto a la
+ * vista, editar una jugada es elegir quién gana: alcanzaba con copiarle los
+ * números al extracto para convertir un sorteo vacante en un premio cobrado.
+ * Antes del sorteo la corrección es legítima (nadie sabe qué va a salir) y
+ * queda registrada igual, con los números anteriores guardados.
+ *
+ * El nombre y el teléfono del comprador se corrigen siempre: no cambian quién
+ * gana, y un apellido mal escrito hay que poder arreglarlo cuando el comprador
+ * se presenta a cobrar.
  */
 router.patch('/:id', requireAuth, requireAdmin, async (req, res) => {
   const sets = [];
@@ -308,9 +339,15 @@ router.patch('/:id', requireAuth, requireAdmin, async (req, res) => {
     sets.push(`${columna} = $${params.length}`);
   };
 
-  if (req.body?.numeros !== undefined) {
+  const cambiaNumeros = req.body?.numeros !== undefined;
+
+  if (cambiaNumeros) {
     const numeros = validarNumeros(req.body.numeros, 'numeros');
     numeros.forEach((n, i) => setear(`numero_${i + 1}`, n));
+
+    // En un UPDATE, la derecha de un SET ve siempre la fila vieja: esto guarda
+    // los números que la jugada tenía antes, en la misma sentencia que los pisa.
+    sets.push('numeros_anteriores = ARRAY[numero_1, numero_2, numero_3, numero_4]');
   }
   if (req.body?.comprador_nombre !== undefined) {
     const { nombre } = validarComprador(req.body);
@@ -331,13 +368,23 @@ router.patch('/:id', requireAuth, requireAdmin, async (req, res) => {
   sets.push('updated_at = now()');
   params.push(req.params.id);
 
+  // La condición del sorteo va dentro del UPDATE y no en un chequeo previo: si
+  // el admin carga el extracto justo entre la lectura y la escritura, no se
+  // cuela una corrección de números con el resultado ya a la vista.
+  const sorteoSinSortear = cambiaNumeros
+    ? `AND EXISTS (
+         SELECT 1 FROM sorteos s
+         WHERE s.id = jugadas.sorteo_id AND s.estado <> 'finalizado'
+       )`
+    : '';
+
   const { rows } = await query(
     `UPDATE jugadas SET ${sets.join(', ')}
-     WHERE id = $${params.length}
+     WHERE id = $${params.length} ${sorteoSinSortear}
      RETURNING ${CAMPOS}`,
     params,
   );
-  if (!rows[0]) throw new AppError(404, 'No existe esa jugada.');
+  if (!rows[0]) throw await errorDeCorreccion(req.params.id);
 
   res.json({ jugada: rows[0] });
 });

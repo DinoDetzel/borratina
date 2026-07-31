@@ -22,6 +22,7 @@
 | `008_password_actualizada.sql` | `password_actualizada_at`: invalida los tokens anteriores al cambio |
 | `009_sin_email.sql` | Se elimina `usuarios.email` |
 | `010_corregir_extracto.sql` | El extracto se puede corregir, y queda quién, cuándo y qué decía antes |
+| `011_correccion_de_jugada.sql` | `jugadas.numeros_anteriores`: qué decía la jugada antes de corregirla |
 
 ## El resultado es un extracto de 20
 

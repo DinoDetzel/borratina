@@ -335,6 +335,14 @@ input:focus, select:focus {
   border-color: transparent;
 }
 
+/* Un campo bloqueado tiene que verse bloqueado antes de que alguien intente
+   escribir en él y se pregunte por qué no pasa nada. */
+input:disabled, select:disabled {
+  color: var(--tinta-apagada);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
 .campo + .campo { margin-top: 0.9rem; }
 
 .fila {
