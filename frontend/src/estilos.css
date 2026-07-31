@@ -221,7 +221,16 @@ input:focus, select:focus {
 }
 .fila > * { flex: 1; min-width: 130px; }
 
-button {
+/* Los botones se estilan por clase y no por etiqueta, porque un enlace que
+   lleva a otra pantalla tiene que verse igual que un botón que hace algo. La
+   diferencia es de comportamiento, no de aspecto: `a.boton` sirve cuando la
+   acción es navegar (funciona el botón derecho y "abrir en pestaña nueva", que
+   un <button> con navigate() rompe). */
+button,
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font: inherit;
   font-weight: 600;
   padding: 0.6rem 1rem;
@@ -229,17 +238,19 @@ button {
   border: 1px solid transparent;
   background: var(--serie-1);
   color: #fff;
+  text-decoration: none;
   cursor: pointer;
 }
-button:hover:not(:disabled) { filter: brightness(1.08); }
+button:hover:not(:disabled),
+.boton:hover { filter: brightness(1.08); }
 button:disabled { opacity: 0.55; cursor: not-allowed; }
 
-button.secundario {
+.secundario {
   background: transparent;
   color: var(--tinta);
   border-color: var(--eje);
 }
-button.peligro {
+.peligro {
   background: transparent;
   color: var(--grave);
   border-color: var(--grave);
@@ -247,24 +258,15 @@ button.peligro {
 /* El rojo lleno se reserva para el botón que efectivamente borra algo, que
    siempre está dentro de un cartel de confirmación. En una fila, un botón así
    se apreta sin querer. */
-button.peligro.lleno {
+.peligro.lleno {
   background: var(--grave);
   color: #fff;
   border-color: var(--grave);
 }
 
-button.chico {
+.chico {
   padding: 0.3rem 0.6rem;
   font-size: 0.82rem;
-}
-
-/* Un enlace que se ve como botón. Se usa cuando la acción es ir a otra
-   pantalla: así funciona el botón derecho, "abrir en pestaña nueva" y todo lo
-   que un <button> con navigate() rompe. */
-a.boton {
-  display: inline-block;
-  text-decoration: none;
-  line-height: normal;
 }
 
 /* Volver a la pantalla de la que se vino. */

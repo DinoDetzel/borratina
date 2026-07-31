@@ -420,21 +420,23 @@ export default function AdminSorteos() {
                       )}
                     </td>
                     <td>
-                      {s.estado === 'abierto' && (
-                        <button
-                          className="secundario chico"
-                          onClick={() =>
-                            accion(() => api.sorteos.cerrar(s.id), 'Carga de jugadas cerrada.')
-                          }
-                        >
-                          Cerrar carga
-                        </button>
-                      )}
-                      {s.estado === 'finalizado' && (
-                        <Link className="boton secundario chico" to={`/admin/sorteos/${s.id}`}>
-                          Ver ganadores
-                        </Link>
-                      )}
+                      <div className="acciones-fila">
+                        {s.estado === 'abierto' && (
+                          <button
+                            className="secundario chico"
+                            onClick={() =>
+                              accion(() => api.sorteos.cerrar(s.id), 'Carga de jugadas cerrada.')
+                            }
+                          >
+                            Cerrar carga
+                          </button>
+                        )}
+                        {s.estado === 'finalizado' && (
+                          <Link className="boton secundario chico" to={`/admin/sorteos/${s.id}`}>
+                            Ver ganadores
+                          </Link>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
