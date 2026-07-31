@@ -1,9 +1,17 @@
 import { formatearNumero } from '../utilidades.js';
 
-/** Los 4 números de una jugada, siempre a dos dígitos. */
+/**
+ * Números a dos dígitos: los 4 de una jugada, o los 20 de un extracto.
+ *
+ * Una jugada se muestra siempre en una línea; un extracto necesita envolver.
+ * Se decide por la cantidad y no por una prop, para que quien lo use no tenga
+ * que acordarse.
+ */
 export function Bolillas({ numeros }) {
+  if (!numeros?.length) return null;
+
   return (
-    <span className="bolillas">
+    <span className={`bolillas ${numeros.length > 4 ? 'envuelve' : ''}`}>
       {numeros.map((n, i) => (
         <span className="bolilla" key={i}>
           {formatearNumero(n)}

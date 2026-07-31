@@ -19,8 +19,22 @@ que no hay CORS ni URLs hardcodeadas.
 de carga, el comprobante que se imprime al cargar, y el listado de sus propias
 jugadas. Sin estadísticas: eso es del admin.
 
-Al escribir dos dígitos el foco salta solo al siguiente número, porque un vendedor
-carga muchas jugadas seguidas.
+### Está pensada para el teléfono
+
+El vendedor la usa parado en la calle, con una mano. Por eso:
+
+- **El formulario va primero**, antes de cualquier métrica. Lo que lleva cargado y
+  recaudado queda abajo del botón, en una línea. Entra a cargar, no a mirar
+  números.
+- **Al escribir dos dígitos el foco salta solo** al siguiente campo: se cargan
+  muchas jugadas seguidas.
+- Los campos numéricos son **grandes** y el botón ocupa el ancho completo.
+- Los `input` tienen **16px en móvil**: por debajo de eso, iOS hace zoom al
+  enfocar el campo y descoloca toda la pantalla.
+- El listado deja de ser tabla y **pasa a ser una lista**: cuatro columnas en
+  390px obligaban a scrollear de costado para leer el nombre del comprador.
+
+Si tocás esta pantalla, revisala en un viewport angosto antes de darla por buena.
 
 **Admin** — panel con el pozo, evolución de ventas e historial (`/admin`), gestión
 de sorteos (`/admin/sorteos`), buscador de jugadas con corregir y anular

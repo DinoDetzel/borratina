@@ -264,6 +264,77 @@ button.chico {
   padding: 0.55rem 0.2rem;
 }
 
+/* ---------- Carga desde el celular ----------
+   Es la pantalla que el vendedor usa parado en la calle, con una mano.
+   Los controles se agrandan y el formulario queda al alcance del pulgar. */
+
+@media (max-width: 700px) {
+  /* Menos de 16px hace que iOS haga zoom al enfocar el campo y descoloque
+     toda la pantalla. Con 16px justos no pasa. */
+  input, select { font-size: 16px; }
+
+  .numeros { gap: 0.4rem; }
+  .numeros input {
+    font-size: 1.9rem;
+    padding: 0.75rem 0.1rem;
+  }
+
+  .campo input { padding: 0.75rem 0.7rem; }
+
+  /* El botón principal ocupa el ancho y tiene altura de dedo. */
+  .boton-cargar {
+    width: 100%;
+    padding: 0.95rem 1rem;
+    font-size: 1.05rem;
+  }
+
+  .contenido { padding: 1rem 0.9rem 3rem; }
+  .tarjeta { padding: 1rem; }
+
+  /* El listado propio del vendedor deja de ser tabla y pasa a ser una lista:
+     cuatro columnas en 390px obligaban a scrollear de costado para leer el
+     nombre del comprador. */
+  .lista-jugadas thead { display: none; }
+  .lista-jugadas,
+  .lista-jugadas tbody,
+  .lista-jugadas tr { display: block; }
+
+  .lista-jugadas tr {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--linea);
+  }
+  .lista-jugadas tr:last-child { border-bottom: none; }
+
+  .lista-jugadas td {
+    display: block;
+    border: none;
+    padding: 0;
+  }
+  .lista-jugadas td + td { margin-top: 0.35rem; }
+}
+
+/* Resumen del sorteo arriba de la carga: el pozo se ve, pero sin comerse la
+   pantalla en un teléfono. */
+.pozo-vendedor {
+  font-size: clamp(1.6rem, 7vw, 2.6rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+/* Los datos propios del vendedor, en una línea en vez de dos tarjetas. */
+.mis-datos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.5rem;
+  color: var(--tinta-2);
+  font-size: 0.9rem;
+}
+.mis-datos strong {
+  color: var(--tinta);
+  font-variant-numeric: tabular-nums;
+}
+
 .bolilla {
   display: inline-flex;
   align-items: center;
@@ -282,7 +353,12 @@ button.chico {
 .bolillas {
   display: inline-flex;
   gap: 0.3rem;
-  /* El extracto son 20 bolillas: tienen que poder bajar de renglón. */
+}
+
+/* Solo el extracto (20 bolillas) baja de renglón. Los 4 números de una jugada
+   nunca se parten: dentro de una celda angosta se apilarían en vertical y cada
+   fila de la tabla quedaría altísima. */
+.bolillas.envuelve {
   flex-wrap: wrap;
 }
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { api } from '../api.js';
 import Comprobante from '../componentes/Comprobante.jsx';
-import { Bolillas, Cargando, Chip, Ficha, MensajeError, Vacio } from '../componentes/comunes.jsx';
+import { Bolillas, Cargando, Chip, MensajeError, Vacio } from '../componentes/comunes.jsx';
 import { cuantoFalta, fechaHora, numero, periodoLargo, pesos } from '../utilidades.js';
 
 const VACIO = ['', '', '', ''];
@@ -133,13 +133,13 @@ export default function Vendedor() {
         <Chip estado={sorteo.estado}>Sorteo {periodoLargo(sorteo.periodo)}</Chip>
       </div>
 
-      {/* El pozo es el gancho de venta, así que va grande y primero: es lo que
-          el vendedor le dice al comprador. */}
+      {/* El pozo es el gancho de venta: tiene que verse, pero sin comerse la
+          pantalla del teléfono. El precio va al lado y no debajo. */}
       <div className="tarjeta" style={{ marginBottom: '1rem' }}>
         <div className="etiqueta" style={{ color: 'var(--tinta-2)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
           Pozo de {periodoLargo(sorteo.periodo)}
         </div>
-        <div className="hero">{pesos(sorteo.pozo)}</div>
+        <div className="pozo-vendedor">{pesos(sorteo.pozo)}</div>
         <div className="pie" style={{ color: 'var(--tinta-apagada)', fontSize: '0.85rem' }}>
           {pesos(sorteo.precio_jugada)} por jugada
         </div>
@@ -167,21 +167,9 @@ export default function Vendedor() {
         </div>
       )}
 
-      {/* Lo que cargó este vendedor. El total del sorteo es del admin: acá no
-          va, para no contarle a un vendedor cuánto vendieron los demás. */}
-      <div className="grilla" style={{ marginBottom: '1rem' }}>
-        <Ficha
-          etiqueta="Cargadas por vos"
-          valor={numero(sorteo.mis_jugadas)}
-          pie="En este sorteo"
-        />
-        <Ficha
-          etiqueta="Recaudado por vos"
-          valor={pesos(sorteo.mis_jugadas * sorteo.precio_jugada)}
-          pie={`${numero(sorteo.mis_jugadas)} × ${pesos(sorteo.precio_jugada)}`}
-        />
-      </div>
-
+      {/* El formulario va antes que cualquier métrica: el vendedor entra a
+          cargar, no a mirar números. En el teléfono, dejarlo abajo obligaba a
+          scrollear para hacer lo único que vino a hacer. */}
       <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'minmax(280px, 1fr) auto' }}>
         <form className="tarjeta" onSubmit={enviar}>
           <h2 style={{ marginBottom: '1rem' }}>Nueva jugada</h2>
@@ -226,6 +214,7 @@ export default function Vendedor() {
 
           <button
             type="submit"
+            className="boton-cargar"
             disabled={enviando || !sorteo.carga_vigente}
             style={{ marginTop: '1.1rem' }}
           >
@@ -235,6 +224,21 @@ export default function Vendedor() {
                 ? 'Cargar y emitir comprobante'
                 : 'Carga no habilitada'}
           </button>
+
+          {/* Lo que lleva cargado este vendedor, en una línea. El total del
+              sorteo es del admin: acá no va, para no contarle a un vendedor
+              cuánto vendieron los demás. */}
+          <div
+            className="mis-datos"
+            style={{ marginTop: '1.1rem', paddingTop: '0.9rem', borderTop: '1px solid var(--linea)' }}
+          >
+            <span>
+              Cargadas por vos: <strong>{numero(sorteo.mis_jugadas)}</strong>
+            </span>
+            <span>
+              Recaudado: <strong>{pesos(sorteo.mis_jugadas * sorteo.precio_jugada)}</strong>
+            </span>
+          </div>
         </form>
 
         {ultimo && (
@@ -266,7 +270,7 @@ export default function Vendedor() {
           <Vacio>Todavía no cargaste ninguna jugada.</Vacio>
         ) : (
           <div className="tabla-scroll">
-            <table>
+            <table className="lista-jugadas">
               <thead>
                 <tr>
                   <th>Comprobante</th>
