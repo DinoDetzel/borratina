@@ -93,6 +93,8 @@ export const api = {
   jugadas: {
     cargar: (datos) => pedir('/jugadas', { method: 'POST', body: JSON.stringify(datos) }),
     listar: (filtros) => pedir(`/jugadas${qs(filtros)}`),
+    // Filtros: sorteo_id, vendedor_id, comprador, codigo, numeros,
+    //          incluir_anuladas, solo_ganadoras, limit, offset.
     porComprobante: (codigo) => pedir(`/jugadas/comprobante/${encodeURIComponent(codigo)}`),
     editar: (id, datos) => pedir(`/jugadas/${id}`, { method: 'PATCH', body: JSON.stringify(datos) }),
     anular: (id) => pedir(`/jugadas/${id}/anular`, { method: 'POST' }),

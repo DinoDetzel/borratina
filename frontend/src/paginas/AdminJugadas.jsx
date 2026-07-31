@@ -15,6 +15,7 @@ export default function AdminJugadas() {
     codigo: '',
     numeros: '',
     incluir_anuladas: 'true',
+    solo_ganadoras: '',
   });
 
   const [cargando, setCargando] = useState(true);
@@ -150,15 +151,37 @@ export default function AdminJugadas() {
             </div>
           </div>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.9rem' }}>
-            <input
-              type="checkbox"
-              style={{ width: 'auto' }}
-              checked={filtros.incluir_anuladas === 'true'}
-              onChange={(e) => cambiar('incluir_anuladas', e.target.checked ? 'true' : '')}
-            />
-            Mostrar también las anuladas
-          </label>
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginTop: '0.9rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: 0 }}>
+              <input
+                type="checkbox"
+                style={{ width: 'auto' }}
+                checked={filtros.incluir_anuladas === 'true'}
+                onChange={(e) => cambiar('incluir_anuladas', e.target.checked ? 'true' : '')}
+              />
+              Mostrar también las anuladas
+            </label>
+
+            {/* La lista con la que se pagan los premios. */}
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: 0 }}>
+              <input
+                type="checkbox"
+                style={{ width: 'auto' }}
+                checked={filtros.solo_ganadoras === 'true'}
+                onChange={(e) => {
+                  const marcado = e.target.checked ? 'true' : '';
+                  // Una anulada no cobra aunque acierte: mostrarla en la lista de
+                  // pagos sería pedir un error.
+                  setFiltros((f) => ({
+                    ...f,
+                    solo_ganadoras: marcado,
+                    incluir_anuladas: marcado ? '' : f.incluir_anuladas,
+                  }));
+                }}
+              />
+              Solo las ganadoras
+            </label>
+          </div>
         </form>
       </div>
 
@@ -256,9 +279,12 @@ export default function AdminJugadas() {
                           {j.comprador_telefono}
                         </div>
                       )}
-                      {j.anulada && (
-                        <div style={{ marginTop: '0.2rem' }}>
-                          <Chip estado="anulada">Anulada</Chip>
+                      {/* `gano` es null mientras el sorteo no se haya sorteado,
+                          que no es lo mismo que "no ganó": ahí no se muestra nada. */}
+                      {(j.anulada || j.gano) && (
+                        <div style={{ marginTop: '0.2rem', display: 'flex', gap: '0.3rem' }}>
+                          {j.anulada && <Chip estado="anulada">Anulada</Chip>}
+                          {j.gano && <Chip estado="gano">Ganadora</Chip>}
                         </div>
                       )}
                     </td>

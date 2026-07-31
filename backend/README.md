@@ -77,8 +77,15 @@ Todo cuelga de `/api`. Salvo `login` y `health`, todos piden
 | POST | `/jugadas/:id/restaurar` | admin | Revierte una anulación |
 
 Filtros de `GET /jugadas`: `sorteo_id`, `vendedor_id` (solo admin), `comprador`,
-`codigo`, `numeros` (ej: `numeros=7,23,45,88`), `incluir_anuladas`, `limit`,
-`offset`.
+`codigo`, `numeros` (ej: `numeros=7,23,45,88`), `incluir_anuladas`,
+`solo_ganadoras`, `limit`, `offset`.
+
+Cada jugada del listado trae `gano`, que es **`null` mientras el sorteo no esté
+finalizado** — distinto de `false`. Con un extracto de 20 números no hay forma de
+compararlo a ojo, así que el dato viene resuelto desde la base.
+
+`solo_ganadoras=true` es la lista con la que se pagan los premios: excluye las
+anuladas aunque sus números coincidan.
 
 #### Comprobante
 

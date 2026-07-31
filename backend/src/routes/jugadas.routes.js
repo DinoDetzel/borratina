@@ -5,7 +5,7 @@ import { AppError } from '../middleware/errors.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { validarNumeros } from '../utils/numeros.js';
 import { armarComprobante, normalizarCodigo } from '../utils/comprobante.js';
-import { esGanadora } from '../utils/ganadores.js';
+import { condicionGanadora, esGanadora } from '../utils/ganadores.js';
 
 const router = Router();
 
@@ -184,6 +184,14 @@ router.get('/', requireAuth, async (req, res) => {
     condiciones.push('j.anulada = false');
   }
 
+  // Solo las que cobran: es la lista con la que se pagan los premios, así que una
+  // jugada anulada no entra aunque sus números coincidan.
+  if (req.query.solo_ganadoras === 'true') {
+    condiciones.push(
+      `s.estado = 'finalizado' AND j.anulada = false AND ${condicionGanadora('j', 's')}`,
+    );
+  }
+
   const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : '';
 
   const limit = Math.min(Number(req.query.limit) || 100, 500);
@@ -191,10 +199,18 @@ router.get('/', requireAuth, async (req, res) => {
   params.push(limit, offset);
 
   const { rows } = await query(
+    // `gano` viene en NULL mientras el sorteo no esté finalizado: es distinto de
+    // "no ganó". Con un extracto de 20 números, comparar a ojo es inviable, así
+    // que la pantalla necesita el dato ya resuelto.
     `SELECT ${CAMPOS_J}, u.nombre AS vendedor,
+            CASE WHEN s.estado = 'finalizado'
+                 THEN (j.anulada = false AND ${condicionGanadora('j', 's')})
+                 ELSE NULL
+            END AS gano,
             COUNT(*) OVER() AS total
      FROM jugadas j
      JOIN usuarios u ON u.id = j.vendedor_id
+     JOIN sorteos s ON s.id = j.sorteo_id
      ${where}
      ORDER BY j.created_at DESC
      LIMIT $${params.length - 1} OFFSET $${params.length}`,

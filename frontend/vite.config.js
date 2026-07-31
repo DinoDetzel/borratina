@@ -9,7 +9,9 @@ export default defineConfig({
     // VITE_API_URL apuntando al servicio de Render.
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        // Se puede apuntar a otro backend con BACKEND_URL, que sirve para
+        // probar la app contra una base de prueba sin tocar la de desarrollo.
+        target: process.env.BACKEND_URL ?? 'http://localhost:3000',
         changeOrigin: true,
       },
     },
