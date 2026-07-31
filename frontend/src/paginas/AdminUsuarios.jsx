@@ -132,7 +132,6 @@ export default function AdminUsuarios() {
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck="false"
-                placeholder="juanp"
                 required
               />
             </div>
