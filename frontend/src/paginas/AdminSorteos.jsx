@@ -12,7 +12,11 @@ export default function AdminSorteos() {
 
   const [periodo, setPeriodo] = useState(periodoActual());
   const [precio, setPrecio] = useState('');
+  const [pozo, setPozo] = useState('');
   const [abriendo, setAbriendo] = useState(false);
+
+  // Corrección del pozo de un sorteo ya abierto.
+  const [pozoEditado, setPozoEditado] = useState('');
 
   const [resultado, setResultado] = useState(['', '', '', '']);
   const [ganadores, setGanadores] = useState(null);
@@ -52,10 +56,13 @@ export default function AdminSorteos() {
     evento.preventDefault();
     setAbriendo(true);
     const ok = await accion(
-      () => api.sorteos.abrir(periodo, Number(precio)),
-      `Sorteo de ${periodoLargo(periodo)} abierto.`,
+      () => api.sorteos.abrir(periodo, Number(precio), Number(pozo)),
+      `Sorteo de ${periodoLargo(periodo)} abierto con un pozo de ${pesos(Number(pozo))}.`,
     );
-    if (ok) setPrecio('');
+    if (ok) {
+      setPrecio('');
+      setPozo('');
+    }
     setAbriendo(false);
   }
 
@@ -115,6 +122,19 @@ export default function AdminSorteos() {
                 />
               </div>
               <div>
+                <label htmlFor="pozo">Pozo</label>
+                <input
+                  id="pozo"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={pozo}
+                  onChange={(e) => setPozo(e.target.value)}
+                  placeholder="1500000"
+                  required
+                />
+              </div>
+              <div>
                 <label htmlFor="precio">Precio por jugada</label>
                 <input
                   id="precio"
@@ -123,6 +143,7 @@ export default function AdminSorteos() {
                   step="1"
                   value={precio}
                   onChange={(e) => setPrecio(e.target.value)}
+                  placeholder="2000"
                   required
                 />
               </div>
@@ -132,9 +153,59 @@ export default function AdminSorteos() {
                 </button>
               </div>
             </div>
+
+            {pozo > 0 && precio > 0 && (
+              <p style={{ color: 'var(--tinta-apagada)', fontSize: '0.82rem', marginBottom: 0 }}>
+                Hacen falta {Math.ceil(pozo / precio)} jugadas para cubrir el pozo de{' '}
+                {pesos(Number(pozo))}.
+              </p>
+            )}
           </form>
         )}
       </div>
+
+      {/* El pozo se puede corregir mientras la carga siga abierta. Después no:
+          el premio ya se anunció con jugadas hechas. */}
+      {abierto && (
+        <div className="tarjeta">
+          <h2 style={{ marginBottom: '0.4rem' }}>Pozo de {periodoLargo(abierto.periodo)}</h2>
+          <p style={{ color: 'var(--tinta-2)', fontSize: '0.85rem', marginTop: 0 }}>
+            Ahora es <strong>{pesos(abierto.pozo)}</strong>. Se puede cambiar mientras la carga
+            esté abierta.
+          </p>
+
+          <form
+            className="fila"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const ok = await accion(
+                () => api.sorteos.cambiarPozo(abierto.id, Number(pozoEditado)),
+                `Pozo actualizado a ${pesos(Number(pozoEditado))}.`,
+              );
+              if (ok) setPozoEditado('');
+            }}
+          >
+            <div>
+              <label htmlFor="pozo-nuevo">Nuevo pozo</label>
+              <input
+                id="pozo-nuevo"
+                type="number"
+                min="1"
+                step="1"
+                value={pozoEditado}
+                onChange={(e) => setPozoEditado(e.target.value)}
+                placeholder={String(abierto.pozo)}
+                required
+              />
+            </div>
+            <div style={{ flex: '0 0 auto' }}>
+              <button type="submit" className="secundario">
+                Cambiar pozo
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Cargar el resultado oficial: solo cuando la carga ya está cerrada. */}
       {cerrado && (
@@ -240,7 +311,7 @@ export default function AdminSorteos() {
                         <Bolillas numeros={[s.numero_1, s.numero_2, s.numero_3, s.numero_4]} />
                       )}
                     </td>
-                    <td className="num">{s.pozo_total == null ? '—' : pesos(s.pozo_total)}</td>
+                    <td className="num">{pesos(s.pozo)}</td>
                     <td style={{ color: 'var(--tinta-2)', fontSize: '0.85rem' }}>
                       {s.fecha_cierre_carga ? fechaHora(s.fecha_cierre_carga) : '—'}
                     </td>

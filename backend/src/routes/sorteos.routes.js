@@ -9,9 +9,9 @@ const router = Router();
 
 /** Columnas públicas de un sorteo. `alias` las prefija para queries con JOIN. */
 const COLUMNAS = [
-  'id', 'periodo', 'precio_jugada', 'estado',
+  'id', 'periodo', 'precio_jugada', 'pozo', 'estado',
   'numero_1', 'numero_2', 'numero_3', 'numero_4',
-  'fecha_cierre_carga', 'fecha_resultado', 'pozo_total', 'created_at',
+  'fecha_cierre_carga', 'fecha_resultado', 'created_at',
 ];
 const CAMPOS = COLUMNAS.join(', ');
 const camposCon = (alias) => COLUMNAS.map((c) => `${alias}.${c}`).join(', ');
@@ -23,15 +23,19 @@ router.get('/', requireAuth, async (req, res) => {
 });
 
 /**
- * GET /api/sorteos/actual → el sorteo con la carga abierta, con su pozo en vivo.
+ * GET /api/sorteos/actual → el sorteo con la carga abierta.
  * Es lo primero que consulta la pantalla del vendedor.
+ *
+ * El `pozo` es fijo y viene de la propia fila; lo que se calcula acá es la
+ * recaudación, que es otra cosa: lo que se lleva vendido.
+ *
  * Va antes que /:id para que "actual" no se interprete como un id.
  */
 router.get('/actual', requireAuth, async (req, res) => {
   const { rows } = await query(`
     SELECT ${camposCon('s')},
            COUNT(j.id) AS jugadas_cargadas,
-           COUNT(j.id) * s.precio_jugada AS pozo_actual
+           COUNT(j.id) * s.precio_jugada AS recaudacion
     FROM sorteos s
     LEFT JOIN jugadas j ON j.sorteo_id = s.id AND j.anulada = false
     WHERE s.estado = 'abierto'
@@ -59,24 +63,60 @@ router.get('/:id', requireAuth, async (req, res) => {
  * si pasa, el handler de errores lo traduce a un 409 con mensaje claro.
  */
 router.post('/', requireAuth, requireAdmin, async (req, res) => {
-  const { periodo, precio_jugada } = req.body ?? {};
+  const { periodo, precio_jugada, pozo } = req.body ?? {};
 
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(periodo ?? '')) {
     throw new AppError(400, 'El período debe tener el formato AAAA-MM (ej: 2026-08).');
   }
+
   const precio = Number(precio_jugada);
   if (!Number.isFinite(precio) || precio <= 0) {
     throw new AppError(400, 'El precio por jugada debe ser un número mayor a cero.');
   }
 
+  // El pozo es el premio anunciado y no depende de cuánto se venda.
+  const premio = Number(pozo);
+  if (!Number.isFinite(premio) || premio <= 0) {
+    throw new AppError(400, 'El pozo debe ser un número mayor a cero.');
+  }
+
   const { rows } = await query(
-    `INSERT INTO sorteos (periodo, precio_jugada, estado)
-     VALUES ($1, $2, 'abierto')
+    `INSERT INTO sorteos (periodo, precio_jugada, pozo, estado)
+     VALUES ($1, $2, $3, 'abierto')
      RETURNING ${CAMPOS}`,
-    [periodo, precio],
+    [periodo, precio, premio],
   );
 
   res.status(201).json({ sorteo: rows[0] });
+});
+
+/**
+ * PATCH /api/sorteos/:id/pozo → corrige el pozo anunciado. Solo admin.
+ *
+ * Solo mientras el sorteo esté abierto: una vez cerrada la carga, el premio ya
+ * se les comunicó a los compradores y cambiarlo sería cambiar las reglas con las
+ * jugadas hechas.
+ */
+router.patch('/:id/pozo', requireAuth, requireAdmin, async (req, res) => {
+  const premio = Number(req.body?.pozo);
+  if (!Number.isFinite(premio) || premio <= 0) {
+    throw new AppError(400, 'El pozo debe ser un número mayor a cero.');
+  }
+
+  const { rows } = await query(
+    `UPDATE sorteos SET pozo = $1
+     WHERE id = $2 AND estado = 'abierto'
+     RETURNING ${CAMPOS}`,
+    [premio, req.params.id],
+  );
+
+  if (!rows[0]) {
+    const { rows: existe } = await query('SELECT estado FROM sorteos WHERE id = $1', [req.params.id]);
+    if (!existe[0]) throw new AppError(404, 'No existe ese sorteo.');
+    throw new AppError(409, `El sorteo ya está ${existe[0].estado}: el pozo no se puede cambiar.`);
+  }
+
+  res.json({ sorteo: rows[0] });
 });
 
 /** PATCH /api/sorteos/:id/cerrar → corta la carga de jugadas. Solo admin. */
@@ -103,8 +143,9 @@ router.patch('/:id/cerrar', requireAuth, requireAdmin, async (req, res) => {
  * POST /api/sorteos/:id/resultado → carga el resultado oficial y finaliza. Solo admin.
  * Body: { numeros: [n, n, n, n] }
  *
- * Además de guardar los números (normalizados), congela el pozo en `pozo_total`
- * para que el histórico no cambie si después se anula alguna jugada.
+ * El pozo no se toca: es fijo desde que se abrió el sorteo. Antes había que
+ * congelarlo acá porque se calculaba a partir de las jugadas y anular una
+ * después habría cambiado el histórico.
  */
 router.post('/:id/resultado', requireAuth, requireAdmin, async (req, res) => {
   const numeros = validarNumeros(req.body?.numeros, 'numeros');
@@ -112,7 +153,7 @@ router.post('/:id/resultado', requireAuth, requireAdmin, async (req, res) => {
   const resultado = await withTransaction(async (client) => {
     // FOR UPDATE: si dos admins cargan el resultado a la vez, uno espera al otro.
     const { rows: actuales } = await client.query(
-      'SELECT id, estado, precio_jugada FROM sorteos WHERE id = $1 FOR UPDATE',
+      'SELECT id, estado FROM sorteos WHERE id = $1 FOR UPDATE',
       [req.params.id],
     );
     const sorteo = actuales[0];
@@ -125,19 +166,13 @@ router.post('/:id/resultado', requireAuth, requireAdmin, async (req, res) => {
       throw new AppError(409, 'Este sorteo ya está finalizado.');
     }
 
-    const { rows: conteo } = await client.query(
-      'SELECT COUNT(*) AS jugadas FROM jugadas WHERE sorteo_id = $1 AND anulada = false',
-      [sorteo.id],
-    );
-    const pozo = conteo[0].jugadas * sorteo.precio_jugada;
-
     const { rows: actualizados } = await client.query(
       `UPDATE sorteos
        SET numero_1 = $1, numero_2 = $2, numero_3 = $3, numero_4 = $4,
-           estado = 'finalizado', fecha_resultado = now(), pozo_total = $5
-       WHERE id = $6
+           estado = 'finalizado', fecha_resultado = now()
+       WHERE id = $5
        RETURNING ${CAMPOS}`,
-      [...numeros, pozo, sorteo.id],
+      [...numeros, sorteo.id],
     );
 
     const { rows: ganadores } = await client.query(
@@ -163,7 +198,7 @@ router.post('/:id/resultado', requireAuth, requireAdmin, async (req, res) => {
     sorteo,
     ganadores,
     vacante: ganadores.length === 0,
-    premio_por_ganador: ganadores.length ? sorteo.pozo_total / ganadores.length : 0,
+    premio_por_ganador: ganadores.length ? sorteo.pozo / ganadores.length : 0,
   });
 });
 
@@ -199,7 +234,7 @@ router.get('/:id/ganadores', requireAuth, requireAdmin, async (req, res) => {
     sorteo,
     ganadores,
     vacante: ganadores.length === 0,
-    premio_por_ganador: ganadores.length ? sorteo.pozo_total / ganadores.length : 0,
+    premio_por_ganador: ganadores.length ? sorteo.pozo / ganadores.length : 0,
   });
 });
 

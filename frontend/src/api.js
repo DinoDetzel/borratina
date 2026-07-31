@@ -76,11 +76,13 @@ export const api = {
   sorteos: {
     listar: () => pedir('/sorteos'),
     actual: () => pedir('/sorteos/actual'),
-    abrir: (periodo, precioJugada) =>
+    abrir: (periodo, precioJugada, pozo) =>
       pedir('/sorteos', {
         method: 'POST',
-        body: JSON.stringify({ periodo, precio_jugada: precioJugada }),
+        body: JSON.stringify({ periodo, precio_jugada: precioJugada, pozo }),
       }),
+    cambiarPozo: (id, pozo) =>
+      pedir(`/sorteos/${id}/pozo`, { method: 'PATCH', body: JSON.stringify({ pozo }) }),
     cerrar: (id) => pedir(`/sorteos/${id}/cerrar`, { method: 'PATCH' }),
     cargarResultado: (id, numeros) =>
       pedir(`/sorteos/${id}/resultado`, { method: 'POST', body: JSON.stringify({ numeros }) }),

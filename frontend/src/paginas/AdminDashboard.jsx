@@ -84,10 +84,10 @@ export default function AdminDashboard() {
         </select>
       </div>
 
-      {/* La cifra que encabeza el panel. */}
+      {/* La cifra que encabeza el panel: el premio comprometido. */}
       <div className="tarjeta" style={{ marginBottom: '1rem' }}>
         <div className="etiqueta" style={{ color: 'var(--tinta-2)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          {finalizado ? 'Pozo repartido' : 'Pozo acumulado'}
+          {finalizado ? 'Pozo repartido' : 'Pozo'}
         </div>
         <div className="hero">{pesos(resumen.pozo)}</div>
         <div className="pie" style={{ color: 'var(--tinta-apagada)', fontSize: '0.85rem' }}>
@@ -95,13 +95,28 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {/* El pozo es fijo, así que lo que importa es si lo que se vende alcanza
+          para cubrirlo. Esa diferencia es el número que dice cómo va el sorteo. */}
       <div className="grilla" style={{ marginBottom: '1rem' }}>
-        <Ficha etiqueta="Jugadas válidas" valor={numero(resumen.jugadas_validas)} />
+        <Ficha
+          etiqueta="Recaudado"
+          valor={pesos(resumen.recaudacion)}
+          pie={`${numero(resumen.jugadas_validas)} jugadas vendidas`}
+        />
+        <Ficha
+          etiqueta={resumen.resultado >= 0 ? 'Ganancia' : 'Falta para cubrir el pozo'}
+          valor={pesos(Math.abs(resumen.resultado))}
+          pie={
+            resumen.resultado >= 0
+              ? 'La recaudación cubre el premio'
+              : `Faltan ${numero(resumen.jugadas_para_cubrir - resumen.jugadas_validas)} jugadas`
+          }
+        />
         <Ficha etiqueta="Vendedores activos" valor={numero(resumen.vendedores_activos)} />
         <Ficha
           etiqueta="Jugadas anuladas"
           valor={numero(resumen.jugadas_anuladas)}
-          pie={resumen.jugadas_anuladas > 0 ? 'No suman al pozo' : null}
+          pie={resumen.jugadas_anuladas > 0 ? 'No cuentan para el sorteo' : null}
         />
       </div>
 
@@ -167,6 +182,7 @@ export default function AdminDashboard() {
                   <th>Período</th>
                   <th>Resultado</th>
                   <th style={{ textAlign: 'right' }}>Pozo</th>
+                  <th style={{ textAlign: 'right' }}>Recaudado</th>
                   <th style={{ textAlign: 'right' }}>Ganadores</th>
                   <th style={{ textAlign: 'right' }}>Premio c/u</th>
                 </tr>
@@ -178,7 +194,14 @@ export default function AdminDashboard() {
                     <td>
                       <Bolillas numeros={[h.numero_1, h.numero_2, h.numero_3, h.numero_4]} />
                     </td>
-                    <td className="num">{pesos(h.pozo_total)}</td>
+                    <td className="num">{pesos(h.pozo)}</td>
+                    <td className="num">
+                      {pesos(h.recaudacion)}
+                      <div style={{ color: 'var(--tinta-apagada)', fontSize: '0.78rem' }}>
+                        {h.resultado >= 0 ? '+' : '−'}
+                        {pesos(Math.abs(h.resultado)).replace('$', '').trim()}
+                      </div>
+                    </td>
                     <td className="num">
                       {h.vacante ? <Chip estado="cerrado">Vacante</Chip> : numero(h.cantidad_ganadores)}
                     </td>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { api } from '../api.js';
 import Comprobante from '../componentes/Comprobante.jsx';
-import { Bolillas, Cargando, Chip, MensajeError, Ficha, Vacio } from '../componentes/comunes.jsx';
+import { Bolillas, Cargando, Chip, MensajeError, Vacio } from '../componentes/comunes.jsx';
 import { fechaHora, periodoLargo, pesos } from '../utilidades.js';
 
 const VACIO = ['', '', '', ''];
@@ -103,7 +103,7 @@ export default function Vendedor() {
       document.getElementById('numero-0')?.focus();
 
       traerJugadas();
-      traerSorteo(); // el pozo cambió
+      traerSorteo(); // cambió el conteo de jugadas
     } catch (err) {
       setError(err.message);
     } finally {
@@ -133,13 +133,16 @@ export default function Vendedor() {
         <Chip estado={sorteo.estado}>Sorteo {periodoLargo(sorteo.periodo)}</Chip>
       </div>
 
-      <div className="grilla" style={{ marginBottom: '1rem' }}>
-        <Ficha etiqueta="Pozo acumulado" valor={pesos(sorteo.pozo_actual)} />
-        <Ficha
-          etiqueta="Jugadas cargadas"
-          valor={sorteo.jugadas_cargadas}
-          pie={`${pesos(sorteo.precio_jugada)} por jugada`}
-        />
+      {/* El pozo es el gancho de venta, así que va grande y primero: es lo que
+          el vendedor le dice al comprador. */}
+      <div className="tarjeta" style={{ marginBottom: '1rem' }}>
+        <div className="etiqueta" style={{ color: 'var(--tinta-2)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          Pozo de {periodoLargo(sorteo.periodo)}
+        </div>
+        <div className="hero">{pesos(sorteo.pozo)}</div>
+        <div className="pie" style={{ color: 'var(--tinta-apagada)', fontSize: '0.85rem' }}>
+          {pesos(sorteo.precio_jugada)} por jugada · {sorteo.jugadas_cargadas} cargadas
+        </div>
       </div>
 
       <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'minmax(280px, 1fr) auto' }}>

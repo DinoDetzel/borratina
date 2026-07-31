@@ -35,13 +35,13 @@ router.get('/resumen', async (req, res) => {
   const sorteoId = await resolverSorteoId(req.query.sorteo_id);
 
   const { rows } = await query(
-    `SELECT s.id, s.periodo, s.estado, s.precio_jugada,
+    `SELECT s.id, s.periodo, s.estado, s.precio_jugada, s.pozo,
             s.numero_1, s.numero_2, s.numero_3, s.numero_4,
-            s.fecha_cierre_carga, s.fecha_resultado, s.pozo_total,
+            s.fecha_cierre_carga, s.fecha_resultado,
             COUNT(j.id) FILTER (WHERE j.anulada = false) AS jugadas_validas,
             COUNT(j.id) FILTER (WHERE j.anulada = true)  AS jugadas_anuladas,
             COUNT(DISTINCT j.vendedor_id) FILTER (WHERE j.anulada = false) AS vendedores_activos,
-            COUNT(j.id) FILTER (WHERE j.anulada = false) * s.precio_jugada AS pozo_actual
+            COUNT(j.id) FILTER (WHERE j.anulada = false) * s.precio_jugada AS recaudacion
      FROM sorteos s
      LEFT JOIN jugadas j ON j.sorteo_id = s.id
      WHERE s.id = $1
@@ -51,10 +51,20 @@ router.get('/resumen', async (req, res) => {
 
   const sorteo = rows[0];
 
-  // Ya finalizado: el pozo que vale es el congelado, no el recalculado.
-  const pozo = sorteo.estado === 'finalizado' ? sorteo.pozo_total : sorteo.pozo_actual;
+  // El pozo es fijo y la recaudación depende de cuánto se venda, así que la
+  // diferencia entre las dos es lo que gana o pierde el organizador con este
+  // sorteo. Es el número que dice si conviene o no, así que se calcula acá y no
+  // se deja librado a que cada pantalla lo reste por su cuenta.
+  const resultado = sorteo.recaudacion - sorteo.pozo;
 
-  res.json({ resumen: { ...sorteo, pozo } });
+  res.json({
+    resumen: {
+      ...sorteo,
+      resultado,
+      // Cuántas jugadas hacen falta para cubrir el premio.
+      jugadas_para_cubrir: Math.ceil(sorteo.pozo / sorteo.precio_jugada),
+    },
+  });
 });
 
 /**
@@ -122,21 +132,33 @@ router.get('/ventas', async (req, res) => {
  * Sorteos finalizados con su pozo y cuántos ganadores hubo.
  */
 router.get('/historial', async (req, res) => {
+  // Las jugadas ganadoras y el total vendido se cuentan por separado: el JOIN de
+  // ganadores filtra por los números del sorteo, así que no sirve para contar
+  // cuántas jugadas hubo en total.
   const { rows } = await query(`
-    SELECT s.id, s.periodo, s.precio_jugada,
+    WITH ventas AS (
+      SELECT sorteo_id, COUNT(*) AS jugadas
+      FROM jugadas WHERE anulada = false
+      GROUP BY sorteo_id
+    )
+    SELECT s.id, s.periodo, s.precio_jugada, s.pozo,
            s.numero_1, s.numero_2, s.numero_3, s.numero_4,
-           s.fecha_resultado, s.pozo_total,
+           s.fecha_resultado,
+           COALESCE(v.jugadas, 0) AS jugadas,
+           COALESCE(v.jugadas, 0) * s.precio_jugada AS recaudacion,
+           COALESCE(v.jugadas, 0) * s.precio_jugada - s.pozo AS resultado,
            COUNT(j.id) AS cantidad_ganadores,
            CASE WHEN COUNT(j.id) = 0 THEN 0
-                ELSE s.pozo_total / COUNT(j.id)
+                ELSE s.pozo / COUNT(j.id)
            END AS premio_por_ganador,
            COUNT(j.id) = 0 AS vacante
     FROM sorteos s
+    LEFT JOIN ventas v ON v.sorteo_id = s.id
     LEFT JOIN jugadas j ON j.sorteo_id = s.id AND j.anulada = false
         AND j.numero_1 = s.numero_1 AND j.numero_2 = s.numero_2
         AND j.numero_3 = s.numero_3 AND j.numero_4 = s.numero_4
     WHERE s.estado = 'finalizado'
-    GROUP BY s.id
+    GROUP BY s.id, v.jugadas
     ORDER BY s.periodo DESC
   `);
 

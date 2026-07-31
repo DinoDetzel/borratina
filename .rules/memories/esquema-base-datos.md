@@ -16,6 +16,25 @@
 | `002_codigo_comprobante.sql` | `jugadas.codigo`: identificador único del comprobante |
 | `003_usuario_login.sql` | `usuarios.usuario`: credencial de ingreso; el email pasa a opcional |
 | `004_codigo_con_fecha.sql` | El código del comprobante pasa a `AAMMDD-XXXXXX` y lo pone un trigger |
+| `005_pozo_fijo.sql` | `pozo_total` → `pozo`: deja de calcularse y pasa a definirse al abrir |
+
+## El pozo es un dato, no un cálculo
+
+```sql
+ALTER TABLE sorteos RENAME COLUMN pozo_total TO pozo;
+ALTER TABLE sorteos ALTER COLUMN pozo SET NOT NULL;
+ALTER TABLE sorteos ADD CONSTRAINT chk_sorteos_pozo CHECK (pozo > 0);
+```
+
+- Se renombró porque el significado cambió: `pozo_total` sonaba a total calculado
+  y ahora es un valor de entrada.
+- `precio_jugada` **no** desapareció: sigue siendo lo que paga el comprador. Lo que
+  cambió es que ya no determina el premio, así que **pozo y recaudación son dos
+  números distintos** y su diferencia es lo que gana o pierde el organizador.
+- Ya no hay que congelar nada al finalizar: el pozo fue fijo desde el principio.
+- El backfill usó el cálculo viejo (`jugadas × precio`) para no inventar valores,
+  con el precio de una jugada como piso para los sorteos sin ventas, que no
+  habrían pasado el `CHECK`.
 
 ## Credencial de ingreso
 

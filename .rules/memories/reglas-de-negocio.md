@@ -48,14 +48,30 @@ con modalidad de extractos de quiniela y premios por aciertos numéricos.
 
 ## El pozo
 
+- El pozo es **fijo**: lo define el admin al abrir el sorteo (ej: $1.500.000 para
+  agosto) y **no depende de cuánto se venda**.
+- Es el premio que se anuncia de entrada, y es el gancho de venta: es lo que el
+  vendedor le dice al comprador.
+- Se puede corregir **mientras la carga esté abierta**. Una vez cerrada, no: el
+  premio ya se anunció con las jugadas hechas.
+
+> Antes el pozo se calculaba como `jugadas no anuladas × precio_jugada` y se
+> congelaba al finalizar. Cambió en la migración 005.
+
+## Pozo y recaudación son cosas distintas
+
+Al ser el pozo fijo, dejó de coincidir con lo recaudado:
+
 ```
-pozo_total = cantidad de jugadas NO anuladas × precio_jugada
+recaudación = jugadas NO anuladas × precio_jugada
+resultado   = recaudación − pozo
 ```
 
-- Las jugadas **anuladas no suman al pozo** ni pueden ganar.
-- El pozo se calcula en vivo mientras el sorteo está abierto, y se **congela**
-  (se persiste en `sorteos.pozo_total`) al finalizarlo, para que el histórico no
-  cambie si después se toca alguna jugada.
+- El **resultado** es lo que gana o pierde el organizador con ese sorteo. Si se
+  vende poco, se paga el premio igual y se pierde plata.
+- El punto de equilibrio es `pozo / precio_jugada` jugadas.
+- Las jugadas **anuladas no cuentan** para la recaudación ni pueden ganar, pero
+  ya no afectan el premio: el pozo es el mismo se venda lo que se venda.
 
 ## El resultado
 
@@ -68,7 +84,8 @@ pozo_total = cantidad de jugadas NO anuladas × precio_jugada
 
 - Gana la jugada **no anulada** cuyos 4 números coinciden con los 4 del sorteo
   (comparados como conjunto, sobre la forma normalizada).
-- Si hay **N ganadores**, cada uno cobra `pozo_total / N`.
+- Si hay **N ganadores**, cada uno cobra `pozo / N`. Con un pozo de $1.500.000 y
+  dos ganadores, son $750.000 cada uno — aunque se hayan vendido tres jugadas.
 - Si hay **0 ganadores**, el sorteo queda **vacante**: el pozo no se acumula al mes
   siguiente ni se reparte. Queda registrado como vacante y nada más.
 - El sistema **no registra si el premio fue efectivamente pagado**. Eso se maneja

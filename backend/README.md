@@ -56,11 +56,12 @@ Todo cuelga de `/api`. Salvo `login` y `health`, todos piden
 | Método | Ruta | Rol | Qué hace |
 |---|---|---|---|
 | GET | `/sorteos` | cualquiera | Todos los sorteos |
-| GET | `/sorteos/actual` | cualquiera | El sorteo abierto, con pozo en vivo |
+| GET | `/sorteos/actual` | cualquiera | El sorteo abierto, con su pozo y lo recaudado |
 | GET | `/sorteos/:id` | cualquiera | Un sorteo |
-| POST | `/sorteos` | admin | Abre el sorteo del mes |
+| POST | `/sorteos` | admin | Abre el sorteo del mes (período, pozo, precio) |
+| PATCH | `/sorteos/:id/pozo` | admin | Corrige el pozo (solo con la carga abierta) |
 | PATCH | `/sorteos/:id/cerrar` | admin | Corta la carga de jugadas |
-| POST | `/sorteos/:id/resultado` | admin | Carga el resultado, finaliza y congela el pozo |
+| POST | `/sorteos/:id/resultado` | admin | Carga el resultado y finaliza |
 | GET | `/sorteos/:id/ganadores` | admin | Ganadores y reparto |
 
 ### Jugadas
@@ -89,7 +90,7 @@ HTML: el maquetado (imprimir, mandar por WhatsApp) es del frontend.
   "numeros": ["07", "23", "45", "88"],
   "comprador": { "nombre": "Dora Silva", "telefono": "351-9876" },
   "sorteo": { "periodo": "2026-08", "estado": "abierto" },
-  "importe": 600,
+  "importe": 2000,
   "vendedor": "Vendedor Uno",
   "fecha": "2026-07-30T22:02:14.006Z",
   "anulada": false
@@ -144,9 +145,15 @@ Si alguna vez se cambia el alfabeto, hay que cambiarlo también en `ALFABETO` de
 código entero contra el alfabeto: la parte de la fecha lleva `0` y `1`, que el
 alfabeto no incluye, así que cada mitad se valida por separado.
 
-**El pozo se congela al finalizar.** Mientras el sorteo está abierto se calcula en
-vivo; al cargar el resultado se persiste en `sorteos.pozo_total` para que anular
-una jugada después no altere el histórico.
+**El pozo es fijo, no se calcula.** Lo define el admin al abrir el sorteo y no
+depende de cuánto se venda: con un pozo de $1.500.000 y dos ganadores, cobran
+$750.000 cada uno aunque se hayan vendido tres jugadas. Solo se puede corregir
+mientras la carga esté abierta.
+
+**Pozo y recaudación son dos números distintos.** `recaudación = jugadas no
+anuladas × precio_jugada`, y `resultado = recaudación − pozo` es lo que gana o
+pierde el organizador. El dashboard los muestra separados a propósito: si se
+vende poco, el premio se paga igual.
 
 ## Deploy en Render
 
