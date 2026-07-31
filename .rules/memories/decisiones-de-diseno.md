@@ -62,8 +62,10 @@ Registro de decisiones de producto tomadas durante el diseño inicial del proyec
 - **Se entra con un nombre de usuario corto, no con email** (confirmado 2026-07-30).
   Son pocos vendedores y las cuentas las crea el admin a mano: pedir un email
   para entrar era burocracia sin beneficio.
-- El **email queda como dato de contacto opcional**. No se eliminó la columna:
-  borrar datos no tiene vuelta atrás y no había nada que ganar.
+- **El email se eliminó** (2026-07-31), y esto reemplaza a lo que decía antes esta
+  misma sección: la 003 lo había dejado como dato de contacto opcional, pero
+  quedaba siempre vacío. Un vendedor se da de alta con **nombre, usuario y
+  contraseña**, nada más. Migración 009.
 - Formato del usuario: 3 a 30 caracteres, minúsculas, números, punto, guion o
   guion bajo. Sin espacios ni acentos, porque es una credencial que se tipea.
   Para mostrar en pantalla se sigue usando la columna `nombre`.

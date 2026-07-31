@@ -50,7 +50,7 @@ Todo cuelga de `/api`. Salvo `login` y `health`, todos piden
 | GET | `/auth/me` | cualquiera | Datos del usuario logueado |
 | GET | `/auth/usuarios` | admin | Lista usuarios |
 | POST | `/auth/usuarios` | admin | Da de alta un vendedor o admin |
-| PATCH | `/auth/usuarios/:id` | admin | Corrige nombre, usuario, email o rol |
+| PATCH | `/auth/usuarios/:id` | admin | Corrige nombre, usuario o rol |
 | PATCH | `/auth/usuarios/:id/password` | admin | Le pone una contraseña nueva |
 | PATCH | `/auth/usuarios/:id/activo` | admin | Activa o desactiva una cuenta |
 | DELETE | `/auth/usuarios/:id` | admin | Borra la cuenta, si no dejó rastro |
@@ -148,11 +148,11 @@ Lo mismo vale para los **totales**: `GET /sorteos/actual` devuelve `mis_jugadas`
 a todos, pero `jugadas_cargadas` y `recaudacion` (que son de todo el sorteo) solo
 al admin. Un vendedor no tiene por qué enterarse de cuánto vendieron los demás.
 
-**Se entra con nombre de usuario, no con email.** Son pocos vendedores y las
-cuentas las crea el admin, así que pedir un email para entrar era burocracia. El
-email quedó como dato de contacto **opcional**. El usuario se normaliza a
-minúsculas al crear la cuenta y al buscarla, así que `Dino` y `dino ` entran
-igual.
+**Una cuenta es nombre, usuario y contraseña.** No hay email: se entra con el
+nombre de usuario, y las cuentas las crea el admin en persona, así que el email
+no servía ni para entrar ni para avisar nada. La columna existió hasta la
+migración 009. El usuario se normaliza a minúsculas al crear la cuenta y al
+buscarla, así que `Dino` y `dino ` entran igual.
 
 **Anular no borra.** Se marca la fila y se registra qué admin lo hizo y cuándo.
 

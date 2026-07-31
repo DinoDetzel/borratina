@@ -29,7 +29,7 @@ router.post('/login', async (req, res) => {
   }
 
   const { rows } = await query(
-    `SELECT id, nombre, usuario, email, rol, activo, password_hash
+    `SELECT id, nombre, usuario, rol, activo, password_hash
      FROM usuarios WHERE usuario = $1`,
     [normalizarUsuario(nombreUsuario)],
   );
@@ -66,7 +66,7 @@ router.get('/me', requireAuth, (req, res) => {
  * No hay registro público: las cuentas las crea el administrador.
  */
 router.post('/usuarios', requireAuth, requireAdmin, async (req, res) => {
-  const { nombre, usuario, email, password, rol = 'vendedor' } = req.body ?? {};
+  const { nombre, usuario, password, rol = 'vendedor' } = req.body ?? {};
 
   if (!nombre?.trim() || !usuario?.trim() || !password) {
     throw new AppError(400, 'Nombre, usuario y contraseña son obligatorios.');
@@ -84,15 +84,12 @@ router.post('/usuarios', requireAuth, requireAdmin, async (req, res) => {
     throw new AppError(400, 'El rol debe ser "vendedor" o "admin".');
   }
 
-  // El email es opcional: sirve de contacto, no para entrar.
-  const correo = email?.trim() ? email.trim().toLowerCase() : null;
-
   const hash = await bcrypt.hash(password, 10);
   const { rows } = await query(
-    `INSERT INTO usuarios (nombre, usuario, email, password_hash, rol)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, nombre, usuario, email, rol, activo, created_at`,
-    [nombre.trim(), nombreUsuario, correo, hash, rol],
+    `INSERT INTO usuarios (nombre, usuario, password_hash, rol)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, nombre, usuario, rol, activo, created_at`,
+    [nombre.trim(), nombreUsuario, hash, rol],
   );
 
   res.status(201).json({ usuario: rows[0] });
@@ -101,7 +98,7 @@ router.post('/usuarios', requireAuth, requireAdmin, async (req, res) => {
 /** GET /api/auth/usuarios → listado de usuarios. Solo admin. */
 router.get('/usuarios', requireAuth, requireAdmin, async (req, res) => {
   const { rows } = await query(
-    `SELECT id, nombre, usuario, email, rol, activo, created_at
+    `SELECT id, nombre, usuario, rol, activo, created_at
      FROM usuarios ORDER BY rol, nombre`,
   );
   res.json({ usuarios: rows });
@@ -114,7 +111,7 @@ router.get('/usuarios', requireAuth, requireAdmin, async (req, res) => {
  * un efecto que los demás campos no tienen (cierra las sesiones abiertas).
  */
 router.patch('/usuarios/:id', requireAuth, requireAdmin, async (req, res) => {
-  const { nombre, usuario, email, rol } = req.body ?? {};
+  const { nombre, usuario, rol } = req.body ?? {};
   const id = Number(req.params.id);
 
   if (!nombre?.trim() || !usuario?.trim()) {
@@ -136,13 +133,11 @@ router.patch('/usuarios/:id', requireAuth, requireAdmin, async (req, res) => {
     throw new AppError(400, 'No podés sacarte a vos mismo el rol de administrador.');
   }
 
-  const correo = email?.trim() ? email.trim().toLowerCase() : null;
-
   const { rows } = await query(
-    `UPDATE usuarios SET nombre = $1, usuario = $2, email = $3, rol = $4
-     WHERE id = $5
-     RETURNING id, nombre, usuario, email, rol, activo, created_at`,
-    [nombre.trim(), nombreUsuario, correo, rol, id],
+    `UPDATE usuarios SET nombre = $1, usuario = $2, rol = $3
+     WHERE id = $4
+     RETURNING id, nombre, usuario, rol, activo, created_at`,
+    [nombre.trim(), nombreUsuario, rol, id],
   );
   if (!rows[0]) throw new AppError(404, 'No existe ese usuario.');
 
@@ -231,7 +226,7 @@ router.patch('/usuarios/:id/activo', requireAuth, requireAdmin, async (req, res)
 
   const { rows } = await query(
     `UPDATE usuarios SET activo = $1 WHERE id = $2
-     RETURNING id, nombre, usuario, email, rol, activo`,
+     RETURNING id, nombre, usuario, rol, activo`,
     [activo, id],
   );
   if (!rows[0]) throw new AppError(404, 'No existe ese usuario.');

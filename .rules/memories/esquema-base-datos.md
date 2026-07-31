@@ -19,6 +19,8 @@
 | `005_pozo_fijo.sql` | `pozo_total` → `pozo`: deja de calcularse y pasa a definirse al abrir |
 | `006_ventana_de_carga.sql` | `inicia_at` / `finaliza_at`: desde y hasta cuándo se puede cargar |
 | `007_extracto_de_20.sql` | El resultado pasa de 4 números a un extracto de 20 |
+| `008_password_actualizada.sql` | `password_actualizada_at`: invalida los tokens anteriores al cambio |
+| `009_sin_email.sql` | Se elimina `usuarios.email` |
 
 ## El resultado es un extracto de 20
 
@@ -92,10 +94,16 @@ ALTER TABLE usuarios ALTER COLUMN email DROP NOT NULL;
 
 - El backfill toma la parte del email anterior al `@`, y desempata con el `id` si
   dos emails distintos comparten esa parte.
-- El email sigue siendo `UNIQUE`, pero ahora acepta `NULL`: en Postgres los NULL
-  no colisionan entre sí en un índice único, así que puede haber varias cuentas
-  sin email.
 - El `CHECK` exige minúsculas; la normalización la hace la app antes de insertar.
+
+**El email ya no existe** (migración 009, 2026-07-31). La 003 lo había dejado
+como dato de contacto opcional; en la práctica quedaba siempre vacío, porque las
+cuentas las da el admin en persona. Para dar de alta a un vendedor hacen falta
+tres cosas: nombre, usuario y contraseña.
+
+```sql
+ALTER TABLE usuarios DROP COLUMN email;
+```
 
 ## Código de comprobante
 

@@ -12,7 +12,7 @@ import {
 } from '../componentes/comunes.jsx';
 import { fechaDia } from '../utilidades.js';
 
-const NUEVO = { nombre: '', usuario: '', email: '', password: '', rol: 'vendedor' };
+const NUEVO = { nombre: '', usuario: '', password: '', rol: 'vendedor' };
 
 export default function AdminUsuarios() {
   const { usuario: yo } = useAuth();
@@ -137,15 +137,6 @@ export default function AdminUsuarios() {
               />
             </div>
             <div>
-              <label htmlFor="u-email">Email (opcional)</label>
-              <input
-                id="u-email"
-                type="email"
-                value={nuevo.email}
-                onChange={(e) => setNuevo({ ...nuevo, email: e.target.value })}
-              />
-            </div>
-            <div>
               <label htmlFor="u-password">Contraseña</label>
               <input
                 id="u-password"
@@ -192,7 +183,6 @@ export default function AdminUsuarios() {
                 <tr>
                   <th>Nombre</th>
                   <th>Usuario</th>
-                  <th>Email</th>
                   <th>Rol</th>
                   <th>Estado</th>
                   <th>Alta</th>
@@ -209,7 +199,6 @@ export default function AdminUsuarios() {
                       )}
                     </td>
                     <td className="codigo">{u.usuario}</td>
-                    <td>{u.email ?? <span style={{ color: 'var(--tinta-apagada)' }}>—</span>}</td>
                     <td>{u.rol}</td>
                     <td>
                       <Chip estado={u.activo ? 'abierto' : 'anulada'}>
@@ -235,7 +224,6 @@ export default function AdminUsuarios() {
                               usuario: u,
                               nombre: u.nombre,
                               login: u.usuario,
-                              email: u.email ?? '',
                               rol: u.rol,
                             })
                           }
@@ -292,7 +280,6 @@ export default function AdminUsuarios() {
                 api.usuarios.editar(cartel.usuario.id, {
                   nombre: cartel.nombre,
                   usuario: cartel.login,
-                  email: cartel.email,
                   rol: cartel.rol,
                 }),
               'Cuenta actualizada.',
@@ -325,16 +312,6 @@ export default function AdminUsuarios() {
             <p style={{ color: 'var(--tinta-apagada)', fontSize: '0.8rem', margin: '0.3rem 0 0' }}>
               Si lo cambiás, tiene que entrar con el nuevo.
             </p>
-          </div>
-
-          <div className="campo">
-            <label htmlFor="ed-email">Email (opcional)</label>
-            <input
-              id="ed-email"
-              type="email"
-              value={cartel.email}
-              onChange={(e) => setCartel({ ...cartel, email: e.target.value })}
-            />
           </div>
 
           <div className="campo">
