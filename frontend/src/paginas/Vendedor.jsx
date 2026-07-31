@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import Comprobante from '../componentes/Comprobante.jsx';
+import { enlaceWhatsapp, numeroWhatsapp } from '../whatsapp.js';
 import { Bolillas, Cargando, Chip, MensajeError, Vacio } from '../componentes/comunes.jsx';
 import { cuantoFalta, fechaHora, numero, periodoLargo, pesos } from '../utilidades.js';
 
@@ -281,14 +282,33 @@ export default function Vendedor() {
         {ultimo && (
           <div>
             <Comprobante comprobante={ultimo} />
-            <div className="no-imprimir" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-              <button className="secundario chico" onClick={() => window.print()}>
+
+            {/* Mandarlo va primero que imprimirlo: el vendedor está en la calle
+                con el teléfono, no al lado de una impresora. */}
+            <div className="no-imprimir acciones-comprobante">
+              <a
+                className="boton"
+                href={enlaceWhatsapp(ultimo)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Enviar por WhatsApp
+              </a>
+              <button className="secundario" onClick={() => window.print()}>
                 Imprimir
               </button>
-              <button className="secundario chico" onClick={() => setUltimo(null)}>
+              <button className="enlace" onClick={() => setUltimo(null)}>
                 Cerrar
               </button>
             </div>
+
+            {/* Decir a qué chat va antes de abrirlo: si el número está mal
+                tipeado, es mejor enterarse acá que después de mandarlo. */}
+            <p className="no-imprimir pie-comprobante">
+              {numeroWhatsapp(ultimo.comprador.telefono)
+                ? `Se abre el chat con ${ultimo.comprador.telefono}. El mensaje queda escrito; lo mandás vos.`
+                : 'Sin teléfono cargado: WhatsApp te va a pedir el contacto. El mensaje ya va escrito.'}
+            </p>
           </div>
         )}
       </div>

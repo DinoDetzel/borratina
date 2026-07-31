@@ -1104,3 +1104,20 @@ td.num { font-variant-numeric: tabular-nums; text-align: right; }
   }
   .comprobante-club .hoja { box-shadow: none; }
 }
+
+/* ---------- Acciones del comprobante recién emitido ---------- */
+
+.acciones-comprobante {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.85rem;
+}
+
+.pie-comprobante {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  margin: 0.5rem 0 0;
+  max-width: 46ch;
+}

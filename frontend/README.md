@@ -77,6 +77,17 @@ Al imprimir se oculta todo por `visibility` menos el comprobante. Tiene que ser
 `visibility` y no `display`, porque el comprobante cuelga del formulario de
 carga: ocultando por `display` desaparecería con él.
 
+**El comprobante se manda por WhatsApp como texto, no como imagen.** Una foto
+del ticket se ve mejor pero deja el número de comprobante adentro de un mapa de
+píxeles: el comprador no lo puede copiar ni encontrar buscando en el chat, que es
+exactamente lo que va a hacer cuando venga a cobrar. Además evitaría cargar una
+librería de captura de ~200 kB en una app que se usa con datos móviles.
+
+`whatsapp.js` arma el enlace `wa.me`. Si el teléfono del comprador se puede
+normalizar, abre su chat directo; si no, WhatsApp pide elegir el contacto. **No
+adivina**: antes que abrir el chat equivocado con los datos de una jugada ajena,
+prefiere que el vendedor elija. La pantalla dice de antemano a qué número va.
+
 **Las fechas con hora van en dos controles, no en un `datetime-local`.**
 `CampoFechaHora` es un `input type="date"` más una lista de horas. El campo
 combinado se manejaba mal: los segmentos se recorren con las flechas sin saber
