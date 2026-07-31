@@ -65,9 +65,12 @@ function Cabecera() {
 
   return (
     <header className="cabecera no-imprimir">
-      <span className="marca">Borratina</span>
+      <span className="marca">al Rojo Vivo!!! - Borratina</span>
       <span className="quien">
-        {usuario.nombre} · {usuario.rol}
+        {usuario.nombre}
+        {/* El rol se cae en el teléfono: uno sabe con qué cuenta entró, y con
+            el nombre largo arriba la cabecera se partía en dos renglones. */}
+        <span className="rol"> · {usuario.rol}</span>
       </span>
       <button className="secundario chico" onClick={cerrarSesion}>
         Salir

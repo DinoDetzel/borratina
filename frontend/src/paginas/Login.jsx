@@ -28,7 +28,7 @@ export default function Login() {
   return (
     <div className="login">
       <form className="tarjeta" onSubmit={enviar}>
-        <h1>Borratina</h1>
+        <h1>al Rojo Vivo!!! - Borratina</h1>
         <p className="subtitulo">Ingresá con tu cuenta de vendedor o administrador.</p>
 
         <MensajeError>{error}</MensajeError>
