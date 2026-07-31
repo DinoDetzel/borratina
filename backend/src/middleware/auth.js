@@ -31,7 +31,8 @@ export async function requireAuth(req, res, next) {
   }
 
   const { rows } = await query(
-    'SELECT id, nombre, usuario, email, rol, activo FROM usuarios WHERE id = $1',
+    `SELECT id, nombre, usuario, email, rol, activo, password_actualizada_at
+     FROM usuarios WHERE id = $1`,
     [payload.sub],
   );
   const usuario = rows[0];
@@ -40,6 +41,17 @@ export async function requireAuth(req, res, next) {
     return next(new AppError(401, 'La cuenta no existe o está desactivada.'));
   }
 
+  // Si la contraseña cambió después de que se firmó este token, el token no
+  // vale más: es lo que hace que restablecer una clave eche de verdad al que
+  // la tenía. `iat` viene en segundos, así que la fecha del cambio se trunca a
+  // segundos también; si no, un login en el mismo segundo que el cambio se
+  // rechazaría a sí mismo.
+  const cambioEnSegundos = Math.floor(new Date(usuario.password_actualizada_at).getTime() / 1000);
+  if (payload.iat < cambioEnSegundos) {
+    return next(new AppError(401, 'La contraseña cambió, volvé a iniciar sesión.'));
+  }
+
+  delete usuario.password_actualizada_at;
   req.user = usuario;
   return next();
 }

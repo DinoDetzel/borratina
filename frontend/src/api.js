@@ -69,8 +69,16 @@ export const api = {
   usuarios: {
     listar: () => pedir('/auth/usuarios'),
     crear: (datos) => pedir('/auth/usuarios', { method: 'POST', body: JSON.stringify(datos) }),
+    editar: (id, datos) =>
+      pedir(`/auth/usuarios/${id}`, { method: 'PATCH', body: JSON.stringify(datos) }),
     cambiarActivo: (id, activo) =>
       pedir(`/auth/usuarios/${id}/activo`, { method: 'PATCH', body: JSON.stringify({ activo }) }),
+    cambiarPassword: (id, password) =>
+      pedir(`/auth/usuarios/${id}/password`, {
+        method: 'PATCH',
+        body: JSON.stringify({ password }),
+      }),
+    borrar: (id) => pedir(`/auth/usuarios/${id}`, { method: 'DELETE' }),
   },
 
   sorteos: {

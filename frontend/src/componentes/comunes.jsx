@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 import { formatearNumero } from '../utilidades.js';
 
 /**
@@ -43,6 +45,63 @@ export function Cargando({ children = 'Cargando…' }) {
 
 export function Vacio({ children }) {
   return <div className="vacio">{children}</div>;
+}
+
+/**
+ * Cartel modal: confirmar algo que no se puede deshacer, o completar un
+ * formulario corto sin salir de la pantalla.
+ *
+ * Usa el <dialog> nativo con showModal(), que ya se encarga del foco, del fondo
+ * inerte y de cerrar con Escape. El contenido va dentro de un <form>, así Enter
+ * confirma sin tener que llegar al botón.
+ */
+export function Dialogo({
+  titulo,
+  children,
+  confirmar = 'Confirmar',
+  peligro = false,
+  ocupado = false,
+  onConfirmar,
+  onCerrar,
+}) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    // showModal() no se puede llamar dos veces sobre el mismo diálogo abierto.
+    if (!ref.current?.open) ref.current?.showModal();
+  }, []);
+
+  return (
+    <dialog
+      ref={ref}
+      className="dialogo"
+      // Escape y el click en el fondo disparan "cancel": lo tomamos nosotros
+      // para que el estado de React quede en sincronía con el DOM.
+      onCancel={(e) => {
+        e.preventDefault();
+        onCerrar();
+      }}
+    >
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onConfirmar();
+        }}
+      >
+        <h2>{titulo}</h2>
+        <div className="cuerpo">{children}</div>
+
+        <div className="acciones">
+          <button type="button" className="secundario" onClick={onCerrar} disabled={ocupado}>
+            Cancelar
+          </button>
+          <button type="submit" className={peligro ? 'peligro' : ''} disabled={ocupado}>
+            {ocupado ? 'Un momento…' : confirmar}
+          </button>
+        </div>
+      </form>
+    </dialog>
+  );
 }
 
 /** Dato suelto: etiqueta arriba, número grande abajo. */

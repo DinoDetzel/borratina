@@ -249,6 +249,44 @@ button.chico {
   font-size: 0.82rem;
 }
 
+/* ---------- Cartel modal ---------- */
+
+.dialogo {
+  width: min(440px, calc(100vw - 2rem));
+  padding: 1.25rem;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  background: var(--superficie);
+  color: var(--tinta);
+  box-shadow: var(--sombra);
+}
+.dialogo::backdrop { background: rgba(11, 11, 11, 0.45); }
+
+.dialogo h2 { margin: 0 0 0.75rem; font-size: 1.1rem; }
+.dialogo .cuerpo { color: var(--tinta-2); }
+.dialogo .cuerpo p { margin: 0 0 0.75rem; }
+.dialogo .cuerpo p:last-child { margin-bottom: 0; }
+.dialogo .cuerpo label { color: var(--tinta); }
+
+.dialogo .acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+/* En el celular el cartel se apoya abajo, donde llega el pulgar. */
+@media (max-width: 700px) {
+  .dialogo {
+    margin: auto auto 0;
+    width: 100%;
+    max-width: none;
+    border-radius: var(--radio) var(--radio) 0 0;
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+  }
+  .dialogo .acciones button { flex: 1; }
+}
+
 /* ---------- Números de la jugada ---------- */
 
 .numeros {

@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react';
 
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
-import { Cargando, Chip, MensajeError, MensajeExito, Vacio } from '../componentes/comunes.jsx';
+import {
+  Cargando,
+  Chip,
+  Dialogo,
+  MensajeError,
+  MensajeExito,
+  Vacio,
+} from '../componentes/comunes.jsx';
 import { fechaHora } from '../utilidades.js';
 
 const NUEVO = { nombre: '', usuario: '', email: '', password: '', rol: 'vendedor' };
@@ -17,6 +24,12 @@ export default function AdminUsuarios() {
 
   const [nuevo, setNuevo] = useState(NUEVO);
   const [creando, setCreando] = useState(false);
+
+  // Cartel abierto: { tipo: 'editar' | 'password' | 'borrar', usuario, ... }.
+  // Uno solo a la vez, así que alcanza con un estado.
+  const [cartel, setCartel] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+  const cerrarCartel = () => setCartel(null);
 
   async function traer() {
     setCargando(true);
@@ -61,6 +74,26 @@ export default function AdminUsuarios() {
       await traer();
     } catch (err) {
       setError(err.message);
+    }
+  }
+
+  /**
+   * Ejecuta lo que confirma el cartel. Si sale bien lo cierra y refresca; si
+   * falla lo deja abierto con el error adentro, para no perder lo tipeado.
+   */
+  async function confirmarCartel(fn, mensaje) {
+    setError('');
+    setExito('');
+    setGuardando(true);
+    try {
+      await fn();
+      setExito(mensaje);
+      cerrarCartel();
+      await traer();
+    } catch (err) {
+      setCartel((c) => ({ ...c, error: err.message }));
+    } finally {
+      setGuardando(false);
     }
   }
 
@@ -187,15 +220,51 @@ export default function AdminUsuarios() {
                       {fechaHora(u.created_at)}
                     </td>
                     <td>
-                      {/* El backend rechaza desactivarse a uno mismo; acá ni lo ofrecemos. */}
-                      {u.id !== yo.id && (
+                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
                         <button
-                          className={u.activo ? 'peligro chico' : 'secundario chico'}
-                          onClick={() => cambiarActivo(u)}
+                          className="secundario chico"
+                          onClick={() =>
+                            setCartel({
+                              tipo: 'editar',
+                              usuario: u,
+                              nombre: u.nombre,
+                              login: u.usuario,
+                              email: u.email ?? '',
+                              rol: u.rol,
+                            })
+                          }
                         >
-                          {u.activo ? 'Desactivar' : 'Activar'}
+                          Editar
                         </button>
-                      )}
+
+                        <button
+                          className="secundario chico"
+                          onClick={() =>
+                            setCartel({ tipo: 'password', usuario: u, password: '', repetida: '' })
+                          }
+                        >
+                          Contraseña
+                        </button>
+
+                        {/* El backend rechaza desactivarse y borrarse a uno
+                            mismo; acá ni lo ofrecemos. */}
+                        {u.id !== yo.id && (
+                          <>
+                            <button
+                              className={u.activo ? 'peligro chico' : 'secundario chico'}
+                              onClick={() => cambiarActivo(u)}
+                            >
+                              {u.activo ? 'Desactivar' : 'Activar'}
+                            </button>
+                            <button
+                              className="peligro chico"
+                              onClick={() => setCartel({ tipo: 'borrar', usuario: u })}
+                            >
+                              Eliminar
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -204,6 +273,165 @@ export default function AdminUsuarios() {
           </div>
         )}
       </div>
+
+      {cartel?.tipo === 'editar' && (
+        <Dialogo
+          titulo={`Editar a ${cartel.usuario.nombre}`}
+          confirmar="Guardar"
+          ocupado={guardando}
+          onCerrar={cerrarCartel}
+          onConfirmar={() =>
+            confirmarCartel(
+              () =>
+                api.usuarios.editar(cartel.usuario.id, {
+                  nombre: cartel.nombre,
+                  usuario: cartel.login,
+                  email: cartel.email,
+                  rol: cartel.rol,
+                }),
+              'Cuenta actualizada.',
+            )
+          }
+        >
+          <MensajeError>{cartel.error}</MensajeError>
+
+          <div className="campo">
+            <label htmlFor="ed-nombre">Nombre</label>
+            <input
+              id="ed-nombre"
+              value={cartel.nombre}
+              onChange={(e) => setCartel({ ...cartel, nombre: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="campo">
+            <label htmlFor="ed-usuario">Usuario</label>
+            <input
+              id="ed-usuario"
+              value={cartel.login}
+              onChange={(e) => setCartel({ ...cartel, login: e.target.value })}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck="false"
+              required
+            />
+            <p style={{ color: 'var(--tinta-apagada)', fontSize: '0.8rem', margin: '0.3rem 0 0' }}>
+              Si lo cambiás, tiene que entrar con el nuevo.
+            </p>
+          </div>
+
+          <div className="campo">
+            <label htmlFor="ed-email">Email (opcional)</label>
+            <input
+              id="ed-email"
+              type="email"
+              value={cartel.email}
+              onChange={(e) => setCartel({ ...cartel, email: e.target.value })}
+            />
+          </div>
+
+          <div className="campo">
+            <label htmlFor="ed-rol">Rol</label>
+            <select
+              id="ed-rol"
+              value={cartel.rol}
+              onChange={(e) => setCartel({ ...cartel, rol: e.target.value })}
+              // Sacarte a vos mismo el rol de admin te deja afuera del panel.
+              disabled={cartel.usuario.id === yo.id}
+            >
+              <option value="vendedor">Vendedor</option>
+              <option value="admin">Administrador</option>
+            </select>
+            {cartel.usuario.id === yo.id && (
+              <p style={{ color: 'var(--tinta-apagada)', fontSize: '0.8rem', margin: '0.3rem 0 0' }}>
+                No podés cambiarte el rol a vos mismo.
+              </p>
+            )}
+          </div>
+        </Dialogo>
+      )}
+
+      {cartel?.tipo === 'password' && (
+        <Dialogo
+          titulo={`Contraseña de ${cartel.usuario.nombre}`}
+          confirmar="Cambiar"
+          ocupado={guardando}
+          onCerrar={cerrarCartel}
+          onConfirmar={() => {
+            if (cartel.password !== cartel.repetida) {
+              return setCartel({ ...cartel, error: 'Las dos contraseñas no coinciden.' });
+            }
+            return confirmarCartel(
+              () => api.usuarios.cambiarPassword(cartel.usuario.id, cartel.password),
+              `Contraseña de ${cartel.usuario.nombre} cambiada. Pasásela para que entre.`,
+            );
+          }}
+        >
+          <MensajeError>{cartel.error}</MensajeError>
+
+          <p>
+            La anterior no hace falta: nadie la puede leer, ni vos. Anotá la nueva antes de
+            confirmar, porque después tampoco se va a poder ver.
+          </p>
+
+          <div className="campo">
+            <label htmlFor="pw-nueva">Contraseña nueva</label>
+            <input
+              id="pw-nueva"
+              type="password"
+              minLength={8}
+              autoComplete="new-password"
+              value={cartel.password}
+              onChange={(e) => setCartel({ ...cartel, password: e.target.value, error: '' })}
+              required
+            />
+          </div>
+
+          <div className="campo">
+            <label htmlFor="pw-repetida">Repetila</label>
+            <input
+              id="pw-repetida"
+              type="password"
+              autoComplete="new-password"
+              value={cartel.repetida}
+              onChange={(e) => setCartel({ ...cartel, repetida: e.target.value, error: '' })}
+              required
+            />
+          </div>
+
+          <p style={{ fontSize: '0.82rem' }}>
+            Si tenía la sesión abierta en el celular, se le va a cerrar.
+          </p>
+        </Dialogo>
+      )}
+
+      {cartel?.tipo === 'borrar' && (
+        <Dialogo
+          titulo={`¿Eliminar a ${cartel.usuario.nombre}?`}
+          confirmar="Sí, eliminar"
+          peligro
+          ocupado={guardando}
+          onCerrar={cerrarCartel}
+          onConfirmar={() =>
+            confirmarCartel(
+              () => api.usuarios.borrar(cartel.usuario.id),
+              `La cuenta de ${cartel.usuario.nombre} se eliminó.`,
+            )
+          }
+        >
+          <MensajeError>{cartel.error}</MensajeError>
+
+          <p>
+            Se borra la cuenta <span className="codigo">{cartel.usuario.usuario}</span> y no se
+            puede deshacer.
+          </p>
+          <p>
+            Si ya cargó jugadas no se va a poder borrar, porque se perdería el historial: en ese
+            caso, desactivala.
+          </p>
+        </Dialogo>
+      )}
     </>
   );
 }

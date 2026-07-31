@@ -50,7 +50,10 @@ Todo cuelga de `/api`. Salvo `login` y `health`, todos piden
 | GET | `/auth/me` | cualquiera | Datos del usuario logueado |
 | GET | `/auth/usuarios` | admin | Lista usuarios |
 | POST | `/auth/usuarios` | admin | Da de alta un vendedor o admin |
+| PATCH | `/auth/usuarios/:id` | admin | Corrige nombre, usuario, email o rol |
+| PATCH | `/auth/usuarios/:id/password` | admin | Le pone una contraseña nueva |
 | PATCH | `/auth/usuarios/:id/activo` | admin | Activa o desactiva una cuenta |
+| DELETE | `/auth/usuarios/:id` | admin | Borra la cuenta, si no dejó rastro |
 
 ### Sorteos
 | Método | Ruta | Rol | Qué hace |
@@ -152,6 +155,21 @@ minúsculas al crear la cuenta y al buscarla, así que `Dino` y `dino ` entran
 igual.
 
 **Anular no borra.** Se marca la fila y se registra qué admin lo hizo y cuándo.
+
+**Una cuenta con historial no se borra, se desactiva.** `DELETE
+/auth/usuarios/:id` solo pasa si esa cuenta no cargó, no anuló y no corrigió
+ninguna jugada; si tocó algo, responde 409 y sugiere desactivarla. Borrarla sería
+llevarse puesto el historial: las jugadas quedan a nombre de quien las cargó, y
+una cuenta desactivada no puede entrar igual. Sirve, en la práctica, para deshacer
+un alta recién hecha con un error de tipeo.
+
+**Cambiar una contraseña cierra las sesiones abiertas.** El admin no necesita la
+contraseña anterior (nadie la tiene: en la base solo queda el hash), así que el
+reset sería inútil como medida de seguridad si el token viejo siguiera valiendo.
+Por eso `usuarios.password_actualizada_at` (migración 008) se compara contra el
+`iat` del token en `requireAuth`. La fecha se trunca a segundos antes de comparar,
+porque `iat` viene en segundos: si no, un login en el mismo segundo que el cambio
+se rechazaría a sí mismo.
 
 **El código de comprobante lo genera Postgres, no Node.** El formato es
 `AAMMDD-XXXXXX`: los primeros seis dígitos son la fecha de carga, los últimos seis
