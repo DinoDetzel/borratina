@@ -118,7 +118,7 @@ router.post('/', requireAuth, async (req, res) => {
   }
 
   const { rows: sorteos } = await query(
-    'SELECT periodo, estado, precio_jugada FROM sorteos WHERE id = $1',
+    'SELECT periodo, estado, precio_jugada, pozo FROM sorteos WHERE id = $1',
     [jugada.sorteo_id],
   );
 
@@ -241,7 +241,7 @@ router.get('/comprobante/:codigo', requireAuth, async (req, res) => {
 
   const { rows } = await query(
     `SELECT ${CAMPOS_J}, u.nombre AS vendedor,
-            s.periodo, s.estado AS sorteo_estado, s.precio_jugada,
+            s.periodo, s.estado AS sorteo_estado, s.precio_jugada, s.pozo,
             s.numeros AS extracto
      FROM jugadas j
      JOIN usuarios u ON u.id = j.vendedor_id
@@ -271,6 +271,7 @@ router.get('/comprobante/:codigo', requireAuth, async (req, res) => {
       periodo: fila.periodo,
       estado: fila.sorteo_estado,
       precio_jugada: fila.precio_jugada,
+      pozo: fila.pozo,
     }),
     sorteado,
     extracto: fila.extracto,

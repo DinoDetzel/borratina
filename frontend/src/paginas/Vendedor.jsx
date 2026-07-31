@@ -195,7 +195,7 @@ export default function Vendedor() {
       {/* El formulario va antes que cualquier métrica: el vendedor entra a
           cargar, no a mirar números. En el teléfono, dejarlo abajo obligaba a
           scrollear para hacer lo único que vino a hacer. */}
-      <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'minmax(280px, 1fr) auto' }}>
+      <div className="carga-y-ticket">
         <form className="tarjeta" onSubmit={enviar}>
           <h2 style={{ marginBottom: '1rem' }}>Nueva jugada</h2>
 

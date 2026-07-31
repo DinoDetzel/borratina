@@ -62,6 +62,21 @@ Las tarjetas partidas en dos (el pozo con su cobertura, el sorteo abierto con su
 pozo y sus fechas) comparten `.partida`: dos columnas con una línea al medio que
 en pantalla angosta se apilan y la línea pasa a ser horizontal.
 
+**El comprobante es el talonario del club, reproducido tal cual.** Por eso sus
+medidas van en píxeles y no en variables del sistema: no es una pantalla más, es
+una pieza impresa que tiene que salir siempre igual, sin que la mueva un ajuste
+de tipografía hecho para otra cosa. El ancho fijo de 720px se escala con `zoom`
+en pantallas angostas, que es la única forma de achicarlo sin deformar las
+proporciones del diseño.
+
+Las tipografías (Yellowtail y Barlow) van **con la app y no desde un CDN**: el
+vendedor imprime en la calle y el comprobante tiene que verse igual sin conexión.
+Están en `src/fuentes/`, solo el subconjunto latino, ~164 kB en total.
+
+Al imprimir se oculta todo por `visibility` menos el comprobante. Tiene que ser
+`visibility` y no `display`, porque el comprobante cuelga del formulario de
+carga: ocultando por `display` desaparecería con él.
+
 **Las fechas con hora van en dos controles, no en un `datetime-local`.**
 `CampoFechaHora` es un `input type="date"` más una lista de horas. El campo
 combinado se manejaba mal: los segmentos se recorren con las flechas sin saber

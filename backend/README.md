@@ -109,6 +109,9 @@ HTML: el maquetado (imprimir, mandar por WhatsApp) es del frontend.
 }
 ```
 
+El comprobante incluye el **pozo**: es el premio que el comprador está comprando
+y tiene que quedarle por escrito en el papel.
+
 `GET /jugadas/comprobante/:codigo` lo recupera después, para cuando el comprador
 se presenta con el papel en la mano. Acepta el código con o sin guion y en
 minúsculas. Si el sorteo ya está finalizado, agrega `sorteado: true` y `gano`.

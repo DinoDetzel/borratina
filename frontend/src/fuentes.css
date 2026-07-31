@@ -1,0 +1,59 @@
+/* Fuentes del comprobante del club, sacadas del diseño original.
+   Van con la app y no desde un CDN: el vendedor imprime el comprobante en la
+   calle y tiene que verse igual sin conexión. Solo el subconjunto latino. */
+
+@font-face {
+  font-family: 'Yellowtail';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fuentes/yellowtail-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Barlow';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./fuentes/barlow-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Barlow';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./fuentes/barlow-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Barlow';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('./fuentes/barlow-800.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Barlow';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fuentes/barlow-400-italica.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Barlow';
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./fuentes/barlow-500-italica.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Barlow Semi Condensed';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./fuentes/barlow-semi-condensed-700.woff2') format('woff2');
+}

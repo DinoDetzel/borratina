@@ -80,6 +80,9 @@ export function armarComprobante(jugada, sorteo) {
     sorteo: {
       periodo: sorteo.periodo,
       estado: sorteo.estado,
+      // El pozo se imprime en el comprobante: es el premio que el comprador
+      // está comprando y tiene que quedarle por escrito.
+      pozo: sorteo.pozo,
     },
     importe: sorteo.precio_jugada,
     vendedor: jugada.vendedor ?? null,
