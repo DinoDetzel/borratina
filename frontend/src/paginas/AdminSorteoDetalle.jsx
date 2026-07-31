@@ -2,11 +2,22 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { api } from '../api.js';
-import { Bolillas, Cargando, Chip, Ficha, MensajeError, Vacio } from '../componentes/comunes.jsx';
+import CamposExtracto from '../componentes/CamposExtracto.jsx';
+import {
+  Bolillas,
+  Cargando,
+  Chip,
+  Dialogo,
+  Ficha,
+  MensajeError,
+  MensajeExito,
+  Vacio,
+} from '../componentes/comunes.jsx';
 import {
   CANTIDAD_EXTRACTO,
   aciertos,
   fechaHora,
+  formatearNumero,
   numero,
   periodoLargo,
   pesos,
@@ -29,6 +40,13 @@ export default function AdminSorteoDetalle() {
   const [cargando, setCargando] = useState(true);
   const [trayendoMas, setTrayendoMas] = useState(false);
   const [error, setError] = useState('');
+  const [exito, setExito] = useState('');
+
+  // Corrección del extracto: `corrigiendo` son los 20 campos como texto, y
+  // `confirmando` el cartel que aparece antes de guardar.
+  const [corrigiendo, setCorrigiendo] = useState(null);
+  const [confirmando, setConfirmando] = useState(false);
+  const [guardando, setGuardando] = useState(false);
 
   const traerJugadas = useCallback(
     async (offset) => {
@@ -44,41 +62,71 @@ export default function AdminSorteoDetalle() {
     [id],
   );
 
-  useEffect(() => {
-    let vigente = true;
-
-    (async () => {
-      setCargando(true);
+  const traerTodo = useCallback(
+    async (sigueVigente = () => true) => {
       setError('');
       try {
         const { sorteo } = await api.sorteos.uno(id);
-        if (!vigente) return;
+        if (!sigueVigente()) return;
         setSorteo(sorteo);
 
         await traerJugadas(0);
 
         const soloValidas = await api.jugadas.listar({ sorteo_id: id, limit: 1 });
-        if (vigente) setValidas(soloValidas.total);
+        if (sigueVigente()) setValidas(soloValidas.total);
 
         // Los ganadores solo existen una vez cargado el extracto: antes de eso
         // el endpoint responde 409 a propósito.
         if (sorteo.estado === 'finalizado') {
           const reparto = await api.sorteos.ganadores(id);
-          if (vigente) setResultado(reparto);
+          if (sigueVigente()) setResultado(reparto);
         } else {
           setResultado(null);
         }
       } catch (err) {
-        if (vigente) setError(err.message);
-      } finally {
-        if (vigente) setCargando(false);
+        if (sigueVigente()) setError(err.message);
       }
-    })();
+    },
+    [id, traerJugadas],
+  );
+
+  useEffect(() => {
+    let vigente = true;
+
+    setCargando(true);
+    traerTodo(() => vigente).finally(() => {
+      if (vigente) setCargando(false);
+    });
 
     return () => {
       vigente = false;
     };
-  }, [id, traerJugadas]);
+  }, [traerTodo]);
+
+  /** Guarda el extracto corregido y cuenta qué cambió. */
+  async function guardarCorreccion() {
+    setGuardando(true);
+    setError('');
+    try {
+      const r = await api.sorteos.corregirResultado(id, corrigiendo.map(Number));
+
+      const perdieron = r.dejaron_de_ganar.map((g) => g.comprador_nombre);
+      setExito(
+        `Extracto corregido. ${
+          r.vacante ? 'Ahora no gana nadie' : `Ahora ganan ${r.ganadores.length}`
+        }.${perdieron.length ? ` Dejaron de ganar: ${perdieron.join(', ')}.` : ''}`,
+      );
+
+      setConfirmando(false);
+      setCorrigiendo(null);
+      await traerTodo();
+    } catch (err) {
+      setError(err.message);
+      setConfirmando(false);
+    } finally {
+      setGuardando(false);
+    }
+  }
 
   async function verMas() {
     setTrayendoMas(true);
@@ -118,6 +166,7 @@ export default function AdminSorteoDetalle() {
       </div>
 
       <MensajeError>{error}</MensajeError>
+      <MensajeExito>{exito}</MensajeExito>
 
       {/* Lo primero que se quiere saber: si hubo ganadores o quedó vacante. */}
       {finalizado && resultado && (
@@ -157,20 +206,65 @@ export default function AdminSorteoDetalle() {
       )}
 
       <div className="tarjeta">
-        <h2 style={{ marginBottom: '0.4rem' }}>Extracto de la quiniela</h2>
+        <div className="encabezado-tarjeta">
+          <h2 style={{ margin: 0 }}>Extracto de la quiniela</h2>
+          {sorteo.numeros && !corrigiendo && (
+            <button
+              className="secundario chico"
+              onClick={() => setCorrigiendo(sorteo.numeros.map(formatearNumero))}
+            >
+              Corregir
+            </button>
+          )}
+        </div>
 
-        {sorteo.numeros ? (
-          <>
-            <p style={{ color: 'var(--tinta-2)', fontSize: '0.85rem', marginTop: 0 }}>
-              Los {CANTIDAD_EXTRACTO} números que salieron, en el orden en que se publicaron.
-            </p>
-            <Bolillas numeros={sorteo.numeros} />
-          </>
-        ) : (
+        {!sorteo.numeros ? (
           <Vacio>
             Todavía no se cargó el extracto. Se carga desde Sorteos, con la carga de jugadas ya
             cerrada.
           </Vacio>
+        ) : corrigiendo ? (
+          <>
+            <p style={{ color: 'var(--tinta-2)', fontSize: '0.85rem', margin: '0.4rem 0 0.9rem' }}>
+              Corregí el número que salió mal. Al guardar se vuelve a calcular quién gana, así que
+              revisá los {CANTIDAD_EXTRACTO} antes de confirmar.
+            </p>
+
+            <CamposExtracto valores={corrigiendo} onCambiar={setCorrigiendo} prefijo="correccion" />
+
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+              <button
+                onClick={() => setConfirmando(true)}
+                disabled={corrigiendo.some((n) => n === '')}
+              >
+                Guardar corrección
+              </button>
+              <button className="secundario" onClick={() => setCorrigiendo(null)}>
+                Cancelar
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p style={{ color: 'var(--tinta-2)', fontSize: '0.85rem', margin: '0.4rem 0 0.9rem' }}>
+              Los {CANTIDAD_EXTRACTO} números que salieron, en el orden en que se publicaron.
+            </p>
+            <Bolillas numeros={sorteo.numeros} />
+
+            {sorteo.resultado_corregido_at && (
+              <p
+                style={{
+                  color: 'var(--tinta-apagada)',
+                  fontSize: '0.82rem',
+                  margin: '0.9rem 0 0',
+                }}
+              >
+                Corregido el {fechaHora(sorteo.resultado_corregido_at)}
+                {sorteo.corregido_por && ` por ${sorteo.corregido_por}`}. Antes decía{' '}
+                {sorteo.numeros_anteriores?.map(formatearNumero).join(' ')}.
+              </p>
+            )}
+          </>
         )}
       </div>
 
@@ -279,6 +373,31 @@ export default function AdminSorteoDetalle() {
           </>
         )}
       </div>
+
+      {confirmando && (
+        <Dialogo
+          titulo="¿Guardar el extracto corregido?"
+          confirmar="Sí, corregir"
+          peligro
+          ocupado={guardando}
+          onCerrar={() => setConfirmando(false)}
+          onConfirmar={guardarCorreccion}
+        >
+          <p>Se vuelve a calcular quién gana. Los números quedan así:</p>
+
+          <div style={{ margin: '0 0 0.9rem' }}>
+            <Bolillas numeros={corrigiendo.map(Number)} />
+          </div>
+
+          <p style={{ marginBottom: 0 }}>
+            {resultado?.vacante
+              ? 'Hoy el sorteo figura vacante.'
+              : `Hoy figuran ${resultado?.ganadores.length} ganadores.`}{' '}
+            Si eso cambia, avisale a quien corresponda: la corrección queda registrada a tu
+            nombre.
+          </p>
+        </Dialogo>
+      )}
     </>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { api } from '../api.js';
+import CamposExtracto from '../componentes/CamposExtracto.jsx';
 import { Bolillas, Cargando, Chip, MensajeError, MensajeExito, Vacio } from '../componentes/comunes.jsx';
 import {
   CANTIDAD_EXTRACTO,
@@ -339,26 +340,7 @@ export default function AdminSorteos() {
             que salieron. Gana quien tenga sus 4 números acá dentro.
           </p>
 
-          <div className="extracto">
-            {resultado.map((valor, i) => (
-              <input
-                key={i}
-                id={`extracto-${i}`}
-                inputMode="numeric"
-                value={valor}
-                placeholder={String(i + 1)}
-                aria-label={`Número ${i + 1} del extracto`}
-                onChange={(e) => {
-                  const limpio = e.target.value.replace(/\D/g, '').slice(0, 2);
-                  setResultado((prev) => prev.map((n, j) => (j === i ? limpio : n)));
-                  // Cargar 20 números a mano es tedioso: el foco salta solo.
-                  if (limpio.length === 2 && i < CANTIDAD_EXTRACTO - 1) {
-                    document.getElementById(`extracto-${i + 1}`)?.focus();
-                  }
-                }}
-              />
-            ))}
-          </div>
+          <CamposExtracto valores={resultado} onCambiar={setResultado} />
 
           <p style={{ color: 'var(--tinta-apagada)', fontSize: '0.82rem', marginBottom: 0 }}>
             {resultado.filter((n) => n !== '').length} de {CANTIDAD_EXTRACTO} cargados.

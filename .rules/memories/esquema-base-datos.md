@@ -21,6 +21,7 @@
 | `007_extracto_de_20.sql` | El resultado pasa de 4 números a un extracto de 20 |
 | `008_password_actualizada.sql` | `password_actualizada_at`: invalida los tokens anteriores al cambio |
 | `009_sin_email.sql` | Se elimina `usuarios.email` |
+| `010_corregir_extracto.sql` | El extracto se puede corregir, y queda quién, cuándo y qué decía antes |
 
 ## El resultado es un extracto de 20
 

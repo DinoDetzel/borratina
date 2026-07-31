@@ -65,7 +65,8 @@ Todo cuelga de `/api`. Salvo `login` y `health`, todos piden
 | PATCH | `/sorteos/:id/pozo` | admin | Corrige el pozo (solo con la carga abierta) |
 | PATCH | `/sorteos/:id/ventana` | admin | Corrige las fechas de carga (solo con la carga abierta) |
 | PATCH | `/sorteos/:id/cerrar` | admin | Corta la carga de jugadas |
-| POST | `/sorteos/:id/resultado` | admin | Carga el resultado y finaliza |
+| POST | `/sorteos/:id/resultado` | admin | Carga el extracto y finaliza |
+| PATCH | `/sorteos/:id/resultado` | admin | Corrige el extracto ya cargado |
 | GET | `/sorteos/:id/ganadores` | admin | Ganadores y reparto |
 
 ### Jugadas
@@ -153,6 +154,17 @@ nombre de usuario, y las cuentas las crea el admin en persona, así que el email
 no servía ni para entrar ni para avisar nada. La columna existió hasta la
 migración 009. El usuario se normaliza a minúsculas al crear la cuenta y al
 buscarla, así que `Dino` y `dino ` entran igual.
+
+**El extracto se puede corregir, y queda registrado.** Son 20 números que alguien
+tipea leyendo la pizarra: un dedazo en uno solo cambia quién cobra, así que
+`PATCH /sorteos/:id/resultado` permite arreglarlo aunque el sorteo esté
+finalizado. La corrección guarda quién la hizo, cuándo, y el extracto anterior
+(`resultado_corregido_por`, `resultado_corregido_at`, `numeros_anteriores`).
+
+La respuesta trae `ganadores_antes` y `dejaron_de_ganar` además de los ganadores
+nuevos. Eso último es lo que de verdad se necesita: a quién hay que avisarle que
+ya no cobra. Que lo calcule el backend evita que alguien compare dos listas a ojo
+justo cuando importa.
 
 **Anular no borra.** Se marca la fila y se registra qué admin lo hizo y cuándo.
 

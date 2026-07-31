@@ -139,6 +139,14 @@ h3 { font-size: 1rem; }
   margin-bottom: 1.25rem;
 }
 
+/* Título de una tarjeta con su acción al costado. */
+.encabezado-tarjeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 /* ---------- Tarjetas ---------- */
 
 .tarjeta {

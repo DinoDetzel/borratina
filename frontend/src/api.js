@@ -96,6 +96,10 @@ export const api = {
     cerrar: (id) => pedir(`/sorteos/${id}/cerrar`, { method: 'PATCH' }),
     cargarResultado: (id, numeros) =>
       pedir(`/sorteos/${id}/resultado`, { method: 'POST', body: JSON.stringify({ numeros }) }),
+    // Corrige un extracto ya cargado. Devuelve además ganadores_antes y
+    // dejaron_de_ganar, que es a quién hay que avisarle.
+    corregirResultado: (id, numeros) =>
+      pedir(`/sorteos/${id}/resultado`, { method: 'PATCH', body: JSON.stringify({ numeros }) }),
     ganadores: (id) => pedir(`/sorteos/${id}/ganadores`),
   },
 
