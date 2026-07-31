@@ -479,6 +479,39 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   .dialogo .acciones button[type='submit'] { flex: 1; }
 }
 
+/* ---------- Barra de filtros ----------
+   Lo que acota la búsqueda a la izquierda, lo que la dispara contra el borde
+   derecho. Es la misma idea que el pie de un cartel. */
+
+.barra-filtros {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--linea);
+}
+
+/* Una casilla con su texto al lado, en una sola línea. */
+.casilla {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0;
+  color: var(--tinta);
+  font-weight: 450;
+  cursor: pointer;
+}
+.casilla input[type='checkbox'] {
+  width: auto;
+  margin: 0;
+  cursor: pointer;
+}
+
+/* Una fila que sigue estando pero ya no cuenta. */
+tr.apagada { opacity: 0.55; }
+
 /* ---------- Acciones al final de una fila ---------- */
 
 .acciones-fila {
@@ -553,6 +586,13 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
     padding: 0;
   }
   .lista-jugadas td + td { margin-top: 0.35rem; }
+
+  /* Sin encabezados, el nombre del vendedor quedaba como una línea suelta
+     debajo del comprador y no se sabía cuál era cuál. */
+  .lista-jugadas td.vendedor::before {
+    content: 'Cargó ';
+    color: var(--tinta-apagada);
+  }
 }
 
 /* Resumen del sorteo arriba de la carga: el pozo se ve, pero sin comerse la

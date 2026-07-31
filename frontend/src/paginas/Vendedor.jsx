@@ -364,7 +364,7 @@ export default function Vendedor() {
                         </div>
                       )}
                     </td>
-                    {viendoTodas && <td>{j.vendedor}</td>}
+                    {viendoTodas && <td className="vendedor">{j.vendedor}</td>}
                     <td style={{ color: 'var(--tinta-2)', fontSize: '0.85rem' }}>
                       {fechaHora(j.created_at)}
                     </td>

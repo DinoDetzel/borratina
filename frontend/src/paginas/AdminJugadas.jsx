@@ -4,21 +4,27 @@ import { api } from '../api.js';
 import { Bolillas, Cargando, Chip, MensajeError, MensajeExito, Vacio } from '../componentes/comunes.jsx';
 import { fechaHora, numero, periodoLargo } from '../utilidades.js';
 
+/** Cuántas jugadas se traen por vez. El backend no acepta más de 500. */
+const POR_PAGINA = 100;
+
+const SIN_FILTROS = {
+  sorteo_id: '',
+  comprador: '',
+  codigo: '',
+  numeros: '',
+  incluir_anuladas: 'true',
+  solo_ganadoras: '',
+};
+
 export default function AdminJugadas() {
   const [sorteos, setSorteos] = useState([]);
   const [jugadas, setJugadas] = useState([]);
   const [total, setTotal] = useState(0);
 
-  const [filtros, setFiltros] = useState({
-    sorteo_id: '',
-    comprador: '',
-    codigo: '',
-    numeros: '',
-    incluir_anuladas: 'true',
-    solo_ganadoras: '',
-  });
+  const [filtros, setFiltros] = useState(SIN_FILTROS);
 
   const [cargando, setCargando] = useState(true);
+  const [trayendoMas, setTrayendoMas] = useState(false);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
   const [editando, setEditando] = useState(null);
@@ -31,7 +37,7 @@ export default function AdminJugadas() {
     setCargando(true);
     setError('');
     try {
-      const { jugadas, total } = await api.jugadas.listar(nuevosFiltros);
+      const { jugadas, total } = await api.jugadas.listar({ ...nuevosFiltros, limit: POR_PAGINA });
       setJugadas(jugadas);
       setTotal(total);
     } catch (err) {
@@ -40,6 +46,24 @@ export default function AdminJugadas() {
       setTotal(0);
     } finally {
       setCargando(false);
+    }
+  }
+
+  /** Trae la página siguiente sin perder lo que ya está en pantalla. */
+  async function verMas() {
+    setTrayendoMas(true);
+    try {
+      const respuesta = await api.jugadas.listar({
+        ...filtros,
+        limit: POR_PAGINA,
+        offset: jugadas.length,
+      });
+      setJugadas((previas) => [...previas, ...respuesta.jugadas]);
+      setTotal(respuesta.total);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setTrayendoMas(false);
     }
   }
 
@@ -53,6 +77,9 @@ export default function AdminJugadas() {
   function cambiar(campo, valor) {
     setFiltros((f) => ({ ...f, [campo]: valor }));
   }
+
+  /** Si hay algo distinto de lo que trae la pantalla al abrirse. */
+  const hayFiltros = Object.keys(SIN_FILTROS).some((k) => filtros[k] !== SIN_FILTROS[k]);
 
   async function accion(fn, mensaje) {
     setError('');
@@ -86,7 +113,11 @@ export default function AdminJugadas() {
     <>
       <div className="encabezado-seccion">
         <h1>Jugadas</h1>
-        {!cargando && <span style={{ color: 'var(--tinta-2)' }}>{numero(total)} resultados</span>}
+        {!cargando && (
+          <span style={{ color: 'var(--tinta-2)' }}>
+            {numero(total)} {total === 1 ? 'resultado' : 'resultados'}
+          </span>
+        )}
       </div>
 
       <MensajeError>{error}</MensajeError>
@@ -146,16 +177,14 @@ export default function AdminJugadas() {
               />
             </div>
 
-            <div style={{ flex: '0 0 auto' }}>
-              <button type="submit">Buscar</button>
-            </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginTop: '0.9rem' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: 0 }}>
+          {/* Las casillas a la izquierda y los botones contra el borde derecho:
+              lo que acota la búsqueda, separado de lo que la dispara. */}
+          <div className="barra-filtros">
+            <label className="casilla">
               <input
                 type="checkbox"
-                style={{ width: 'auto' }}
                 checked={filtros.incluir_anuladas === 'true'}
                 onChange={(e) => cambiar('incluir_anuladas', e.target.checked ? 'true' : '')}
               />
@@ -163,10 +192,9 @@ export default function AdminJugadas() {
             </label>
 
             {/* La lista con la que se pagan los premios. */}
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: 0 }}>
+            <label className="casilla">
               <input
                 type="checkbox"
-                style={{ width: 'auto' }}
                 checked={filtros.solo_ganadoras === 'true'}
                 onChange={(e) => {
                   const marcado = e.target.checked ? 'true' : '';
@@ -181,6 +209,22 @@ export default function AdminJugadas() {
               />
               Solo las ganadoras
             </label>
+
+            <div className="acciones-fila" style={{ marginLeft: 'auto' }}>
+              {hayFiltros && (
+                <button
+                  type="button"
+                  className="secundario"
+                  onClick={() => {
+                    setFiltros(SIN_FILTROS);
+                    buscar(SIN_FILTROS);
+                  }}
+                >
+                  Limpiar
+                </button>
+              )}
+              <button type="submit">Buscar</button>
+            </div>
           </div>
         </form>
       </div>
@@ -254,7 +298,7 @@ export default function AdminJugadas() {
           <Vacio>Ninguna jugada coincide con la búsqueda.</Vacio>
         ) : (
           <div className="tabla-scroll">
-            <table>
+            <table className="lista-jugadas">
               <thead>
                 <tr>
                   <th>Comprobante</th>
@@ -267,10 +311,19 @@ export default function AdminJugadas() {
               </thead>
               <tbody>
                 {jugadas.map((j) => (
-                  <tr key={j.id} style={{ opacity: j.anulada ? 0.55 : 1 }}>
+                  <tr key={j.id} className={j.anulada ? 'apagada' : ''}>
                     <td className="codigo">{j.codigo}</td>
                     <td>
                       <Bolillas numeros={[j.numero_1, j.numero_2, j.numero_3, j.numero_4]} />
+                      {/* El estado va pegado a los números y no abajo del nombre:
+                          `gano` es null mientras el sorteo no se haya sorteado,
+                          que no es lo mismo que "no ganó", y ahí no se muestra nada. */}
+                      {(j.anulada || j.gano) && (
+                        <div style={{ marginTop: '0.3rem', display: 'flex', gap: '0.3rem' }}>
+                          {j.anulada && <Chip estado="anulada">Anulada</Chip>}
+                          {j.gano && <Chip estado="gano">Ganadora</Chip>}
+                        </div>
+                      )}
                     </td>
                     <td>
                       {j.comprador_nombre}
@@ -279,21 +332,13 @@ export default function AdminJugadas() {
                           {j.comprador_telefono}
                         </div>
                       )}
-                      {/* `gano` es null mientras el sorteo no se haya sorteado,
-                          que no es lo mismo que "no ganó": ahí no se muestra nada. */}
-                      {(j.anulada || j.gano) && (
-                        <div style={{ marginTop: '0.2rem', display: 'flex', gap: '0.3rem' }}>
-                          {j.anulada && <Chip estado="anulada">Anulada</Chip>}
-                          {j.gano && <Chip estado="gano">Ganadora</Chip>}
-                        </div>
-                      )}
                     </td>
-                    <td>{j.vendedor}</td>
-                    <td style={{ color: 'var(--tinta-2)', fontSize: '0.85rem' }}>
+                    <td className="vendedor">{j.vendedor}</td>
+                    <td style={{ color: 'var(--tinta-2)', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
                       {fechaHora(j.created_at)}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: '0.35rem' }}>
+                      <div className="acciones-fila">
                         {j.anulada ? (
                           <button
                             className="secundario chico"
@@ -337,6 +382,19 @@ export default function AdminJugadas() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Sin esto, una búsqueda con más de 100 resultados se cortaba en
+            silencio: el encabezado decía 340 y la tabla mostraba 100. */}
+        {!cargando && jugadas.length < total && (
+          <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <button className="secundario" onClick={verMas} disabled={trayendoMas}>
+              {trayendoMas ? 'Trayendo…' : 'Ver más'}
+            </button>
+            <span style={{ color: 'var(--tinta-2)', fontSize: '0.85rem' }}>
+              {numero(jugadas.length)} de {numero(total)}
+            </span>
           </div>
         )}
       </div>

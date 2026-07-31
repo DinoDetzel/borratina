@@ -53,6 +53,11 @@ línea), después tres fichas chicas, y después el gráfico junto al ranking po
 vendedor (`.panel-fila`). El ritmo ancho/angosto es lo que hace que se lea de
 arriba abajo sin que todo pese lo mismo.
 
+**Las listas largas se traen de a páginas y lo dicen.** Tanto el buscador de
+jugadas como el detalle de un sorteo muestran "N de M · Ver más". Antes el
+buscador pedía las primeras 100 y el encabezado decía el total, así que una
+búsqueda con más resultados se cortaba en silencio.
+
 Ojo con `.tarjeta + .tarjeta { margin-top }` cuando las tarjetas van dentro de
 una grilla: ahí la separación la da el `gap`, y el margen extra deja la primera
 tarjeta desalineada del resto. Por eso está anulado en `.grilla` y `.panel-fila`.
