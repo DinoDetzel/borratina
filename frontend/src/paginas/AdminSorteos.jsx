@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { api } from '../api.js';
+import CampoFechaHora from '../componentes/CampoFechaHora.jsx';
 import CamposExtracto from '../componentes/CamposExtracto.jsx';
 import { Bolillas, Cargando, Chip, MensajeError, MensajeExito, Vacio } from '../componentes/comunes.jsx';
 import {
@@ -191,27 +192,19 @@ export default function AdminSorteos() {
 
             {/* Ventana de carga: fuera de estas fechas no se puede cargar. */}
             <div className="fila" style={{ marginTop: '0.9rem' }}>
-              <div>
-                <label htmlFor="inicia">La carga abre</label>
-                <input
-                  id="inicia"
-                  type="datetime-local"
-                  value={inicia}
-                  onChange={(e) => setInicia(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="finaliza">La carga cierra</label>
-                <input
-                  id="finaliza"
-                  type="datetime-local"
-                  value={finaliza}
-                  onChange={(e) => setFinaliza(e.target.value)}
-                  min={inicia}
-                  required
-                />
-              </div>
+              <CampoFechaHora
+                id="inicia"
+                etiqueta="La carga abre"
+                valor={inicia}
+                onCambiar={setInicia}
+              />
+              <CampoFechaHora
+                id="finaliza"
+                etiqueta="La carga cierra"
+                valor={finaliza}
+                onCambiar={setFinaliza}
+                minFecha={inicia.split('T')[0]}
+              />
               <div style={{ flex: '0 0 auto' }}>
                 <button type="submit" disabled={abriendo}>
                   {abriendo ? 'Abriendo…' : 'Abrir'}
@@ -302,27 +295,19 @@ export default function AdminSorteos() {
               );
             }}
           >
-            <div>
-              <label htmlFor="inicia-editado">La carga abre</label>
-              <input
-                id="inicia-editado"
-                type="datetime-local"
-                value={iniciaEditado}
-                onChange={(e) => setIniciaEditado(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="finaliza-editado">La carga cierra</label>
-              <input
-                id="finaliza-editado"
-                type="datetime-local"
-                value={finalizaEditado}
-                onChange={(e) => setFinalizaEditado(e.target.value)}
-                min={iniciaEditado}
-                required
-              />
-            </div>
+            <CampoFechaHora
+              id="inicia-editado"
+              etiqueta="La carga abre"
+              valor={iniciaEditado}
+              onCambiar={setIniciaEditado}
+            />
+            <CampoFechaHora
+              id="finaliza-editado"
+              etiqueta="La carga cierra"
+              valor={finalizaEditado}
+              onCambiar={setFinalizaEditado}
+              minFecha={iniciaEditado.split('T')[0]}
+            />
             <div style={{ flex: '0 0 auto' }}>
               <button type="submit" className="secundario">
                 Cambiar fechas

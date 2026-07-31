@@ -62,6 +62,14 @@ Las tarjetas partidas en dos (el pozo con su cobertura, el sorteo abierto con su
 pozo y sus fechas) comparten `.partida`: dos columnas con una línea al medio que
 en pantalla angosta se apilan y la línea pasa a ser horizontal.
 
+**Las fechas con hora van en dos controles, no en un `datetime-local`.**
+`CampoFechaHora` es un `input type="date"` más una lista de horas. El campo
+combinado se manejaba mal: los segmentos se recorren con las flechas sin saber
+en cuál estás, al año no se llega, y pasando la hora caés en el AM/PM, donde
+subir y bajar solo alterna entre dos valores. La lista de horas va de media en
+media hora e incluye el valor que ya tenga el sorteo aunque no caiga en la media,
+para no pisarle la configuración a nadie por abrir la pantalla.
+
 Cuando una fila tiene más de dos acciones, van como texto (`.enlace`) y no como
 botones con borde: cuatro cajitas repetidas en cada fila convierten la tabla en
 una pared. El rojo se reserva para la única que no se puede deshacer.

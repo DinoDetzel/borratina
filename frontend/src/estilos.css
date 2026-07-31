@@ -345,6 +345,27 @@ input:disabled, select:disabled {
 
 .campo + .campo { margin-top: 0.9rem; }
 
+/* Fecha y hora, uno al lado del otro. La hora ocupa lo que necesita y la fecha
+   se queda con el resto. El mínimo del par es lo que impide que, apretados en
+   una fila, el campo de fecha se aplaste hasta quedar ilegible. */
+/* El segundo selector no es de más: `.fila > *` impone un mínimo de 130px y,
+   con la misma especificidad, gana por venir después en el archivo. */
+.campo-fecha-hora,
+.fila > .campo-fecha-hora { min-width: 245px; }
+
+.fecha-hora {
+  display: flex;
+  gap: 0.4rem;
+}
+.fecha-hora input {
+  flex: 1 1 auto;
+  min-width: 140px;
+}
+.fecha-hora select {
+  flex: 0 0 auto;
+  width: auto;
+}
+
 .fila {
   display: flex;
   gap: 0.75rem;
