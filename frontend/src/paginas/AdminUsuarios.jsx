@@ -10,7 +10,7 @@ import {
   MensajeExito,
   Vacio,
 } from '../componentes/comunes.jsx';
-import { fechaHora } from '../utilidades.js';
+import { fechaDia } from '../utilidades.js';
 
 const NUEVO = { nombre: '', usuario: '', email: '', password: '', rol: 'vendedor' };
 
@@ -216,11 +216,17 @@ export default function AdminUsuarios() {
                         {u.activo ? 'Activo' : 'Desactivado'}
                       </Chip>
                     </td>
-                    <td style={{ color: 'var(--tinta-2)', fontSize: '0.85rem' }}>
-                      {fechaHora(u.created_at)}
+                    <td
+                      style={{
+                        color: 'var(--tinta-2)',
+                        fontSize: '0.85rem',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {fechaDia(u.created_at)}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                      <div className="acciones-fila">
                         <button
                           className="secundario chico"
                           onClick={() =>
@@ -250,10 +256,10 @@ export default function AdminUsuarios() {
                             mismo; acá ni lo ofrecemos. */}
                         {u.id !== yo.id && (
                           <>
-                            <button
-                              className={u.activo ? 'peligro chico' : 'secundario chico'}
-                              onClick={() => cambiarActivo(u)}
-                            >
+                            {/* Desactivar no es destructivo: se revierte con el
+                                mismo botón. El rojo queda para Eliminar, que es
+                                el único que no se puede deshacer. */}
+                            <button className="secundario chico" onClick={() => cambiarActivo(u)}>
                               {u.activo ? 'Desactivar' : 'Activar'}
                             </button>
                             <button

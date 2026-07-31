@@ -28,6 +28,16 @@ export function fechaHora(iso) {
   });
 }
 
+/** Solo el día: cuando la hora exacta no le importa a nadie. */
+export function fechaDia(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
 export function fechaCorta(iso) {
   if (!iso) return '—';
   return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });

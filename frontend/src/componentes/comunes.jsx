@@ -74,7 +74,7 @@ export function Dialogo({
   return (
     <dialog
       ref={ref}
-      className="dialogo"
+      className={`dialogo ${peligro ? 'peligroso' : ''}`}
       // Escape y el click en el fondo disparan "cancel": lo tomamos nosotros
       // para que el estado de React quede en sincronía con el DOM.
       onCancel={(e) => {
@@ -95,7 +95,7 @@ export function Dialogo({
           <button type="button" className="secundario" onClick={onCerrar} disabled={ocupado}>
             Cancelar
           </button>
-          <button type="submit" className={peligro ? 'peligro' : ''} disabled={ocupado}>
+          <button type="submit" className={peligro ? 'peligro lleno' : ''} disabled={ocupado}>
             {ocupado ? 'Un momento…' : confirmar}
           </button>
         </div>
