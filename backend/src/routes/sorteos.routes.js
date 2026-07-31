@@ -29,23 +29,36 @@ router.get('/', requireAuth, async (req, res) => {
  * El `pozo` es fijo y viene de la propia fila; lo que se calcula acá es la
  * recaudación, que es otra cosa: lo que se lleva vendido.
  *
+ * Un vendedor recibe únicamente `mis_jugadas`. El total del sorteo y la
+ * recaudación son del admin: dárselos al vendedor sería contarle cuánto vendieron
+ * los demás, que es justo lo que la regla de visibilidad no permite.
+ *
  * Va antes que /:id para que "actual" no se interprete como un id.
  */
 router.get('/actual', requireAuth, async (req, res) => {
-  const { rows } = await query(`
-    SELECT ${camposCon('s')},
-           COUNT(j.id) AS jugadas_cargadas,
-           COUNT(j.id) * s.precio_jugada AS recaudacion
-    FROM sorteos s
-    LEFT JOIN jugadas j ON j.sorteo_id = s.id AND j.anulada = false
-    WHERE s.estado = 'abierto'
-    GROUP BY s.id
-  `);
+  const { rows } = await query(
+    `SELECT ${camposCon('s')},
+            COUNT(j.id) FILTER (WHERE j.vendedor_id = $1) AS mis_jugadas,
+            COUNT(j.id) AS jugadas_cargadas,
+            COUNT(j.id) * s.precio_jugada AS recaudacion
+     FROM sorteos s
+     LEFT JOIN jugadas j ON j.sorteo_id = s.id AND j.anulada = false
+     WHERE s.estado = 'abierto'
+     GROUP BY s.id`,
+    [req.user.id],
+  );
 
   if (!rows[0]) {
     throw new AppError(404, 'No hay ningún sorteo con la carga abierta.');
   }
-  res.json({ sorteo: rows[0] });
+
+  const sorteo = rows[0];
+  if (req.user.rol !== 'admin') {
+    delete sorteo.jugadas_cargadas;
+    delete sorteo.recaudacion;
+  }
+
+  res.json({ sorteo });
 });
 
 /** GET /api/sorteos/:id */

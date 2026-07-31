@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 
 import { api } from '../api.js';
 import Comprobante from '../componentes/Comprobante.jsx';
-import { Bolillas, Cargando, Chip, MensajeError, Vacio } from '../componentes/comunes.jsx';
-import { fechaHora, periodoLargo, pesos } from '../utilidades.js';
+import { Bolillas, Cargando, Chip, Ficha, MensajeError, Vacio } from '../componentes/comunes.jsx';
+import { fechaHora, numero, periodoLargo, pesos } from '../utilidades.js';
 
 const VACIO = ['', '', '', ''];
 
@@ -141,8 +141,23 @@ export default function Vendedor() {
         </div>
         <div className="hero">{pesos(sorteo.pozo)}</div>
         <div className="pie" style={{ color: 'var(--tinta-apagada)', fontSize: '0.85rem' }}>
-          {pesos(sorteo.precio_jugada)} por jugada · {sorteo.jugadas_cargadas} cargadas
+          {pesos(sorteo.precio_jugada)} por jugada
         </div>
+      </div>
+
+      {/* Lo que cargó este vendedor. El total del sorteo es del admin: acá no
+          va, para no contarle a un vendedor cuánto vendieron los demás. */}
+      <div className="grilla" style={{ marginBottom: '1rem' }}>
+        <Ficha
+          etiqueta="Cargadas por vos"
+          valor={numero(sorteo.mis_jugadas)}
+          pie="En este sorteo"
+        />
+        <Ficha
+          etiqueta="Recaudado por vos"
+          valor={pesos(sorteo.mis_jugadas * sorteo.precio_jugada)}
+          pie={`${numero(sorteo.mis_jugadas)} × ${pesos(sorteo.precio_jugada)}`}
+        />
       </div>
 
       <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'minmax(280px, 1fr) auto' }}>

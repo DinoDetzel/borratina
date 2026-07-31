@@ -125,6 +125,10 @@ guardar una jugada que nunca podría ganar.
 `GET /jugadas` se impone en el servidor: un vendedor que mande `?vendedor_id=3`
 sigue viendo solo lo suyo.
 
+Lo mismo vale para los **totales**: `GET /sorteos/actual` devuelve `mis_jugadas`
+a todos, pero `jugadas_cargadas` y `recaudacion` (que son de todo el sorteo) solo
+al admin. Un vendedor no tiene por qué enterarse de cuánto vendieron los demás.
+
 **Se entra con nombre de usuario, no con email.** Son pocos vendedores y las
 cuentas las crea el admin, así que pedir un email para entrar era burocracia. El
 email quedó como dato de contacto **opcional**. El usuario se normaliza a

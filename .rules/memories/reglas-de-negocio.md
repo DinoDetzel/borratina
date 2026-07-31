@@ -134,6 +134,12 @@ resultado   = recaudación − pozo
 
 - Un **vendedor** ve únicamente las jugadas que él mismo cargó.
 - El **admin** ve todas las jugadas de todos los vendedores.
+- Esto incluye los **totales**, no solo el listado: en su pantalla el vendedor ve
+  cuántas cargó **él** y cuánto recaudó **él**. El total del sorteo y la
+  recaudación de todos son del panel del admin — dárselos al vendedor sería
+  contarle cuánto vendieron los demás.
+- El **pozo sí lo ve todo el mundo**: es el premio anunciado, lo que el vendedor
+  le dice al comprador.
 
 ## Números repetidos dentro de una jugada ✅ CONFIRMADO
 

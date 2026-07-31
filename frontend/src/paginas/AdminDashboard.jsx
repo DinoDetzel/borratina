@@ -98,10 +98,17 @@ export default function AdminDashboard() {
       {/* El pozo es fijo, así que lo que importa es si lo que se vende alcanza
           para cubrirlo. Esa diferencia es el número que dice cómo va el sorteo. */}
       <div className="grilla" style={{ marginBottom: '1rem' }}>
+        {/* El total cargado entre todos los vendedores. Es el número que el
+            vendedor no ve en su pantalla: allá cada uno ve solo lo suyo. */}
+        <Ficha
+          etiqueta="Jugadas cargadas"
+          valor={numero(resumen.jugadas_validas)}
+          pie={`Entre ${numero(resumen.vendedores_activos)} vendedores`}
+        />
         <Ficha
           etiqueta="Recaudado"
           valor={pesos(resumen.recaudacion)}
-          pie={`${numero(resumen.jugadas_validas)} jugadas vendidas`}
+          pie={`${pesos(resumen.precio_jugada)} por jugada`}
         />
         <Ficha
           etiqueta={resumen.resultado >= 0 ? 'Ganancia' : 'Falta para cubrir el pozo'}
@@ -112,7 +119,6 @@ export default function AdminDashboard() {
               : `Faltan ${numero(resumen.jugadas_para_cubrir - resumen.jugadas_validas)} jugadas`
           }
         />
-        <Ficha etiqueta="Vendedores activos" valor={numero(resumen.vendedores_activos)} />
         <Ficha
           etiqueta="Jugadas anuladas"
           valor={numero(resumen.jugadas_anuladas)}
