@@ -27,6 +27,23 @@ export default function GraficoVentas({ serie }) {
     return <Vacio>Todavía no hay jugadas cargadas en este sorteo.</Vacio>;
   }
 
+  // Con un solo día no hay evolución que mostrar: una línea necesita al menos
+  // dos puntos, y un punto suelto en un plano vacío se lee peor que el número.
+  if (serie.length === 1) {
+    const [dia] = serie;
+    return (
+      <div className="ficha" style={{ paddingTop: '0.5rem' }}>
+        <div className="valor">{numero(dia.jugadas_del_dia)}</div>
+        <div className="pie">
+          jugadas el {fechaCorta(dia.dia)} · {pesos(dia.recaudacion_del_dia)}
+        </div>
+        <div className="pie" style={{ marginTop: '0.6rem' }}>
+          El gráfico aparece cuando haya ventas de más de un día.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
