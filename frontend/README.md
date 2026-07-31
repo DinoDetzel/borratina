@@ -47,6 +47,16 @@ Debajo del botón, el admin ve además el total del sorteo (`jugadas_cargadas` y
 `recaudacion`, que la API manda solo a los admins). El vendedor sigue viendo
 únicamente lo suyo.
 
+El **panel** no es una pila de tarjetas iguales: arriba va el pozo grande con la
+cobertura al costado (`.panel-hero`, dos columnas desparejas separadas por una
+línea), después tres fichas chicas, y después el gráfico junto al ranking por
+vendedor (`.panel-fila`). El ritmo ancho/angosto es lo que hace que se lea de
+arriba abajo sin que todo pese lo mismo.
+
+Ojo con `.tarjeta + .tarjeta { margin-top }` cuando las tarjetas van dentro de
+una grilla: ahí la separación la da el `gap`, y el margen extra deja la primera
+tarjeta desalineada del resto. Por eso está anulado en `.grilla` y `.panel-fila`.
+
 **Admin** — panel con el pozo, evolución de ventas e historial (`/admin`), gestión
 de sorteos (`/admin/sorteos`), detalle de un sorteo (`/admin/sorteos/:id`),
 buscador de jugadas con corregir y anular (`/admin/jugadas`) y alta de cuentas

@@ -139,6 +139,17 @@ h3 { font-size: 1rem; }
   margin-bottom: 1.25rem;
 }
 
+/* Para un control cuyo propósito se entiende mirándolo, pero que igual necesita
+   etiqueta para quien usa un lector de pantalla. */
+.visualmente-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* Título de una tarjeta con su acción al costado. */
 .encabezado-tarjeta {
   display: flex;
@@ -158,6 +169,12 @@ h3 { font-size: 1rem; }
 }
 
 .tarjeta + .tarjeta { margin-top: 1rem; }
+
+/* Dentro de una grilla la separación la da el `gap`. Sin esto, la segunda
+   tarjeta en adelante se lleva un margen de más y queda 16px más abajo que la
+   primera: es la fila despareja que se veía en el panel. */
+.grilla > .tarjeta + .tarjeta,
+.panel-fila > .tarjeta + .tarjeta { margin-top: 0; }
 
 .grilla {
   display: grid;
@@ -191,6 +208,100 @@ h3 { font-size: 1rem; }
   font-size: 3rem;
   font-weight: 700;
   letter-spacing: -0.03em;
+}
+
+/* ---------- Encabezado del panel ----------
+   El pozo grande a la izquierda y, contra el borde derecho, lo único que hace
+   falta saber sobre él: si lo vendido alcanza para pagarlo. Las dos mitades no
+   son iguales a propósito — una es la cifra y la otra el estado de esa cifra. */
+
+.panel-hero {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.panel-hero .etiqueta {
+  color: var(--tinta-2);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.panel-hero .pie {
+  color: var(--tinta-apagada);
+  font-size: 0.85rem;
+}
+.panel-hero .pie strong { color: var(--tinta-2); }
+
+.panel-hero .cobertura {
+  padding-left: 1.5rem;
+  border-left: 1px solid var(--linea);
+}
+.panel-hero .monto {
+  font-size: 1.6rem;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+  margin: 0.1rem 0 0.8rem;
+}
+
+/* Barra de avance. También la usa el ranking por vendedor. */
+.barra {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--serie-1-suave);
+  overflow: hidden;
+}
+.barra .relleno {
+  height: 100%;
+  background: var(--serie-1);
+  border-radius: 999px;
+}
+/* Cubierto no es "mejor": es un estado distinto, y por eso cambia de color
+   además de llenarse. El texto de al lado lo dice con palabras. */
+.barra.cubierta .relleno { background: var(--ok); }
+
+/* ---------- Fila de dos tarjetas desparejas ---------- */
+
+.panel-fila {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr;
+  gap: 1rem;
+}
+
+/* ---------- Ranking por vendedor ---------- */
+
+.ranking {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ranking li + li { margin-top: 0.9rem; }
+
+.ranking .linea {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.3rem;
+}
+.ranking .linea strong { font-variant-numeric: tabular-nums; }
+.ranking .pie {
+  color: var(--tinta-apagada);
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+@media (max-width: 900px) {
+  .panel-hero,
+  .panel-fila { grid-template-columns: 1fr; }
+
+  /* Sin dos columnas, la línea divisoria pasa a ser horizontal. */
+  .panel-hero .cobertura {
+    padding: 1.1rem 0 0;
+    border-left: none;
+    border-top: 1px solid var(--linea);
+  }
 }
 
 /* ---------- Formularios ---------- */
@@ -401,6 +512,9 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
      toda la pantalla. Con 16px justos no pasa. */
   input, select { font-size: 16px; }
 
+  /* Columnas que en un teléfono estorban más de lo que aportan. */
+  .oculta-en-movil { display: none; }
+
   .numeros { gap: 0.4rem; }
   .numeros input {
     font-size: 1.9rem;
@@ -495,6 +609,16 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
    fila de la tabla quedaría altísima. */
 .bolillas.envuelve {
   flex-wrap: wrap;
+}
+
+/* Un extracto que acompaña a otra cosa (una fila del historial) y no es lo que
+   se vino a leer. */
+.bolillas.compactas { gap: 0.2rem; }
+.bolillas.compactas .bolilla {
+  min-width: 1.6rem;
+  height: 1.6rem;
+  font-size: 0.75rem;
+  padding: 0 0.25rem;
 }
 
 /* Los 20 campos del extracto: 10 por fila, y menos en pantallas angostas. */

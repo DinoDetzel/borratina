@@ -9,11 +9,13 @@ import { formatearNumero } from '../utilidades.js';
  * Se decide por la cantidad y no por una prop, para que quien lo use no tenga
  * que acordarse.
  */
-export function Bolillas({ numeros, marcadas }) {
+export function Bolillas({ numeros, marcadas, compactas = false }) {
   if (!numeros?.length) return null;
 
   return (
-    <span className={`bolillas ${numeros.length > 4 ? 'envuelve' : ''}`}>
+    <span
+      className={`bolillas ${numeros.length > 4 ? 'envuelve' : ''} ${compactas ? 'compactas' : ''}`}
+    >
       {numeros.map((n, i) => (
         <span className={`bolilla ${marcadas?.[i] ? 'acierto' : ''}`} key={i}>
           {formatearNumero(n)}

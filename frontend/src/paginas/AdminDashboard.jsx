@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { api } from '../api.js';
 import GraficoVentas from '../componentes/GraficoVentas.jsx';
@@ -62,41 +63,87 @@ export default function AdminDashboard() {
   }
 
   const finalizado = resumen.estado === 'finalizado';
+  const cubierto = resumen.resultado >= 0;
+  // Cuánto del pozo cubre lo recaudado. Se corta en 1: la barra llena ya dice
+  // "cubierto", y el excedente lo cuenta el texto de abajo.
+  const avance = resumen.pozo > 0 ? Math.min(1, resumen.recaudacion / resumen.pozo) : 0;
+  const masCargo = Math.max(...vendedores.map((v) => Number(v.cantidad_jugadas)), 1);
 
   return (
     <>
       <div className="encabezado-seccion">
         <h1>Panel</h1>
         <Chip estado={resumen.estado}>{resumen.estado}</Chip>
+
+        {/* El filtro va en el encabezado y no en una tarjeta propia: ocupaba un
+            renglón entero para un solo control. */}
+        <div style={{ marginLeft: 'auto' }}>
+          <label htmlFor="sorteo" className="visualmente-oculto">
+            Sorteo
+          </label>
+          <select
+            id="sorteo"
+            value={sorteoId}
+            onChange={(e) => setSorteoId(e.target.value)}
+            style={{ width: 'auto' }}
+          >
+            {sorteos.map((s) => (
+              <option key={s.id} value={s.id}>
+                {periodoLargo(s.periodo)} — {s.estado}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <MensajeError>{error}</MensajeError>
 
-      {/* Un solo control de filtro arriba de todo lo que acota. */}
-      <div className="tarjeta" style={{ marginBottom: '1rem' }}>
-        <label htmlFor="sorteo">Sorteo</label>
-        <select id="sorteo" value={sorteoId} onChange={(e) => setSorteoId(e.target.value)}>
-          {sorteos.map((s) => (
-            <option key={s.id} value={s.id}>
-              {periodoLargo(s.periodo)} — {s.estado}
-            </option>
-          ))}
-        </select>
+      {/* El pozo es la cifra que encabeza el panel, y al lado va lo único que
+          hace falta saber sobre él: si lo vendido alcanza para pagarlo. Van
+          juntos porque solo se entienden uno contra el otro. */}
+      <div className="tarjeta panel-hero" style={{ marginBottom: '1rem' }}>
+        <div>
+          <div className="etiqueta">{finalizado ? 'Pozo repartido' : 'Pozo'}</div>
+          <div className="hero">{pesos(resumen.pozo)}</div>
+          <div className="pie">
+            {periodoLargo(resumen.periodo)} · {pesos(resumen.precio_jugada)} por jugada
+          </div>
+
+          {finalizado && resumen.numeros && (
+            <div style={{ marginTop: '1.1rem' }}>
+              <div className="etiqueta" style={{ marginBottom: '0.4rem' }}>
+                Extracto
+              </div>
+              <Bolillas numeros={resumen.numeros} />
+            </div>
+          )}
+        </div>
+
+        <div className="cobertura">
+          <div className="etiqueta">Recaudado</div>
+          <div className="monto">{pesos(resumen.recaudacion)}</div>
+
+          <div className={`barra ${cubierto ? 'cubierta' : ''}`}>
+            <div className="relleno" style={{ width: `${Math.round(avance * 100)}%` }} />
+          </div>
+
+          <p className="pie" style={{ margin: '0.5rem 0 0' }}>
+            {resumen.resultado === 0 ? (
+              <>Lo recaudado cubre el pozo justo</>
+            ) : cubierto ? (
+              <>
+                Cubre el pozo y sobran <strong>{pesos(resumen.resultado)}</strong>
+              </>
+            ) : (
+              <>
+                Falta <strong>{pesos(-resumen.resultado)}</strong> —{' '}
+                {numero(resumen.jugadas_para_cubrir - resumen.jugadas_validas)} jugadas más
+              </>
+            )}
+          </p>
+        </div>
       </div>
 
-      {/* La cifra que encabeza el panel: el premio comprometido. */}
-      <div className="tarjeta" style={{ marginBottom: '1rem' }}>
-        <div className="etiqueta" style={{ color: 'var(--tinta-2)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          {finalizado ? 'Pozo repartido' : 'Pozo'}
-        </div>
-        <div className="hero">{pesos(resumen.pozo)}</div>
-        <div className="pie" style={{ color: 'var(--tinta-apagada)', fontSize: '0.85rem' }}>
-          {periodoLargo(resumen.periodo)} · {pesos(resumen.precio_jugada)} por jugada
-        </div>
-      </div>
-
-      {/* El pozo es fijo, así que lo que importa es si lo que se vende alcanza
-          para cubrirlo. Esa diferencia es el número que dice cómo va el sorteo. */}
       <div className="grilla" style={{ marginBottom: '1rem' }}>
         {/* El total cargado entre todos los vendedores. Es el número que el
             vendedor no ve en su pantalla: allá cada uno ve solo lo suyo. */}
@@ -106,72 +153,58 @@ export default function AdminDashboard() {
           pie={`Entre ${numero(resumen.vendedores_activos)} vendedores`}
         />
         <Ficha
-          etiqueta="Recaudado"
-          valor={pesos(resumen.recaudacion)}
-          pie={`${pesos(resumen.precio_jugada)} por jugada`}
-        />
-        <Ficha
-          etiqueta={resumen.resultado >= 0 ? 'Ganancia' : 'Falta para cubrir el pozo'}
-          valor={pesos(Math.abs(resumen.resultado))}
-          pie={
-            resumen.resultado >= 0
-              ? 'La recaudación cubre el premio'
-              : `Faltan ${numero(resumen.jugadas_para_cubrir - resumen.jugadas_validas)} jugadas`
-          }
+          etiqueta="Para cubrir el pozo"
+          valor={numero(resumen.jugadas_para_cubrir)}
+          pie={`A ${pesos(resumen.precio_jugada)} cada una`}
         />
         <Ficha
           etiqueta="Jugadas anuladas"
           valor={numero(resumen.jugadas_anuladas)}
-          pie={resumen.jugadas_anuladas > 0 ? 'No cuentan para el sorteo' : null}
+          pie={resumen.jugadas_anuladas > 0 ? 'No cuentan para el sorteo' : 'Ninguna'}
         />
       </div>
 
-      {finalizado && (
-        <div className="tarjeta" style={{ marginBottom: '1rem' }}>
-          <h2 style={{ marginBottom: '0.6rem' }}>Resultado del sorteo</h2>
-          <Bolillas numeros={resumen.numeros} />
+      {/* La evolución y el reparto por vendedor contestan la misma pregunta
+          desde dos lados, así que se leen de una sola pasada. */}
+      <div className="panel-fila" style={{ marginBottom: '1rem' }}>
+        <div className="tarjeta">
+          <h2>Evolución de ventas</h2>
+          <p style={{ color: 'var(--tinta-2)', fontSize: '0.85rem', margin: '0.2rem 0 0.75rem' }}>
+            Jugadas cargadas por día en {periodoLargo(resumen.periodo)}.
+          </p>
+          <GraficoVentas serie={serie} />
         </div>
-      )}
 
-      <div className="tarjeta" style={{ marginBottom: '1rem' }}>
-        <h2>Evolución de ventas</h2>
-        <p style={{ color: 'var(--tinta-2)', fontSize: '0.85rem', margin: '0.2rem 0 0.75rem' }}>
-          Jugadas cargadas por día en {periodoLargo(resumen.periodo)}.
-        </p>
-        <GraficoVentas serie={serie} />
-      </div>
+        <div className="tarjeta">
+          <h2 style={{ marginBottom: '0.2rem' }}>Por vendedor</h2>
+          <p style={{ color: 'var(--tinta-2)', fontSize: '0.85rem', margin: '0 0 0.9rem' }}>
+            Jugadas cargadas, de mayor a menor.
+          </p>
 
-      <div className="tarjeta" style={{ marginBottom: '1rem' }}>
-        <h2 style={{ marginBottom: '0.75rem' }}>Por vendedor</h2>
-        {vendedores.length === 0 ? (
-          <Vacio>Nadie cargó jugadas en este sorteo.</Vacio>
-        ) : (
-          <div className="tabla-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Vendedor</th>
-                  <th style={{ textAlign: 'right' }}>Jugadas</th>
-                  <th style={{ textAlign: 'right' }}>Recaudación</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vendedores.map((v) => (
-                  <tr key={v.id}>
-                    <td>
-                      {v.nombre}
-                      <div style={{ color: 'var(--tinta-apagada)', fontSize: '0.8rem' }}>
-                        {v.usuario}
-                      </div>
-                    </td>
-                    <td className="num">{numero(v.cantidad_jugadas)}</td>
-                    <td className="num">{pesos(v.recaudacion)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+          {vendedores.length === 0 ? (
+            <Vacio>Nadie cargó jugadas en este sorteo.</Vacio>
+          ) : (
+            <ol className="ranking">
+              {vendedores.map((v) => (
+                <li key={v.id}>
+                  <div className="linea">
+                    <span>{v.nombre}</span>
+                    <strong>{numero(v.cantidad_jugadas)}</strong>
+                  </div>
+                  {/* La barra se mide contra el que más cargó, no contra el
+                      total: lo que se compara acá es entre vendedores. */}
+                  <div className="barra">
+                    <div
+                      className="relleno"
+                      style={{ width: `${(v.cantidad_jugadas / masCargo) * 100}%` }}
+                    />
+                  </div>
+                  <div className="pie">{pesos(v.recaudacion)}</div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
       </div>
 
       <div className="tarjeta">
@@ -184,7 +217,9 @@ export default function AdminDashboard() {
               <thead>
                 <tr>
                   <th>Período</th>
-                  <th>Resultado</th>
+                  {/* Los 20 números no entran en un teléfono sin volver la fila
+                      altísima. Están en el detalle del sorteo, a un toque. */}
+                  <th className="oculta-en-movil">Resultado</th>
                   <th style={{ textAlign: 'right' }}>Pozo</th>
                   <th style={{ textAlign: 'right' }}>Recaudado</th>
                   <th style={{ textAlign: 'right' }}>Ganadores</th>
@@ -194,9 +229,11 @@ export default function AdminDashboard() {
               <tbody>
                 {historial.map((h) => (
                   <tr key={h.id}>
-                    <td>{periodoLargo(h.periodo)}</td>
-                    <td>
-                      <Bolillas numeros={h.numeros} />
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <Link to={`/admin/sorteos/${h.id}`}>{periodoLargo(h.periodo)}</Link>
+                    </td>
+                    <td className="oculta-en-movil">
+                      <Bolillas numeros={h.numeros} compactas />
                     </td>
                     <td className="num">{pesos(h.pozo)}</td>
                     <td className="num">
