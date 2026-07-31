@@ -36,6 +36,17 @@ El vendedor la usa parado en la calle, con una mano. Por eso:
 
 Si tocás esta pantalla, revisala en un viewport angosto antes de darla por buena.
 
+**El admin usa la misma pantalla, y ahí el título tiene que decir la verdad.** El
+backend no le filtra las jugadas ajenas, así que antes el listado decía "Mis
+jugadas" y mostraba las de todos. Ahora el admin elige entre **Mías** y **De
+todos**: el título cambia con la elección y la columna "Vendedor" aparece solo
+cuando está viendo las de todos. Al vendedor no se le ofrece la opción, porque el
+backend le da lo suyo y punto.
+
+Debajo del botón, el admin ve además el total del sorteo (`jugadas_cargadas` y
+`recaudacion`, que la API manda solo a los admins). El vendedor sigue viendo
+únicamente lo suyo.
+
 **Admin** — panel con el pozo, evolución de ventas e historial (`/admin`), gestión
 de sorteos (`/admin/sorteos`), detalle de un sorteo (`/admin/sorteos/:id`),
 buscador de jugadas con corregir y anular (`/admin/jugadas`) y alta de cuentas

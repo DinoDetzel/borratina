@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { api } from '../api.js';
+import { useAuth } from '../auth.jsx';
 import Comprobante from '../componentes/Comprobante.jsx';
 import { Bolillas, Cargando, Chip, MensajeError, Vacio } from '../componentes/comunes.jsx';
 import { cuantoFalta, fechaHora, numero, periodoLargo, pesos } from '../utilidades.js';
@@ -14,8 +15,13 @@ const ULTIMAS = 15;
  * Pantalla del vendedor: deliberadamente simple.
  * Formulario de carga + sus propias jugadas. Sin estadísticas ni gráficos:
  * eso es del panel del admin.
+ *
+ * El admin usa la misma pantalla y el backend no le filtra las jugadas ajenas,
+ * así que acá elige explícitamente qué está mirando: lo suyo o todo. Antes decía
+ * "Mis jugadas" y listaba las de todos, que es peor que no decir nada.
  */
 export default function Vendedor() {
+  const { usuario, esAdmin } = useAuth();
   const [sorteo, setSorteo] = useState(null);
   const [cargandoSorteo, setCargandoSorteo] = useState(true);
   const [sinSorteo, setSinSorteo] = useState('');
@@ -32,6 +38,11 @@ export default function Vendedor() {
   const [totalJugadas, setTotalJugadas] = useState(0);
   const [cargandoJugadas, setCargandoJugadas] = useState(true);
 
+  // Solo el admin puede cambiarlo: al vendedor el backend le da lo suyo y
+  // punto, así que ofrecerle la opción sería mentirle.
+  const [ambito, setAmbito] = useState('mias');
+  const viendoTodas = esAdmin && ambito === 'todas';
+
   async function traerSorteo() {
     try {
       const { sorteo } = await api.sorteos.actual();
@@ -44,13 +55,19 @@ export default function Vendedor() {
     }
   }
 
-  async function traerJugadas() {
+  async function traerJugadas(cuales = ambito) {
     setCargandoJugadas(true);
     try {
       // Solo las últimas: sobre el final del mes un vendedor tiene cientos
       // cargadas y la pantalla se vuelve un scroll interminable. Para buscar
       // una vieja está el comprobante.
-      const { jugadas, total } = await api.jugadas.listar({ limit: ULTIMAS });
+      //
+      // Para el vendedor el `vendedor_id` sobra (el backend le impone el suyo);
+      // para el admin es lo que hace la diferencia entre "mías" y "todas".
+      const { jugadas, total } = await api.jugadas.listar({
+        limit: ULTIMAS,
+        vendedor_id: cuales === 'mias' ? usuario.id : undefined,
+      });
       setJugadas(jugadas);
       setTotalJugadas(total);
     } catch {
@@ -62,9 +79,17 @@ export default function Vendedor() {
     }
   }
 
+  function cambiarAmbito(cuales) {
+    setAmbito(cuales);
+    traerJugadas(cuales);
+  }
+
   useEffect(() => {
     traerSorteo();
     traerJugadas();
+    // Solo al montar: después se refresca al cargar una jugada o al cambiar de
+    // ámbito, que llaman a traerJugadas() a mano.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function cambiarNumero(indice, valor) {
@@ -225,19 +250,31 @@ export default function Vendedor() {
                 : 'Carga no habilitada'}
           </button>
 
-          {/* Lo que lleva cargado este vendedor, en una línea. El total del
-              sorteo es del admin: acá no va, para no contarle a un vendedor
-              cuánto vendieron los demás. */}
+          {/* Lo que lleva cargado quien está usando la pantalla. El total del
+              sorteo lo manda el backend solo si es admin: a un vendedor no se
+              le cuenta cuánto vendieron los demás. */}
           <div
-            className="mis-datos"
             style={{ marginTop: '1.1rem', paddingTop: '0.9rem', borderTop: '1px solid var(--linea)' }}
           >
-            <span>
-              Cargadas por vos: <strong>{numero(sorteo.mis_jugadas)}</strong>
-            </span>
-            <span>
-              Recaudado: <strong>{pesos(sorteo.mis_jugadas * sorteo.precio_jugada)}</strong>
-            </span>
+            <div className="mis-datos">
+              <span>
+                Cargadas por vos: <strong>{numero(sorteo.mis_jugadas)}</strong>
+              </span>
+              <span>
+                Recaudado: <strong>{pesos(sorteo.mis_jugadas * sorteo.precio_jugada)}</strong>
+              </span>
+            </div>
+
+            {esAdmin && (
+              <div className="mis-datos" style={{ marginTop: '0.35rem' }}>
+                <span>
+                  Cargadas en total: <strong>{numero(sorteo.jugadas_cargadas)}</strong>
+                </span>
+                <span>
+                  Recaudado en total: <strong>{pesos(sorteo.recaudacion)}</strong>
+                </span>
+              </div>
+            )}
           </div>
         </form>
 
@@ -257,17 +294,47 @@ export default function Vendedor() {
       </div>
 
       <div className="tarjeta no-imprimir" style={{ marginTop: '1.5rem' }}>
-        <h2 style={{ marginBottom: '0.2rem' }}>Mis jugadas de este sorteo</h2>
-        <p style={{ color: 'var(--tinta-2)', fontSize: '0.85rem', margin: '0 0 0.9rem' }}>
+        <div className="encabezado-tarjeta">
+          <h2 style={{ margin: 0 }}>
+            {viendoTodas ? 'Jugadas de este sorteo' : 'Mis jugadas de este sorteo'}
+          </h2>
+
+          {/* El admin ve las de todos si quiere, pero el título tiene que decir
+              cuál de las dos cosas está mirando. */}
+          {esAdmin && (
+            <div className="acciones-fila">
+              <button
+                className={ambito === 'mias' ? 'chico' : 'secundario chico'}
+                onClick={() => cambiarAmbito('mias')}
+              >
+                Mías
+              </button>
+              <button
+                className={ambito === 'todas' ? 'chico' : 'secundario chico'}
+                onClick={() => cambiarAmbito('todas')}
+              >
+                De todos
+              </button>
+            </div>
+          )}
+        </div>
+
+        <p style={{ color: 'var(--tinta-2)', fontSize: '0.85rem', margin: '0.35rem 0 0.9rem' }}>
           {totalJugadas > ULTIMAS
-            ? `Las ${ULTIMAS} más recientes de ${totalJugadas} que cargaste.`
-            : `${totalJugadas} en total.`}
+            ? `Las ${ULTIMAS} más recientes de ${numero(totalJugadas)} ${
+                viendoTodas ? 'que se cargaron' : 'que cargaste'
+              }.`
+            : `${numero(totalJugadas)} en total.`}
         </p>
 
         {cargandoJugadas ? (
           <Cargando />
         ) : jugadas.length === 0 ? (
-          <Vacio>Todavía no cargaste ninguna jugada.</Vacio>
+          <Vacio>
+            {viendoTodas
+              ? 'Todavía no se cargó ninguna jugada en este sorteo.'
+              : 'Todavía no cargaste ninguna jugada.'}
+          </Vacio>
         ) : (
           <div className="tabla-scroll">
             <table className="lista-jugadas">
@@ -276,6 +343,7 @@ export default function Vendedor() {
                   <th>Comprobante</th>
                   <th>Números</th>
                   <th>Comprador</th>
+                  {viendoTodas && <th>Vendedor</th>}
                   <th>Cargada</th>
                 </tr>
               </thead>
@@ -296,6 +364,7 @@ export default function Vendedor() {
                         </div>
                       )}
                     </td>
+                    {viendoTodas && <td>{j.vendedor}</td>}
                     <td style={{ color: 'var(--tinta-2)', fontSize: '0.85rem' }}>
                       {fechaHora(j.created_at)}
                     </td>
