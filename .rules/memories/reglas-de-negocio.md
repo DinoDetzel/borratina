@@ -8,25 +8,56 @@ con modalidad de extractos de quiniela y premios por aciertos numéricos.
 ## Funcionamiento
 
 - Cada participante elige **4 números de dos cifras** (00-99).
-- Los números pueden repetirse: varias personas pueden jugar la misma combinación.
+- Varias personas pueden jugar la misma combinación.
 - El sorteo se realiza **una vez por mes**.
-- Si una o más personas aciertan la combinación ganadora, el **pozo se reparte en
-  partes iguales** entre todos los ganadores.
+- Al sortearse, el admin carga el **extracto oficial de la quiniela: 20 números**.
+- **Gana la jugada cuyos 4 números están dentro de esos 20.**
+- Si una o más personas ganan, el **pozo se reparte en partes iguales** entre todos.
 - Si nadie acierta, el sorteo **queda vacante**.
 
-## Comparación de ganadores: orden libre ✅ CONFIRMADO
+## Cómo se gana: 4 dentro de 20 ✅ CONFIRMADO
 
-> Esta sección reemplaza la asunción anterior de comparación posicional
-> (que suponía un extracto de quiniela distinto por posición). **Confirmado por el
-> usuario: el orden NO importa.**
+> Confirmado por el usuario (2026-07-31). Esta sección reemplaza dos versiones
+> anteriores equivocadas: la primera suponía comparación posicional contra 4
+> números, la segunda comparación de conjuntos también contra 4. **El sorteo no
+> tiene 4 números: tiene 20.**
 
-- Una jugada gana si tiene **los mismos 4 números que el sorteo, en cualquier orden**.
-  `45 07 88 23` y `07 23 45 88` son la misma jugada.
-- Implementación: los 4 números se **normalizan en orden ascendente** al guardarse,
-  tanto en la jugada como en el resultado del sorteo. La comparación se hace
-  posición a posición sobre esa forma ya normalizada, lo que mantiene el índice
-  utilizable.
+```
+EXTRACTO (20 números)
+  07 14 23 31 45 52 60 66 71 88
+  02 19 27 33 40 55 63 77 84 91
+
+jugada  07 23 45 88   → GANA   (los 4 están)
+jugada  07 23 45 99   → pierde (el 99 no salió)
+```
+
+- El **orden no importa**, ni el de la jugada ni el del extracto: lo que cuenta es
+  qué números salieron.
 - **No hay premios parciales**: acertar 3 de 4 no paga nada. Es todo o nada.
+
+### Los repetidos cuentan
+
+En el extracto **un número puede salir más de una vez**, y eso importa: si la
+jugada repite un número, el extracto tiene que repetirlo también. La jugada tiene
+que estar contenida en el extracto **como multiconjunto**, no como conjunto.
+
+```
+extracto con un solo 07 …  jugada  07 07 23 45  → pierde
+extracto con dos 07    …  jugada  07 07 23 45  → GANA
+```
+
+Jugar un número repetido es entonces una apuesta más difícil que jugar 4 distintos.
+
+### Cómo está implementado
+
+- El extracto se guarda como un array de 20 en `sorteos.numeros`, **sin normalizar
+  el orden**: el extracto publicado tiene un orden propio y conviene poder
+  mostrarlo como se leyó.
+- Los 4 números de la jugada **sí** se normalizan ascendentes, que es lo que hace
+  utilizable el índice para el buscador por combinación exacta.
+- La regla vive en `backend/src/utils/ganadores.js`, en dos formas que tienen que
+  dar siempre lo mismo: `condicionGanadora()` (SQL, para las queries) y
+  `esGanadora()` (JS, para cuando los datos ya están en memoria).
 
 ## El sorteo
 
@@ -92,15 +123,15 @@ resultado   = recaudación − pozo
 
 ## El resultado
 
-- El número ganador son **4 números del 00 al 99**, tomados del **resultado oficial
-  de la quiniela**.
+- El resultado es el **extracto oficial de la quiniela: 20 números del 00 al 99**,
+  donde un mismo número puede aparecer más de una vez.
 - Lo **carga a mano el admin**; el sistema no lo genera ni lo consulta a ninguna API.
-- Se normaliza en orden ascendente al guardarse, igual que las jugadas.
+- Se guarda tal como salió, **sin reordenar**.
 
 ## Los ganadores
 
-- Gana la jugada **no anulada** cuyos 4 números coinciden con los 4 del sorteo
-  (comparados como conjunto, sobre la forma normalizada).
+- Gana la jugada **no anulada** cuyos 4 números están dentro del extracto, contando
+  los repetidos (ver "Cómo se gana" más arriba).
 - Si hay **N ganadores**, cada uno cobra `pozo / N`. Con un pozo de $1.500.000 y
   dos ganadores, son $750.000 cada uno — aunque se hayan vendido tres jugadas.
 - Si hay **0 ganadores**, el sorteo queda **vacante**: el pozo no se acumula al mes

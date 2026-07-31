@@ -1,6 +1,12 @@
 /** 7 → "07". Los números de la borratina se leen siempre de dos cifras. */
 export const formatearNumero = (n) => String(n).padStart(2, '0');
 
+/** Cuántos números elige el comprador en una jugada. */
+export const CANTIDAD_NUMEROS = 4;
+
+/** Cuántos números trae el extracto oficial de la quiniela. */
+export const CANTIDAD_EXTRACTO = 20;
+
 const PESOS = new Intl.NumberFormat('es-AR', {
   style: 'currency',
   currency: 'ARS',

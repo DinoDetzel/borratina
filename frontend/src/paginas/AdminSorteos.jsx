@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { Bolillas, Cargando, Chip, MensajeError, MensajeExito, Vacio } from '../componentes/comunes.jsx';
 import {
+  CANTIDAD_EXTRACTO,
   fechaHora,
   finDelPeriodo,
   paraInputFecha,
@@ -32,7 +33,8 @@ export default function AdminSorteos() {
   const [iniciaEditado, setIniciaEditado] = useState('');
   const [finalizaEditado, setFinalizaEditado] = useState('');
 
-  const [resultado, setResultado] = useState(['', '', '', '']);
+  // El extracto oficial de la quiniela: 20 números.
+  const [resultado, setResultado] = useState(() => Array(CANTIDAD_EXTRACTO).fill(''));
   const [ganadores, setGanadores] = useState(null);
 
   async function traer() {
@@ -96,19 +98,20 @@ export default function AdminSorteos() {
   }
 
   async function cargarResultado(sorteo) {
-    if (resultado.some((n) => n === '')) {
-      setError('Completá los 4 números del resultado.');
+    const faltan = resultado.filter((n) => n === '').length;
+    if (faltan > 0) {
+      setError(`Faltan ${faltan} de los ${CANTIDAD_EXTRACTO} números del extracto.`);
       return;
     }
 
     const respuesta = await accion(
       () => api.sorteos.cargarResultado(sorteo.id, resultado.map(Number)),
-      'Resultado cargado. El sorteo quedó finalizado.',
+      'Extracto cargado. El sorteo quedó finalizado.',
     );
 
     if (respuesta) {
       setGanadores(respuesta);
-      setResultado(['', '', '', '']);
+      setResultado(Array(CANTIDAD_EXTRACTO).fill(''));
     }
   }
 
@@ -326,30 +329,40 @@ export default function AdminSorteos() {
       {cerrado && (
         <div className="tarjeta">
           <h2 style={{ marginBottom: '0.4rem' }}>
-            Cargar resultado de {periodoLargo(cerrado.periodo)}
+            Cargar extracto de {periodoLargo(cerrado.periodo)}
           </h2>
           <p style={{ color: 'var(--tinta-2)', fontSize: '0.85rem', marginTop: 0 }}>
-            Los 4 números del extracto oficial de la quiniela. El orden no importa.
+            Los {CANTIDAD_EXTRACTO} números del extracto oficial de la quiniela, en el orden en
+            que salieron. Gana quien tenga sus 4 números acá dentro.
           </p>
 
-          <div className="numeros" style={{ maxWidth: 260 }}>
+          <div className="extracto">
             {resultado.map((valor, i) => (
               <input
                 key={i}
+                id={`extracto-${i}`}
                 inputMode="numeric"
                 value={valor}
-                placeholder="00"
-                aria-label={`Número ganador ${i + 1}`}
+                placeholder={String(i + 1)}
+                aria-label={`Número ${i + 1} del extracto`}
                 onChange={(e) => {
                   const limpio = e.target.value.replace(/\D/g, '').slice(0, 2);
                   setResultado((prev) => prev.map((n, j) => (j === i ? limpio : n)));
+                  // Cargar 20 números a mano es tedioso: el foco salta solo.
+                  if (limpio.length === 2 && i < CANTIDAD_EXTRACTO - 1) {
+                    document.getElementById(`extracto-${i + 1}`)?.focus();
+                  }
                 }}
               />
             ))}
           </div>
 
+          <p style={{ color: 'var(--tinta-apagada)', fontSize: '0.82rem', marginBottom: 0 }}>
+            {resultado.filter((n) => n !== '').length} de {CANTIDAD_EXTRACTO} cargados.
+          </p>
+
           <button style={{ marginTop: '1rem' }} onClick={() => cargarResultado(cerrado)}>
-            Cargar resultado y finalizar
+            Cargar extracto y finalizar
           </button>
         </div>
       )}
@@ -420,10 +433,10 @@ export default function AdminSorteos() {
                     </td>
                     <td className="num">{pesos(s.precio_jugada)}</td>
                     <td>
-                      {s.numero_1 == null ? (
-                        <span style={{ color: 'var(--tinta-apagada)' }}>—</span>
+                      {s.numeros ? (
+                        <Bolillas numeros={s.numeros} />
                       ) : (
-                        <Bolillas numeros={[s.numero_1, s.numero_2, s.numero_3, s.numero_4]} />
+                        <span style={{ color: 'var(--tinta-apagada)' }}>—</span>
                       )}
                     </td>
                     <td className="num">{pesos(s.pozo)}</td>

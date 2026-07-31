@@ -5,6 +5,7 @@ import { AppError } from '../middleware/errors.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { validarNumeros } from '../utils/numeros.js';
 import { armarComprobante, normalizarCodigo } from '../utils/comprobante.js';
+import { esGanadora } from '../utils/ganadores.js';
 
 const router = Router();
 
@@ -223,8 +224,7 @@ router.get('/comprobante/:codigo', requireAuth, async (req, res) => {
   const { rows } = await query(
     `SELECT ${CAMPOS_J}, u.nombre AS vendedor,
             s.periodo, s.estado AS sorteo_estado, s.precio_jugada,
-            s.numero_1 AS ganador_1, s.numero_2 AS ganador_2,
-            s.numero_3 AS ganador_3, s.numero_4 AS ganador_4
+            s.numeros AS extracto
      FROM jugadas j
      JOIN usuarios u ON u.id = j.vendedor_id
      JOIN sorteos s ON s.id = j.sorteo_id
@@ -240,12 +240,13 @@ router.get('/comprobante/:codigo', requireAuth, async (req, res) => {
 
   // Si el sorteo ya se sorteó, de paso le decimos si ganó.
   const sorteado = fila.sorteo_estado === 'finalizado';
-  const gano = sorteado
-    && !fila.anulada
-    && fila.numero_1 === fila.ganador_1
-    && fila.numero_2 === fila.ganador_2
-    && fila.numero_3 === fila.ganador_3
-    && fila.numero_4 === fila.ganador_4;
+  const gano =
+    sorteado &&
+    !fila.anulada &&
+    esGanadora(
+      [fila.numero_1, fila.numero_2, fila.numero_3, fila.numero_4],
+      fila.extracto,
+    );
 
   res.json({
     comprobante: armarComprobante(fila, {
@@ -254,6 +255,7 @@ router.get('/comprobante/:codigo', requireAuth, async (req, res) => {
       precio_jugada: fila.precio_jugada,
     }),
     sorteado,
+    extracto: fila.extracto,
     gano: sorteado ? gano : null,
   });
 });

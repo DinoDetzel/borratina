@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { query } from '../db.js';
 import { AppError } from '../middleware/errors.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { condicionGanadora } from '../utils/ganadores.js';
 
 const router = Router();
 
@@ -36,7 +37,7 @@ router.get('/resumen', async (req, res) => {
 
   const { rows } = await query(
     `SELECT s.id, s.periodo, s.estado, s.precio_jugada, s.pozo,
-            s.numero_1, s.numero_2, s.numero_3, s.numero_4,
+            s.numeros,
             s.fecha_cierre_carga, s.fecha_resultado,
             COUNT(j.id) FILTER (WHERE j.anulada = false) AS jugadas_validas,
             COUNT(j.id) FILTER (WHERE j.anulada = true)  AS jugadas_anuladas,
@@ -142,7 +143,7 @@ router.get('/historial', async (req, res) => {
       GROUP BY sorteo_id
     )
     SELECT s.id, s.periodo, s.precio_jugada, s.pozo,
-           s.numero_1, s.numero_2, s.numero_3, s.numero_4,
+           s.numeros,
            s.fecha_resultado,
            COALESCE(v.jugadas, 0) AS jugadas,
            COALESCE(v.jugadas, 0) * s.precio_jugada AS recaudacion,
@@ -155,8 +156,7 @@ router.get('/historial', async (req, res) => {
     FROM sorteos s
     LEFT JOIN ventas v ON v.sorteo_id = s.id
     LEFT JOIN jugadas j ON j.sorteo_id = s.id AND j.anulada = false
-        AND j.numero_1 = s.numero_1 AND j.numero_2 = s.numero_2
-        AND j.numero_3 = s.numero_3 AND j.numero_4 = s.numero_4
+        AND ${condicionGanadora('j', 's')}
     WHERE s.estado = 'finalizado'
     GROUP BY s.id, v.jugadas
     ORDER BY s.periodo DESC

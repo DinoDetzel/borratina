@@ -282,6 +282,28 @@ button.chico {
 .bolillas {
   display: inline-flex;
   gap: 0.3rem;
+  /* El extracto son 20 bolillas: tienen que poder bajar de renglón. */
+  flex-wrap: wrap;
+}
+
+/* Los 20 campos del extracto: 10 por fila, y menos en pantallas angostas. */
+.extracto {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 0.4rem;
+  max-width: 640px;
+}
+
+.extracto input {
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  padding: 0.45rem 0.15rem;
+}
+
+@media (max-width: 700px) {
+  .extracto { grid-template-columns: repeat(5, 1fr); }
 }
 
 /* ---------- Estados ---------- */

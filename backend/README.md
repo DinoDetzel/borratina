@@ -113,14 +113,22 @@ minúsculas. Si el sorteo ya está finalizado, agrega `sorteado: true` y `gano`.
 
 ## Lo que hay que tener en cuenta al tocar esto
 
-**El orden de los números no importa.** Se guardan siempre ordenados
-ascendentemente, tanto en la jugada como en el resultado del sorteo. Por eso
-`[45,7,88,23]` y `[7,23,45,88]` son la misma jugada, y el match de ganadores
-puede seguir siendo una comparación posicional barata que usa el índice.
+**Se gana con 4 dentro de 20.** El sorteo guarda el extracto oficial completo
+(20 números) y gana la jugada cuyos 4 números están ahí dentro. El orden no
+importa en ninguno de los dos lados.
 
-Toda normalización pasa por `src/utils/numeros.js`. Los `CHECK` de la base son la
-red de seguridad: si alguien inserta sin normalizar, el INSERT falla en vez de
-guardar una jugada que nunca podría ganar.
+**Los repetidos cuentan.** La contención es de multiconjunto: si la jugada repite
+un número, el extracto tiene que repetirlo también. Con un solo `07` en el
+extracto, la jugada `07 07 23 45` **no** gana.
+
+La regla vive en `src/utils/ganadores.js` en dos formas que tienen que dar siempre
+lo mismo: `condicionGanadora()` (SQL, para las queries) y `esGanadora()` (JS, para
+cuando los datos ya están en memoria). Si se toca una, hay que tocar la otra.
+
+**Los 4 números de la jugada se guardan ordenados ascendentemente**; el extracto
+no, porque se publica en un orden propio que conviene conservar. La normalización
+de las jugadas pasa por `src/utils/numeros.js`, y el `CHECK` de la base es la red
+de seguridad si alguien inserta sin normalizar.
 
 **Los permisos se validan acá, no en el frontend.** El filtro por vendedor en
 `GET /jugadas` se impone en el servidor: un vendedor que mande `?vendedor_id=3`

@@ -18,6 +18,32 @@
 | `004_codigo_con_fecha.sql` | El código del comprobante pasa a `AAMMDD-XXXXXX` y lo pone un trigger |
 | `005_pozo_fijo.sql` | `pozo_total` → `pozo`: deja de calcularse y pasa a definirse al abrir |
 | `006_ventana_de_carga.sql` | `inicia_at` / `finaliza_at`: desde y hasta cuándo se puede cargar |
+| `007_extracto_de_20.sql` | El resultado pasa de 4 números a un extracto de 20 |
+
+## El resultado es un extracto de 20
+
+```sql
+ALTER TABLE sorteos ADD COLUMN numeros SMALLINT[];
+ALTER TABLE sorteos DROP COLUMN numero_1;  -- … hasta numero_4
+
+ALTER TABLE sorteos ADD CONSTRAINT chk_sorteos_extracto CHECK (
+    numeros IS NULL
+    OR (array_length(numeros, 1) = 20 AND 0 <= ALL (numeros) AND 99 >= ALL (numeros))
+);
+```
+
+- **Array y no 20 columnas**: `numero_1..numero_20` sería ilegible y no aporta nada,
+  porque el orden del extracto no interviene en el match.
+- El extracto **no se normaliza**: se guarda como salió publicado. Las jugadas sí
+  se normalizan, que es lo que mantiene utilizable `idx_jugadas_numeros` para el
+  buscador por combinación exacta.
+- El match dejó de ser una comparación posicional y pasó a ser **contención de
+  multiconjunto**. La condición vive en `backend/src/utils/ganadores.js` y se
+  expresa por la negativa: no hay ningún número que la jugada repita más veces de
+  las que salió.
+- Los sorteos que estaban finalizados con el modelo viejo volvieron a `cerrado` sin
+  resultado: un resultado de 4 no se puede convertir en uno de 20 sin inventar los
+  16 que faltan.
 
 ## Ventana de carga
 

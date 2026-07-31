@@ -129,9 +129,7 @@ export default function AdminDashboard() {
       {finalizado && (
         <div className="tarjeta" style={{ marginBottom: '1rem' }}>
           <h2 style={{ marginBottom: '0.6rem' }}>Resultado del sorteo</h2>
-          <Bolillas
-            numeros={[resumen.numero_1, resumen.numero_2, resumen.numero_3, resumen.numero_4]}
-          />
+          <Bolillas numeros={resumen.numeros} />
         </div>
       )}
 
@@ -198,7 +196,7 @@ export default function AdminDashboard() {
                   <tr key={h.id}>
                     <td>{periodoLargo(h.periodo)}</td>
                     <td>
-                      <Bolillas numeros={[h.numero_1, h.numero_2, h.numero_3, h.numero_4]} />
+                      <Bolillas numeros={h.numeros} />
                     </td>
                     <td className="num">{pesos(h.pozo)}</td>
                     <td className="num">

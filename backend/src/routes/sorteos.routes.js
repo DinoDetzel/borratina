@@ -3,7 +3,8 @@ import { Router } from 'express';
 import { query, withTransaction } from '../db.js';
 import { AppError } from '../middleware/errors.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
-import { validarNumeros } from '../utils/numeros.js';
+import { validarExtracto } from '../utils/numeros.js';
+import { condicionGanadora } from '../utils/ganadores.js';
 
 const router = Router();
 
@@ -11,7 +12,7 @@ const router = Router();
 const COLUMNAS = [
   'id', 'periodo', 'precio_jugada', 'pozo', 'estado',
   'inicia_at', 'finaliza_at',
-  'numero_1', 'numero_2', 'numero_3', 'numero_4',
+  'numeros',
   'fecha_cierre_carga', 'fecha_resultado', 'created_at',
 ];
 const CAMPOS = COLUMNAS.join(', ');
@@ -214,7 +215,7 @@ router.patch('/:id/cerrar', requireAuth, requireAdmin, async (req, res) => {
  * después habría cambiado el histórico.
  */
 router.post('/:id/resultado', requireAuth, requireAdmin, async (req, res) => {
-  const numeros = validarNumeros(req.body?.numeros, 'numeros');
+  const extracto = validarExtracto(req.body?.numeros, 'numeros');
 
   const resultado = await withTransaction(async (client) => {
     // FOR UPDATE: si dos admins cargan el resultado a la vez, uno espera al otro.
@@ -234,11 +235,10 @@ router.post('/:id/resultado', requireAuth, requireAdmin, async (req, res) => {
 
     const { rows: actualizados } = await client.query(
       `UPDATE sorteos
-       SET numero_1 = $1, numero_2 = $2, numero_3 = $3, numero_4 = $4,
-           estado = 'finalizado', fecha_resultado = now()
-       WHERE id = $5
+       SET numeros = $1, estado = 'finalizado', fecha_resultado = now()
+       WHERE id = $2
        RETURNING ${CAMPOS}`,
-      [...numeros, sorteo.id],
+      [extracto, sorteo.id],
     );
 
     const { rows: ganadores } = await client.query(
@@ -250,8 +250,7 @@ router.post('/:id/resultado', requireAuth, requireAdmin, async (req, res) => {
        JOIN sorteos s ON s.id = j.sorteo_id
        WHERE j.sorteo_id = $1
          AND j.anulada = false
-         AND j.numero_1 = s.numero_1 AND j.numero_2 = s.numero_2
-         AND j.numero_3 = s.numero_3 AND j.numero_4 = s.numero_4
+         AND ${condicionGanadora('j', 's')}
        ORDER BY j.created_at`,
       [sorteo.id],
     );
@@ -290,8 +289,7 @@ router.get('/:id/ganadores', requireAuth, requireAdmin, async (req, res) => {
      JOIN sorteos s ON s.id = j.sorteo_id
      WHERE j.sorteo_id = $1
        AND j.anulada = false
-       AND j.numero_1 = s.numero_1 AND j.numero_2 = s.numero_2
-       AND j.numero_3 = s.numero_3 AND j.numero_4 = s.numero_4
+       AND ${condicionGanadora('j', 's')}
      ORDER BY j.created_at`,
     [sorteo.id],
   );

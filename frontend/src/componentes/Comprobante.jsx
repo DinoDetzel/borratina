@@ -7,7 +7,7 @@ import { fechaHora, periodoLargo, pesos } from '../utilidades.js';
  * El backend manda datos, no HTML; el maquetado es de acá. Se imprime con la
  * regla @media print, que oculta todo lo demás de la página.
  */
-export default function Comprobante({ comprobante, sorteado, gano }) {
+export default function Comprobante({ comprobante, sorteado, gano, extracto }) {
   const { codigo, numeros, comprador, sorteo, importe, vendedor, fecha, anulada } = comprobante;
 
   return (
@@ -52,6 +52,18 @@ export default function Comprobante({ comprobante, sorteado, gano }) {
       {(anulada || sorteado) && (
         <>
           <hr className="separador" />
+
+          {/* El extracto va acá para que se pueda cotejar contra los números de
+              arriba sin tener que ir a buscarlo a otro lado. */}
+          {sorteado && extracto && (
+            <div style={{ marginBottom: '0.9rem' }}>
+              <div className="titulo" style={{ marginBottom: '0.4rem' }}>
+                Extracto del sorteo
+              </div>
+              <Bolillas numeros={extracto} />
+            </div>
+          )}
+
           <div style={{ textAlign: 'center' }}>
             {anulada ? (
               <Chip estado="anulada">Anulada</Chip>
