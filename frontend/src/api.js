@@ -84,6 +84,7 @@ export const api = {
   sorteos: {
     listar: () => pedir('/sorteos'),
     actual: () => pedir('/sorteos/actual'),
+    uno: (id) => pedir(`/sorteos/${id}`),
     abrir: (datos) => pedir('/sorteos', { method: 'POST', body: JSON.stringify(datos) }),
     cambiarPozo: (id, pozo) =>
       pedir(`/sorteos/${id}/pozo`, { method: 'PATCH', body: JSON.stringify({ pozo }) }),

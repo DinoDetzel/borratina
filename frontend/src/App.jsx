@@ -6,6 +6,7 @@ import Login from './paginas/Login.jsx';
 import Vendedor from './paginas/Vendedor.jsx';
 import AdminDashboard from './paginas/AdminDashboard.jsx';
 import AdminSorteos from './paginas/AdminSorteos.jsx';
+import AdminSorteoDetalle from './paginas/AdminSorteoDetalle.jsx';
 import AdminJugadas from './paginas/AdminJugadas.jsx';
 import AdminUsuarios from './paginas/AdminUsuarios.jsx';
 
@@ -43,7 +44,15 @@ function Navegacion() {
   return (
     <nav className="nav no-imprimir">
       {enlaces.map(([a, texto]) => (
-        <NavLink key={a} to={a} end className={({ isActive }) => (isActive ? 'activo' : '')}>
+        <NavLink
+          key={a}
+          to={a}
+          // Solo /admin necesita coincidencia exacta: si no, quedaría marcado
+          // en todas las pantallas del panel. Las demás sí tienen que seguir
+          // marcadas en sus subpáginas, como el detalle de un sorteo.
+          end={a === '/admin'}
+          className={({ isActive }) => (isActive ? 'activo' : '')}
+        >
           {texto}
         </NavLink>
       ))}
@@ -116,6 +125,16 @@ export default function App() {
           <Protegida soloAdmin>
             <Estructura>
               <AdminSorteos />
+            </Estructura>
+          </Protegida>
+        }
+      />
+      <Route
+        path="/admin/sorteos/:id"
+        element={
+          <Protegida soloAdmin>
+            <Estructura>
+              <AdminSorteoDetalle />
             </Estructura>
           </Protegida>
         }

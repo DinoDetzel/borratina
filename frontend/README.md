@@ -37,8 +37,13 @@ El vendedor la usa parado en la calle, con una mano. Por eso:
 Si tocás esta pantalla, revisala en un viewport angosto antes de darla por buena.
 
 **Admin** — panel con el pozo, evolución de ventas e historial (`/admin`), gestión
-de sorteos (`/admin/sorteos`), buscador de jugadas con corregir y anular
-(`/admin/jugadas`) y alta de cuentas (`/admin/usuarios`).
+de sorteos (`/admin/sorteos`), detalle de un sorteo (`/admin/sorteos/:id`),
+buscador de jugadas con corregir y anular (`/admin/jugadas`) y alta de cuentas
+(`/admin/usuarios`).
+
+El detalle de un sorteo es la pantalla que se mira cuando se sortea: el extracto,
+si hubo ganadores o quedó vacante, quiénes cobran y todas las jugadas cargadas,
+con los números que estaban en el extracto en verde.
 
 ## Estructura
 
@@ -59,6 +64,7 @@ src/
     ├── Vendedor.jsx
     ├── AdminDashboard.jsx
     ├── AdminSorteos.jsx
+    ├── AdminSorteoDetalle.jsx
     ├── AdminJugadas.jsx
     └── AdminUsuarios.jsx
 ```

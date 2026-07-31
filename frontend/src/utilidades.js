@@ -43,6 +43,29 @@ export function fechaCorta(iso) {
   return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
 }
 
+/**
+ * Cuáles de los números de una jugada están en el extracto, uno por uno.
+ * Devuelve un booleano por número, en el mismo orden.
+ *
+ * Los repetidos cuentan: la segunda vez que la jugada repite un número solo
+ * queda marcada si el extracto también lo trae dos veces. Es la misma regla que
+ * `esGanadora()` en el backend, pero acá es solo para pintar; quién ganó lo dice
+ * el campo `gano` que manda la API, que es la única fuente que vale.
+ */
+export function aciertos(numeros, extracto) {
+  if (!extracto) return numeros.map(() => false);
+
+  const disponibles = new Map();
+  for (const n of extracto) disponibles.set(n, (disponibles.get(n) ?? 0) + 1);
+
+  return numeros.map((n) => {
+    const quedan = disponibles.get(n) ?? 0;
+    if (quedan === 0) return false;
+    disponibles.set(n, quedan - 1);
+    return true;
+  });
+}
+
 /** '2026-08' → 'agosto 2026' */
 export function periodoLargo(periodo) {
   if (!periodo) return '—';

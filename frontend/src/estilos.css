@@ -258,6 +258,23 @@ button.chico {
   font-size: 0.82rem;
 }
 
+/* Un enlace que se ve como botón. Se usa cuando la acción es ir a otra
+   pantalla: así funciona el botón derecho, "abrir en pestaña nueva" y todo lo
+   que un <button> con navigate() rompe. */
+a.boton {
+  display: inline-block;
+  text-decoration: none;
+  line-height: normal;
+}
+
+/* Volver a la pantalla de la que se vino. */
+.volver {
+  font-size: 0.85rem;
+  color: var(--tinta-2);
+  text-decoration: none;
+}
+.volver:hover { color: var(--tinta); }
+
 /* ---------- Cartel modal ---------- */
 
 .dialogo {
@@ -449,6 +466,13 @@ button.chico {
   font-weight: 680;
   font-variant-numeric: tabular-nums;
   font-size: 0.95rem;
+}
+
+/* Un número de la jugada que está en el extracto. El color no va solo: los
+   cuatro acertados llevan además el chip "Ganadora" al lado. */
+.bolilla.acierto {
+  background: var(--ok);
+  color: #fff;
 }
 
 .bolillas {

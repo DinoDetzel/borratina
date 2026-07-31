@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { api } from '../api.js';
 import { Bolillas, Cargando, Chip, MensajeError, MensajeExito, Vacio } from '../componentes/comunes.jsx';
@@ -13,6 +14,8 @@ import {
 } from '../utilidades.js';
 
 export default function AdminSorteos() {
+  const navegar = useNavigate();
+
   const [sorteos, setSorteos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
@@ -35,7 +38,6 @@ export default function AdminSorteos() {
 
   // El extracto oficial de la quiniela: 20 números.
   const [resultado, setResultado] = useState(() => Array(CANTIDAD_EXTRACTO).fill(''));
-  const [ganadores, setGanadores] = useState(null);
 
   async function traer() {
     setCargando(true);
@@ -109,9 +111,10 @@ export default function AdminSorteos() {
       'Extracto cargado. El sorteo quedó finalizado.',
     );
 
+    // Cargar el extracto se hace para ver quién ganó: se va derecho ahí.
     if (respuesta) {
-      setGanadores(respuesta);
       setResultado(Array(CANTIDAD_EXTRACTO).fill(''));
+      navegar(`/admin/sorteos/${sorteo.id}`);
     }
   }
 
@@ -367,44 +370,6 @@ export default function AdminSorteos() {
         </div>
       )}
 
-      {ganadores && (
-        <div className="tarjeta">
-          <h2 style={{ marginBottom: '0.75rem' }}>
-            {ganadores.vacante ? 'Sorteo vacante' : `Ganadores (${ganadores.ganadores.length})`}
-          </h2>
-
-          {ganadores.vacante ? (
-            <div className="aviso">Nadie acertó la combinación. El pozo no se reparte.</div>
-          ) : (
-            <>
-              <p style={{ marginTop: 0 }}>
-                Premio por ganador: <strong>{pesos(ganadores.premio_por_ganador)}</strong>
-              </p>
-              <div className="tabla-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Comprador</th>
-                      <th>Teléfono</th>
-                      <th>Vendedor</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ganadores.ganadores.map((g) => (
-                      <tr key={g.id}>
-                        <td>{g.comprador_nombre}</td>
-                        <td>{g.comprador_telefono ?? '—'}</td>
-                        <td>{g.vendedor}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
       <div className="tarjeta">
         <h2 style={{ marginBottom: '0.75rem' }}>Todos los sorteos</h2>
 
@@ -427,7 +392,12 @@ export default function AdminSorteos() {
               <tbody>
                 {sorteos.map((s) => (
                   <tr key={s.id}>
-                    <td>{periodoLargo(s.periodo)}</td>
+                    <td>
+                      {/* Se entra al detalle desde el período, no solo desde el
+                          botón: los sorteos sin finalizar también tienen algo
+                          que mirar (lo que se lleva cargado). */}
+                      <Link to={`/admin/sorteos/${s.id}`}>{periodoLargo(s.periodo)}</Link>
+                    </td>
                     <td>
                       <Chip estado={s.estado}>{s.estado}</Chip>
                     </td>
@@ -461,18 +431,9 @@ export default function AdminSorteos() {
                         </button>
                       )}
                       {s.estado === 'finalizado' && (
-                        <button
-                          className="secundario chico"
-                          onClick={async () => {
-                            const r = await accion(
-                              () => api.sorteos.ganadores(s.id),
-                              'Ganadores del sorteo.',
-                            );
-                            if (r) setGanadores(r);
-                          }}
-                        >
+                        <Link className="boton secundario chico" to={`/admin/sorteos/${s.id}`}>
                           Ver ganadores
-                        </button>
+                        </Link>
                       )}
                     </td>
                   </tr>
