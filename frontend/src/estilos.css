@@ -210,17 +210,25 @@ h3 { font-size: 1rem; }
   letter-spacing: -0.03em;
 }
 
-/* ---------- Encabezado del panel ----------
-   El pozo grande a la izquierda y, contra el borde derecho, lo único que hace
-   falta saber sobre él: si lo vendido alcanza para pagarlo. Las dos mitades no
-   son iguales a propósito — una es la cifra y la otra el estado de esa cifra. */
+/* ---------- Tarjeta partida en dos ----------
+   Dos cosas que se entienden juntas, separadas por una línea. En pantalla
+   angosta la línea pasa a ser horizontal y las mitades se apilan. */
 
-.panel-hero {
+.partida {
   display: grid;
-  grid-template-columns: 1.5fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
   align-items: start;
 }
+.partida > * + * {
+  padding-left: 1.5rem;
+  border-left: 1px solid var(--linea);
+}
+
+/* El pozo grande a la izquierda y, contra el borde derecho, lo único que hace
+   falta saber sobre él: si lo vendido alcanza para pagarlo. Las dos mitades no
+   son iguales a propósito — una es la cifra y la otra el estado de esa cifra. */
+.panel-hero { grid-template-columns: 1.5fr 1fr; }
 
 .panel-hero .etiqueta {
   color: var(--tinta-2);
@@ -234,10 +242,6 @@ h3 { font-size: 1rem; }
 }
 .panel-hero .pie strong { color: var(--tinta-2); }
 
-.panel-hero .cobertura {
-  padding-left: 1.5rem;
-  border-left: 1px solid var(--linea);
-}
 .panel-hero .monto {
   font-size: 1.6rem;
   font-weight: 680;
@@ -293,12 +297,13 @@ h3 { font-size: 1rem; }
 }
 
 @media (max-width: 900px) {
+  .partida,
   .panel-hero,
   .panel-fila { grid-template-columns: 1fr; }
 
   /* Sin dos columnas, la línea divisoria pasa a ser horizontal. */
-  .panel-hero .cobertura {
-    padding: 1.1rem 0 0;
+  .partida > * + * {
+    padding: 1.15rem 0 0;
     border-left: none;
     border-top: 1px solid var(--linea);
   }
@@ -566,33 +571,40 @@ tr.apagada { opacity: 0.55; }
   .contenido { padding: 1rem 0.9rem 3rem; }
   .tarjeta { padding: 1rem; }
 
-  /* El listado propio del vendedor deja de ser tabla y pasa a ser una lista:
-     cuatro columnas en 390px obligaban a scrollear de costado para leer el
-     nombre del comprador. */
-  .lista-jugadas thead { display: none; }
-  .lista-jugadas,
-  .lista-jugadas tbody,
-  .lista-jugadas tr { display: block; }
+  /* Una tabla deja de ser tabla y pasa a ser una lista: media docena de
+     columnas en 390px obligan a scrollear de costado para leer lo básico. */
+  .tabla-a-lista thead { display: none; }
+  .tabla-a-lista,
+  .tabla-a-lista tbody,
+  .tabla-a-lista tr { display: block; }
 
-  .lista-jugadas tr {
+  .tabla-a-lista tr {
     padding: 0.75rem 0;
     border-bottom: 1px solid var(--linea);
   }
-  .lista-jugadas tr:last-child { border-bottom: none; }
+  .tabla-a-lista tr:last-child { border-bottom: none; }
 
-  .lista-jugadas td {
+  .tabla-a-lista td {
     display: block;
     border: none;
     padding: 0;
   }
-  .lista-jugadas td + td { margin-top: 0.35rem; }
+  .tabla-a-lista td + td { margin-top: 0.35rem; }
 
-  /* Sin encabezados, el nombre del vendedor quedaba como una línea suelta
-     debajo del comprador y no se sabía cuál era cuál. */
-  .lista-jugadas td.vendedor::before {
-    content: 'Cargó ';
+  /* Sin columna que las alinee, las cifras vuelven al margen izquierdo. */
+  .tabla-a-lista td.num { text-align: left; }
+
+  /* Sin encabezados, cada valor queda como una línea suelta y no se sabe cuál
+     es cuál. `data-movil` le pone el nombre adelante, solo acá. */
+  .tabla-a-lista td[data-movil]::before {
+    content: attr(data-movil) ' ';
     color: var(--tinta-apagada);
   }
+
+  /* Va después de `.tabla-a-lista td`, que si no le gana por especificidad y
+     la columna escondida reaparece. */
+  .tabla-a-lista td.oculta-en-movil,
+  .tabla-a-lista th.oculta-en-movil { display: none; }
 }
 
 /* Resumen del sorteo arriba de la carga: el pozo se ve, pero sin comerse la

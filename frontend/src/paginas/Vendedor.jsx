@@ -337,7 +337,7 @@ export default function Vendedor() {
           </Vacio>
         ) : (
           <div className="tabla-scroll">
-            <table className="lista-jugadas">
+            <table className="tabla-a-lista">
               <thead>
                 <tr>
                   <th>Comprobante</th>
@@ -364,7 +364,7 @@ export default function Vendedor() {
                         </div>
                       )}
                     </td>
-                    {viendoTodas && <td className="vendedor">{j.vendedor}</td>}
+                    {viendoTodas && <td data-movil="Cargó">{j.vendedor}</td>}
                     <td style={{ color: 'var(--tinta-2)', fontSize: '0.85rem' }}>
                       {fechaHora(j.created_at)}
                     </td>

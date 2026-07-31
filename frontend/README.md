@@ -58,6 +58,16 @@ jugadas como el detalle de un sorteo muestran "N de M · Ver más". Antes el
 buscador pedía las primeras 100 y el encabezado decía el total, así que una
 búsqueda con más resultados se cortaba en silencio.
 
+Las tarjetas partidas en dos (el pozo con su cobertura, el sorteo abierto con su
+pozo y sus fechas) comparten `.partida`: dos columnas con una línea al medio que
+en pantalla angosta se apilan y la línea pasa a ser horizontal.
+
+Las tablas anchas llevan `.tabla-a-lista` y en el teléfono dejan de ser tabla:
+cada fila pasa a ser un bloque. Como ahí no hay encabezados, los valores que
+solos no se entienden llevan `data-movil="Pozo"` y el nombre aparece adelante; y
+lo que directamente no entra (los 20 números de un extracto) lleva
+`oculta-en-movil`.
+
 Ojo con `.tarjeta + .tarjeta { margin-top }` cuando las tarjetas van dentro de
 una grilla: ahí la separación la da el `gap`, y el margen extra deja la primera
 tarjeta desalineada del resto. Por eso está anulado en `.grilla` y `.panel-fila`.

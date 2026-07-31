@@ -101,7 +101,7 @@ export default function AdminDashboard() {
       {/* El pozo es la cifra que encabeza el panel, y al lado va lo único que
           hace falta saber sobre él: si lo vendido alcanza para pagarlo. Van
           juntos porque solo se entienden uno contra el otro. */}
-      <div className="tarjeta panel-hero" style={{ marginBottom: '1rem' }}>
+      <div className="tarjeta partida panel-hero" style={{ marginBottom: '1rem' }}>
         <div>
           <div className="etiqueta">{finalizado ? 'Pozo repartido' : 'Pozo'}</div>
           <div className="hero">{pesos(resumen.pozo)}</div>

@@ -141,16 +141,12 @@ export default function AdminSorteos() {
       <MensajeError>{error}</MensajeError>
       <MensajeExito>{exito}</MensajeExito>
 
-      {/* Abrir el sorteo del mes. Solo tiene sentido si no hay otro abierto. */}
-      <div className="tarjeta">
-        <h2 style={{ marginBottom: '0.75rem' }}>Abrir sorteo</h2>
+      {/* Abrir el sorteo del mes solo tiene sentido si no hay otro abierto: con
+          uno abierto, esta tarjeta se reemplaza por la de administrarlo. */}
+      {!abierto && (
+        <div className="tarjeta">
+          <h2 style={{ marginBottom: '0.75rem' }}>Abrir sorteo</h2>
 
-        {abierto ? (
-          <div className="aviso">
-            Ya hay un sorteo abierto ({periodoLargo(abierto.periodo)}). Cerrá la carga antes
-            de abrir el siguiente.
-          </div>
-        ) : (
           <form onSubmit={abrir}>
             <div className="fila">
               <div>
@@ -231,17 +227,24 @@ export default function AdminSorteos() {
               )}
             </p>
           </form>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* El pozo se puede corregir mientras la carga siga abierta. Después no:
-          el premio ya se anunció con jugadas hechas. */}
+      {/* Lo que se puede tocar mientras la carga sigue abierta. Después no: el
+          premio ya se anunció con jugadas hechas. Las dos cosas van juntas
+          porque son las dos únicas que se corrigen sobre la marcha. */}
       {abierto && (
         <div className="tarjeta">
-          <h2 style={{ marginBottom: '0.4rem' }}>Pozo de {periodoLargo(abierto.periodo)}</h2>
+          <div className="encabezado-tarjeta">
+            <h2 style={{ margin: 0 }}>Sorteo de {periodoLargo(abierto.periodo)}</h2>
+            <Chip estado="abierto">carga abierta</Chip>
+          </div>
+
+          <div className="partida" style={{ marginTop: '1.1rem' }}>
+            <div>
+          <h3 style={{ margin: '0 0 0.3rem' }}>Pozo</h3>
           <p style={{ color: 'var(--tinta-2)', fontSize: '0.85rem', marginTop: 0 }}>
-            Ahora es <strong>{pesos(abierto.pozo)}</strong>. Se puede cambiar mientras la carga
-            esté abierta.
+            Ahora es <strong>{pesos(abierto.pozo)}</strong>.
           </p>
 
           <form
@@ -274,10 +277,10 @@ export default function AdminSorteos() {
               </button>
             </div>
           </form>
+            </div>
 
-          <hr style={{ border: 'none', borderTop: '1px solid var(--linea)', margin: '1.25rem 0' }} />
-
-          <h3 style={{ marginBottom: '0.3rem' }}>Fechas de carga</h3>
+            <div>
+          <h3 style={{ margin: '0 0 0.3rem' }}>Fechas de carga</h3>
           {/* Sin punto final: el formato en español ya termina en "p. m." */}
           <p style={{ color: 'var(--tinta-2)', fontSize: '0.85rem', marginTop: 0 }}>
             Abre el <strong>{fechaHora(abierto.inicia_at)}</strong> y cierra el{' '}
@@ -326,6 +329,12 @@ export default function AdminSorteos() {
               </button>
             </div>
           </form>
+            </div>
+          </div>
+
+          <p style={{ color: 'var(--tinta-apagada)', fontSize: '0.82rem', margin: '1.1rem 0 0' }}>
+            Para abrir el sorteo del mes que viene hay que cerrar esta carga primero.
+          </p>
         </div>
       )}
 
@@ -359,13 +368,15 @@ export default function AdminSorteos() {
           <Vacio>Todavía no creaste ningún sorteo.</Vacio>
         ) : (
           <div className="tabla-scroll">
-            <table>
+            <table className="tabla-a-lista">
               <thead>
                 <tr>
                   <th>Período</th>
                   <th>Estado</th>
                   <th style={{ textAlign: 'right' }}>Precio</th>
-                  <th>Resultado</th>
+                  {/* Los 20 números no entran en un teléfono: están en el
+                      detalle del sorteo, a un toque del período. */}
+                  <th className="oculta-en-movil">Resultado</th>
                   <th style={{ textAlign: 'right' }}>Pozo</th>
                   <th>Carga</th>
                   <th></th>
@@ -383,15 +394,19 @@ export default function AdminSorteos() {
                     <td>
                       <Chip estado={s.estado}>{s.estado}</Chip>
                     </td>
-                    <td className="num">{pesos(s.precio_jugada)}</td>
-                    <td>
+                    <td className="num" data-movil="Jugada a">
+                      {pesos(s.precio_jugada)}
+                    </td>
+                    <td className="oculta-en-movil">
                       {s.numeros ? (
-                        <Bolillas numeros={s.numeros} />
+                        <Bolillas numeros={s.numeros} compactas />
                       ) : (
                         <span style={{ color: 'var(--tinta-apagada)' }}>—</span>
                       )}
                     </td>
-                    <td className="num">{pesos(s.pozo)}</td>
+                    <td className="num" data-movil="Pozo">
+                      {pesos(s.pozo)}
+                    </td>
                     <td style={{ color: 'var(--tinta-2)', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
                       {fechaHora(s.inicia_at)}
                       <div>→ {fechaHora(s.finaliza_at)}</div>

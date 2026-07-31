@@ -298,7 +298,7 @@ export default function AdminJugadas() {
           <Vacio>Ninguna jugada coincide con la búsqueda.</Vacio>
         ) : (
           <div className="tabla-scroll">
-            <table className="lista-jugadas">
+            <table className="tabla-a-lista">
               <thead>
                 <tr>
                   <th>Comprobante</th>
@@ -333,7 +333,7 @@ export default function AdminJugadas() {
                         </div>
                       )}
                     </td>
-                    <td className="vendedor">{j.vendedor}</td>
+                    <td data-movil="Cargó">{j.vendedor}</td>
                     <td style={{ color: 'var(--tinta-2)', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
                       {fechaHora(j.created_at)}
                     </td>
