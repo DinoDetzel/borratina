@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react';
 
 import { api } from '../api.js';
 import { Bolillas, Cargando, Chip, MensajeError, MensajeExito, Vacio } from '../componentes/comunes.jsx';
-import { fechaHora, periodoActual, periodoLargo, pesos } from '../utilidades.js';
+import {
+  fechaHora,
+  finDelPeriodo,
+  paraInputFecha,
+  periodoActual,
+  periodoLargo,
+  pesos,
+} from '../utilidades.js';
 
 export default function AdminSorteos() {
   const [sorteos, setSorteos] = useState([]);
@@ -15,8 +22,15 @@ export default function AdminSorteos() {
   const [pozo, setPozo] = useState('');
   const [abriendo, setAbriendo] = useState(false);
 
-  // Corrección del pozo de un sorteo ya abierto.
+  // Por defecto la carga arranca ahora y cierra al terminar el mes del período:
+  // es lo que se hace casi siempre, y así el admin solo toca lo que quiere cambiar.
+  const [inicia, setInicia] = useState(() => paraInputFecha(new Date()));
+  const [finaliza, setFinaliza] = useState(() => paraInputFecha(finDelPeriodo(periodoActual())));
+
+  // Corrección de un sorteo ya abierto.
   const [pozoEditado, setPozoEditado] = useState('');
+  const [iniciaEditado, setIniciaEditado] = useState('');
+  const [finalizaEditado, setFinalizaEditado] = useState('');
 
   const [resultado, setResultado] = useState(['', '', '', '']);
   const [ganadores, setGanadores] = useState(null);
@@ -56,7 +70,15 @@ export default function AdminSorteos() {
     evento.preventDefault();
     setAbriendo(true);
     const ok = await accion(
-      () => api.sorteos.abrir(periodo, Number(precio), Number(pozo)),
+      () =>
+        api.sorteos.abrir({
+          periodo,
+          precio_jugada: Number(precio),
+          pozo: Number(pozo),
+          // El input da hora local; new Date la pasa a UTC para el backend.
+          inicia_at: new Date(inicia).toISOString(),
+          finaliza_at: new Date(finaliza).toISOString(),
+        }),
       `Sorteo de ${periodoLargo(periodo)} abierto con un pozo de ${pesos(Number(pozo))}.`,
     );
     if (ok) {
@@ -64,6 +86,13 @@ export default function AdminSorteos() {
       setPozo('');
     }
     setAbriendo(false);
+  }
+
+  /** Al cambiar el período, el cierre por defecto se mueve al fin de ese mes. */
+  function cambiarPeriodo(valor) {
+    setPeriodo(valor);
+    const fin = finDelPeriodo(valor);
+    if (fin) setFinaliza(paraInputFecha(fin));
   }
 
   async function cargarResultado(sorteo) {
@@ -85,6 +114,14 @@ export default function AdminSorteos() {
 
   const abierto = sorteos.find((s) => s.estado === 'abierto');
   const cerrado = sorteos.find((s) => s.estado === 'cerrado');
+
+  // Los campos de corrección arrancan con las fechas que el sorteo ya tiene, así
+  // el admin ve lo que hay y toca solo lo que quiere mover.
+  useEffect(() => {
+    if (!abierto) return;
+    setIniciaEditado(paraInputFecha(abierto.inicia_at));
+    setFinalizaEditado(paraInputFecha(abierto.finaliza_at));
+  }, [abierto]);
 
   if (cargando) return <Cargando />;
 
@@ -114,7 +151,7 @@ export default function AdminSorteos() {
                 <input
                   id="periodo"
                   value={periodo}
-                  onChange={(e) => setPeriodo(e.target.value)}
+                  onChange={(e) => cambiarPeriodo(e.target.value)}
                   placeholder="2026-08"
                   pattern="\d{4}-(0[1-9]|1[0-2])"
                   title="Formato AAAA-MM"
@@ -147,6 +184,31 @@ export default function AdminSorteos() {
                   required
                 />
               </div>
+            </div>
+
+            {/* Ventana de carga: fuera de estas fechas no se puede cargar. */}
+            <div className="fila" style={{ marginTop: '0.9rem' }}>
+              <div>
+                <label htmlFor="inicia">La carga abre</label>
+                <input
+                  id="inicia"
+                  type="datetime-local"
+                  value={inicia}
+                  onChange={(e) => setInicia(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="finaliza">La carga cierra</label>
+                <input
+                  id="finaliza"
+                  type="datetime-local"
+                  value={finaliza}
+                  onChange={(e) => setFinaliza(e.target.value)}
+                  min={inicia}
+                  required
+                />
+              </div>
               <div style={{ flex: '0 0 auto' }}>
                 <button type="submit" disabled={abriendo}>
                   {abriendo ? 'Abriendo…' : 'Abrir'}
@@ -154,12 +216,13 @@ export default function AdminSorteos() {
               </div>
             </div>
 
-            {pozo > 0 && precio > 0 && (
-              <p style={{ color: 'var(--tinta-apagada)', fontSize: '0.82rem', marginBottom: 0 }}>
-                Hacen falta {Math.ceil(pozo / precio)} jugadas para cubrir el pozo de{' '}
-                {pesos(Number(pozo))}.
-              </p>
-            )}
+            <p style={{ color: 'var(--tinta-apagada)', fontSize: '0.82rem', marginBottom: 0 }}>
+              Fuera de esas fechas los vendedores no van a poder cargar, aunque el sorteo
+              figure abierto.
+              {pozo > 0 && precio > 0 && (
+                <> Hacen falta {Math.ceil(pozo / precio)} jugadas para cubrir el pozo.</>
+              )}
+            </p>
           </form>
         )}
       </div>
@@ -201,6 +264,58 @@ export default function AdminSorteos() {
             <div style={{ flex: '0 0 auto' }}>
               <button type="submit" className="secundario">
                 Cambiar pozo
+              </button>
+            </div>
+          </form>
+
+          <hr style={{ border: 'none', borderTop: '1px solid var(--linea)', margin: '1.25rem 0' }} />
+
+          <h3 style={{ marginBottom: '0.3rem' }}>Fechas de carga</h3>
+          {/* Sin punto final: el formato en español ya termina en "p. m." */}
+          <p style={{ color: 'var(--tinta-2)', fontSize: '0.85rem', marginTop: 0 }}>
+            Abre el <strong>{fechaHora(abierto.inicia_at)}</strong> y cierra el{' '}
+            <strong>{fechaHora(abierto.finaliza_at)}</strong>
+          </p>
+
+          <form
+            className="fila"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              await accion(
+                () =>
+                  api.sorteos.cambiarVentana(
+                    abierto.id,
+                    new Date(iniciaEditado).toISOString(),
+                    new Date(finalizaEditado).toISOString(),
+                  ),
+                'Fechas de carga actualizadas.',
+              );
+            }}
+          >
+            <div>
+              <label htmlFor="inicia-editado">La carga abre</label>
+              <input
+                id="inicia-editado"
+                type="datetime-local"
+                value={iniciaEditado}
+                onChange={(e) => setIniciaEditado(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="finaliza-editado">La carga cierra</label>
+              <input
+                id="finaliza-editado"
+                type="datetime-local"
+                value={finalizaEditado}
+                onChange={(e) => setFinalizaEditado(e.target.value)}
+                min={iniciaEditado}
+                required
+              />
+            </div>
+            <div style={{ flex: '0 0 auto' }}>
+              <button type="submit" className="secundario">
+                Cambiar fechas
               </button>
             </div>
           </form>
@@ -292,7 +407,7 @@ export default function AdminSorteos() {
                   <th style={{ textAlign: 'right' }}>Precio</th>
                   <th>Resultado</th>
                   <th style={{ textAlign: 'right' }}>Pozo</th>
-                  <th>Cerrado</th>
+                  <th>Carga</th>
                   <th></th>
                 </tr>
               </thead>
@@ -312,8 +427,14 @@ export default function AdminSorteos() {
                       )}
                     </td>
                     <td className="num">{pesos(s.pozo)}</td>
-                    <td style={{ color: 'var(--tinta-2)', fontSize: '0.85rem' }}>
-                      {s.fecha_cierre_carga ? fechaHora(s.fecha_cierre_carga) : '—'}
+                    <td style={{ color: 'var(--tinta-2)', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                      {fechaHora(s.inicia_at)}
+                      <div>→ {fechaHora(s.finaliza_at)}</div>
+                      {s.fecha_cierre_carga && (
+                        <div style={{ color: 'var(--tinta-apagada)', fontSize: '0.8rem' }}>
+                          Cerrado a mano: {fechaHora(s.fecha_cierre_carga)}
+                        </div>
+                      )}
                     </td>
                     <td>
                       {s.estado === 'abierto' && (

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Comprobante from '../componentes/Comprobante.jsx';
 import { Bolillas, Cargando, Chip, Ficha, MensajeError, Vacio } from '../componentes/comunes.jsx';
-import { fechaHora, numero, periodoLargo, pesos } from '../utilidades.js';
+import { cuantoFalta, fechaHora, numero, periodoLargo, pesos } from '../utilidades.js';
 
 const VACIO = ['', '', '', ''];
 
@@ -145,6 +145,28 @@ export default function Vendedor() {
         </div>
       </div>
 
+      {/* La ventana de carga: el vendedor tiene que enterarse de que se le acaba
+          el tiempo antes de completar el formulario, no cuando el backend lo
+          rechaza. */}
+      {/* Sin punto final en las fechas: el formato en español ya termina en "p. m." */}
+      {sorteo.aun_no_empezo && (
+        <div className="aviso">
+          La carga todavía no está habilitada. Abre el <strong>{fechaHora(sorteo.inicia_at)}</strong>
+        </div>
+      )}
+      {sorteo.ya_vencio && (
+        <div className="error">
+          La carga cerró el <strong>{fechaHora(sorteo.finaliza_at)}</strong> — ya no se pueden
+          cargar jugadas para este sorteo.
+        </div>
+      )}
+      {sorteo.carga_vigente && (
+        <div className="aviso">
+          La carga cierra el <strong>{fechaHora(sorteo.finaliza_at)}</strong>
+          {cuantoFalta(sorteo.finaliza_at) && <> — faltan {cuantoFalta(sorteo.finaliza_at)}</>}
+        </div>
+      )}
+
       {/* Lo que cargó este vendedor. El total del sorteo es del admin: acá no
           va, para no contarle a un vendedor cuánto vendieron los demás. */}
       <div className="grilla" style={{ marginBottom: '1rem' }}>
@@ -202,8 +224,16 @@ export default function Vendedor() {
             <input id="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
           </div>
 
-          <button type="submit" disabled={enviando} style={{ marginTop: '1.1rem' }}>
-            {enviando ? 'Cargando…' : 'Cargar y emitir comprobante'}
+          <button
+            type="submit"
+            disabled={enviando || !sorteo.carga_vigente}
+            style={{ marginTop: '1.1rem' }}
+          >
+            {enviando
+              ? 'Cargando…'
+              : sorteo.carga_vigente
+                ? 'Cargar y emitir comprobante'
+                : 'Carga no habilitada'}
           </button>
         </form>
 

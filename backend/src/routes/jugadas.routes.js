@@ -19,6 +19,44 @@ const COLUMNAS = [
 const CAMPOS = COLUMNAS.join(', ');
 const CAMPOS_J = COLUMNAS.map((c) => `j.${c}`).join(', ');
 
+const FECHA_LARGA = new Intl.DateTimeFormat('es-AR', {
+  dateStyle: 'short',
+  timeStyle: 'short',
+  timeZone: 'America/Argentina/Buenos_Aires',
+});
+
+/**
+ * Cuando el INSERT no engancha ningún sorteo hay tres motivos posibles y al
+ * vendedor le sirve saber cuál: no hay sorteo, todavía no arrancó, o ya venció.
+ * Se consulta recién acá, en el camino de error, para no pagarlo en cada carga.
+ */
+async function errorDeCarga() {
+  const { rows } = await query(`
+    SELECT inicia_at, finaliza_at,
+           now() < inicia_at   AS aun_no_empezo,
+           now() > finaliza_at AS ya_vencio
+    FROM sorteos WHERE estado = 'abierto'
+  `);
+  const sorteo = rows[0];
+
+  if (!sorteo) {
+    return new AppError(409, 'No hay ningún sorteo con la carga abierta.');
+  }
+  // Sin punto final: el formato en español ya termina en "p. m.".
+  if (sorteo.aun_no_empezo) {
+    return new AppError(
+      409,
+      `La carga todavía no empezó — abre el ${FECHA_LARGA.format(sorteo.inicia_at)}`,
+    );
+  }
+  if (sorteo.ya_vencio) {
+    return new AppError(409, `La carga cerró el ${FECHA_LARGA.format(sorteo.finaliza_at)}`);
+  }
+
+  // La ventana está vigente: el sorteo se cerró entre el INSERT y esta consulta.
+  return new AppError(409, 'El sorteo se cerró recién. No se pudo cargar la jugada.');
+}
+
 /** Valida y normaliza los datos del comprador que vienen del body. */
 function validarComprador(body) {
   const nombre = String(body?.comprador_nombre ?? '').trim();
@@ -44,13 +82,14 @@ router.post('/', requireAuth, async (req, res) => {
   const numeros = validarNumeros(req.body?.numeros, 'numeros');
   const { nombre, telefono } = validarComprador(req.body);
 
-  // INSERT ... SELECT en un solo paso: si el admin cierra el sorteo justo entre
-  // la lectura y la escritura, no se cuela ninguna jugada. Inserta 0 filas si no
-  // hay sorteo abierto.
+  // INSERT ... SELECT en un solo paso: si el admin cierra el sorteo o vence la
+  // ventana justo entre la lectura y la escritura, no se cuela ninguna jugada.
+  // La condición de tiempo se evalúa en la base con su propio `now()`, así que no
+  // depende del reloj de quien haga el request.
   //
-  // El código de comprobante lo genera la base por DEFAULT. Es aleatorio, así que
-  // puede chocar con uno existente: reintentamos unas pocas veces. Con 30^8
-  // combinaciones posibles llegar al segundo intento ya es rarísimo.
+  // El código de comprobante lo genera un trigger. Es aleatorio, así que puede
+  // chocar con uno existente: reintentamos unas pocas veces. Con 30^6
+  // combinaciones por día, llegar al segundo intento ya es rarísimo.
   const INTENTOS = 5;
   let jugada;
 
@@ -63,13 +102,12 @@ router.post('/', requireAuth, async (req, res) => {
          SELECT s.id, $1, $2, $3, $4, $5, $6, $7
          FROM sorteos s
          WHERE s.estado = 'abierto'
+           AND now() BETWEEN s.inicia_at AND s.finaliza_at
          RETURNING ${CAMPOS}`,
         [req.user.id, nombre, telefono, ...numeros],
       );
 
-      if (!rows[0]) {
-        throw new AppError(409, 'No hay ningún sorteo con la carga abierta.');
-      }
+      if (!rows[0]) throw await errorDeCarga();
       jugada = rows[0];
       break;
     } catch (err) {

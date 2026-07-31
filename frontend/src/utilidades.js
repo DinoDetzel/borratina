@@ -42,3 +42,36 @@ export function periodoActual() {
   const hoy = new Date();
   return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
 }
+
+/**
+ * Date → 'AAAA-MM-DDTHH:mm', que es lo único que acepta un <input datetime-local>.
+ * Se usa la hora local a propósito: el admin piensa en la hora del reloj de la
+ * pared, no en UTC. La conversión a UTC la hace `new Date(valor)` al enviarlo.
+ */
+export function paraInputFecha(fecha) {
+  const d = new Date(fecha);
+  const desfase = d.getTimezoneOffset() * 60_000;
+  return new Date(d.getTime() - desfase).toISOString().slice(0, 16);
+}
+
+/** El último instante del mes de un período 'AAAA-MM', en hora local. */
+export function finDelPeriodo(periodo) {
+  const [anio, mes] = periodo.split('-').map(Number);
+  if (!anio || !mes) return null;
+  // Día 0 del mes siguiente = último día de este mes.
+  return new Date(anio, mes, 0, 23, 59);
+}
+
+/** Cuánto falta hasta una fecha, en palabras: "faltan 3 días", "en 2 horas". */
+export function cuantoFalta(iso) {
+  const restante = new Date(iso) - Date.now();
+  if (restante <= 0) return null;
+
+  const minutos = Math.floor(restante / 60_000);
+  const horas = Math.floor(minutos / 60);
+  const dias = Math.floor(horas / 24);
+
+  if (dias >= 1) return `${dias} ${dias === 1 ? 'día' : 'días'}`;
+  if (horas >= 1) return `${horas} ${horas === 1 ? 'hora' : 'horas'}`;
+  return `${minutos} ${minutos === 1 ? 'minuto' : 'minutos'}`;
+}

@@ -17,6 +17,24 @@
 | `003_usuario_login.sql` | `usuarios.usuario`: credencial de ingreso; el email pasa a opcional |
 | `004_codigo_con_fecha.sql` | El código del comprobante pasa a `AAMMDD-XXXXXX` y lo pone un trigger |
 | `005_pozo_fijo.sql` | `pozo_total` → `pozo`: deja de calcularse y pasa a definirse al abrir |
+| `006_ventana_de_carga.sql` | `inicia_at` / `finaliza_at`: desde y hasta cuándo se puede cargar |
+
+## Ventana de carga
+
+```sql
+ALTER TABLE sorteos ADD COLUMN inicia_at   TIMESTAMPTZ NOT NULL;
+ALTER TABLE sorteos ADD COLUMN finaliza_at TIMESTAMPTZ NOT NULL;
+ALTER TABLE sorteos ADD CONSTRAINT chk_sorteos_ventana CHECK (finaliza_at > inicia_at);
+```
+
+- La condición se evalúa **en la base**, dentro del mismo `INSERT ... SELECT` que
+  carga la jugada: `now() BETWEEN s.inicia_at AND s.finaliza_at`. Así no depende
+  del reloj de quien hace el request, y no hay ventana de carrera entre chequear
+  y escribir.
+- `finaliza_at` (previsto) y `fecha_cierre_carga` (efectivo) **no son lo mismo**:
+  el admin puede cerrar antes de tiempo, o dejar que la ventana venza sola.
+- El backfill usó `created_at` como inicio y el último instante del mes del período
+  como fin, que es lo que el período ya implicaba.
 
 ## El pozo es un dato, no un cálculo
 

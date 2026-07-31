@@ -10,11 +10,33 @@ const router = Router();
 /** Columnas públicas de un sorteo. `alias` las prefija para queries con JOIN. */
 const COLUMNAS = [
   'id', 'periodo', 'precio_jugada', 'pozo', 'estado',
+  'inicia_at', 'finaliza_at',
   'numero_1', 'numero_2', 'numero_3', 'numero_4',
   'fecha_cierre_carga', 'fecha_resultado', 'created_at',
 ];
 const CAMPOS = COLUMNAS.join(', ');
 const camposCon = (alias) => COLUMNAS.map((c) => `${alias}.${c}`).join(', ');
+
+/**
+ * Valida la ventana de carga y devuelve las dos fechas como Date.
+ *
+ * Se aceptan en ISO (lo que manda el frontend a partir de un `datetime-local`).
+ * No se valida que el inicio sea futuro: abrir un sorteo que arrancó hace una
+ * hora es normal, y también cargarle una ventana que ya empezó.
+ */
+function validarVentana(iniciaAt, finalizaAt) {
+  const inicia = new Date(iniciaAt ?? '');
+  const finaliza = new Date(finalizaAt ?? '');
+
+  if (Number.isNaN(inicia.getTime()) || Number.isNaN(finaliza.getTime())) {
+    throw new AppError(400, 'Las fechas de inicio y fin de la carga son obligatorias.');
+  }
+  if (finaliza <= inicia) {
+    throw new AppError(400, 'El cierre de la carga tiene que ser posterior al inicio.');
+  }
+
+  return { inicia, finaliza };
+}
 
 /** GET /api/sorteos → todos los sorteos, del más nuevo al más viejo. */
 router.get('/', requireAuth, async (req, res) => {
@@ -40,7 +62,13 @@ router.get('/actual', requireAuth, async (req, res) => {
     `SELECT ${camposCon('s')},
             COUNT(j.id) FILTER (WHERE j.vendedor_id = $1) AS mis_jugadas,
             COUNT(j.id) AS jugadas_cargadas,
-            COUNT(j.id) * s.precio_jugada AS recaudacion
+            COUNT(j.id) * s.precio_jugada AS recaudacion,
+            -- El estado dice 'abierto', pero si la ventana todavía no empezó o
+            -- ya venció no se puede cargar. La pantalla necesita saberlo para
+            -- avisar antes de que el vendedor complete el formulario.
+            (now() BETWEEN s.inicia_at AND s.finaliza_at) AS carga_vigente,
+            (now() < s.inicia_at)   AS aun_no_empezo,
+            (now() > s.finaliza_at) AS ya_vencio
      FROM sorteos s
      LEFT JOIN jugadas j ON j.sorteo_id = s.id AND j.anulada = false
      WHERE s.estado = 'abierto'
@@ -76,7 +104,7 @@ router.get('/:id', requireAuth, async (req, res) => {
  * si pasa, el handler de errores lo traduce a un 409 con mensaje claro.
  */
 router.post('/', requireAuth, requireAdmin, async (req, res) => {
-  const { periodo, precio_jugada, pozo } = req.body ?? {};
+  const { periodo, precio_jugada, pozo, inicia_at, finaliza_at } = req.body ?? {};
 
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(periodo ?? '')) {
     throw new AppError(400, 'El período debe tener el formato AAAA-MM (ej: 2026-08).');
@@ -93,14 +121,39 @@ router.post('/', requireAuth, requireAdmin, async (req, res) => {
     throw new AppError(400, 'El pozo debe ser un número mayor a cero.');
   }
 
+  const { inicia, finaliza } = validarVentana(inicia_at, finaliza_at);
+
   const { rows } = await query(
-    `INSERT INTO sorteos (periodo, precio_jugada, pozo, estado)
-     VALUES ($1, $2, $3, 'abierto')
+    `INSERT INTO sorteos (periodo, precio_jugada, pozo, inicia_at, finaliza_at, estado)
+     VALUES ($1, $2, $3, $4, $5, 'abierto')
      RETURNING ${CAMPOS}`,
-    [periodo, precio, premio],
+    [periodo, precio, premio, inicia, finaliza],
   );
 
   res.status(201).json({ sorteo: rows[0] });
+});
+
+/**
+ * PATCH /api/sorteos/:id/ventana → corrige las fechas de carga. Solo admin.
+ * Igual que el pozo: solo mientras el sorteo esté abierto.
+ */
+router.patch('/:id/ventana', requireAuth, requireAdmin, async (req, res) => {
+  const { inicia, finaliza } = validarVentana(req.body?.inicia_at, req.body?.finaliza_at);
+
+  const { rows } = await query(
+    `UPDATE sorteos SET inicia_at = $1, finaliza_at = $2
+     WHERE id = $3 AND estado = 'abierto'
+     RETURNING ${CAMPOS}`,
+    [inicia, finaliza, req.params.id],
+  );
+
+  if (!rows[0]) {
+    const { rows: existe } = await query('SELECT estado FROM sorteos WHERE id = $1', [req.params.id]);
+    if (!existe[0]) throw new AppError(404, 'No existe ese sorteo.');
+    throw new AppError(409, `El sorteo ya está ${existe[0].estado}: las fechas no se pueden cambiar.`);
+  }
+
+  res.json({ sorteo: rows[0] });
 });
 
 /**

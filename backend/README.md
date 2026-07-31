@@ -58,8 +58,9 @@ Todo cuelga de `/api`. Salvo `login` y `health`, todos piden
 | GET | `/sorteos` | cualquiera | Todos los sorteos |
 | GET | `/sorteos/actual` | cualquiera | El sorteo abierto, con su pozo y lo recaudado |
 | GET | `/sorteos/:id` | cualquiera | Un sorteo |
-| POST | `/sorteos` | admin | Abre el sorteo del mes (período, pozo, precio) |
+| POST | `/sorteos` | admin | Abre el sorteo (período, pozo, precio, ventana de carga) |
 | PATCH | `/sorteos/:id/pozo` | admin | Corrige el pozo (solo con la carga abierta) |
+| PATCH | `/sorteos/:id/ventana` | admin | Corrige las fechas de carga (solo con la carga abierta) |
 | PATCH | `/sorteos/:id/cerrar` | admin | Corta la carga de jugadas |
 | POST | `/sorteos/:id/resultado` | admin | Carga el resultado y finaliza |
 | GET | `/sorteos/:id/ganadores` | admin | Ganadores y reparto |
@@ -148,6 +149,17 @@ Si alguna vez se cambia el alfabeto, hay que cambiarlo también en `ALFABETO` de
 `src/utils/comprobante.js`, que es lo que valida la entrada. Ojo con validar el
 código entero contra el alfabeto: la parte de la fecha lleva `0` y `1`, que el
 alfabeto no incluye, así que cada mitad se valida por separado.
+
+**La ventana de carga la hace cumplir la base, no el frontend.** El
+`INSERT ... SELECT` de `POST /jugadas` incluye
+`now() BETWEEN s.inicia_at AND s.finaliza_at`, así que la condición se evalúa con
+el reloj de Postgres y en la misma sentencia que escribe: no hay forma de que se
+cuele una jugada entre el chequeo y el insert. El frontend deshabilita el botón,
+pero eso es comodidad.
+
+Cuando el insert no engancha ningún sorteo, `errorDeCarga()` consulta recién ahí
+por qué (no hay sorteo / todavía no abrió / ya cerró) para dar un mensaje útil sin
+pagar esa consulta en cada carga exitosa.
 
 **El pozo es fijo, no se calcula.** Lo define el admin al abrir el sorteo y no
 depende de cuánto se venda: con un pozo de $1.500.000 y dos ganadores, cobran

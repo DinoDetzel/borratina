@@ -44,7 +44,24 @@ con modalidad de extractos de quiniela y premios por aciertos numéricos.
 | `finalizado` | Se cargó el número ganador y se calcularon los ganadores | Admin carga el resultado |
 
 - Las transiciones son **solo hacia adelante**: `abierto` → `cerrado` → `finalizado`.
-- Una jugada **solo puede cargarse mientras el sorteo está `abierto`**.
+- Una jugada solo puede cargarse mientras el sorteo está `abierto` **y además la
+  ventana de carga está vigente** (ver abajo).
+
+### Ventana de carga
+
+- Al abrir el sorteo, el admin define **desde cuándo y hasta cuándo** se pueden
+  cargar jugadas (día y hora).
+- El sistema **las hace cumplir**: fuera de esa ventana la carga se rechaza,
+  aunque el sorteo siga en estado `abierto`.
+- El admin puede además **cerrar antes de tiempo** a mano. Por eso hay dos fechas
+  de cierre que no son lo mismo:
+  - `finaliza_at` → cuándo estaba previsto que cerrara
+  - `fecha_cierre_carga` → cuándo lo cerró el admin efectivamente (puede no existir,
+    si dejó que venciera solo)
+- Las fechas se pueden corregir mientras el sorteo esté abierto, igual que el pozo.
+- La pantalla del vendedor avisa cuánto falta para el cierre y deshabilita el
+  formulario cuando la carga no está habilitada: enterarse al apretar "Cargar",
+  con los datos del comprador ya tipeados, es la peor forma de descubrirlo.
 
 ## El pozo
 

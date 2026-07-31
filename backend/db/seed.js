@@ -25,6 +25,17 @@ const POZO = 1_500_000;
 
 const periodoActual = () => new Date().toISOString().slice(0, 7); // 'AAAA-MM'
 
+/**
+ * La ventana de carga del sorteo de prueba: desde hoy hasta que termine el mes.
+ * Fuera de esa ventana el backend rechaza las jugadas, así que el sorteo del seed
+ * tiene que nacer con una vigente o no se puede cargar nada.
+ */
+function ventanaDelMes() {
+  const hoy = new Date();
+  const finDeMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59);
+  return { inicia: hoy, finaliza: finDeMes };
+}
+
 async function main() {
   await withTransaction(async (client) => {
     for (const u of USUARIOS) {
@@ -37,11 +48,12 @@ async function main() {
       );
     }
 
+    const { inicia, finaliza } = ventanaDelMes();
     await client.query(
-      `INSERT INTO sorteos (periodo, precio_jugada, pozo, estado)
-       VALUES ($1, $2, $3, 'abierto')
+      `INSERT INTO sorteos (periodo, precio_jugada, pozo, inicia_at, finaliza_at, estado)
+       VALUES ($1, $2, $3, $4, $5, 'abierto')
        ON CONFLICT (periodo) DO NOTHING`,
-      [periodoActual(), PRECIO_JUGADA, POZO],
+      [periodoActual(), PRECIO_JUGADA, POZO, inicia, finaliza],
     );
   });
 
