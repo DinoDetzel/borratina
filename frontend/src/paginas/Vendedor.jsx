@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import Comprobante from '../componentes/Comprobante.jsx';
-import { enlaceWhatsapp, numeroWhatsapp } from '../whatsapp.js';
+import { compartirComprobante, enlaceWhatsapp, numeroWhatsapp } from '../whatsapp.js';
 import { Bolillas, Cargando, Chip, MensajeError, Vacio } from '../componentes/comunes.jsx';
 import { cuantoFalta, fechaHora, numero, periodoLargo, pesos } from '../utilidades.js';
 
@@ -34,6 +34,11 @@ export default function Vendedor() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
   const [ultimo, setUltimo] = useState(null); // comprobante recién emitido
+
+  // Dibujar el comprobante y armar el PNG tarda un instante en un teléfono
+  // modesto: mientras tanto el botón lo dice, para que nadie lo toque dos veces.
+  const [compartiendo, setCompartiendo] = useState(false);
+  const [avisoCompartir, setAvisoCompartir] = useState(null);
 
   const [jugadas, setJugadas] = useState([]);
   const [totalJugadas, setTotalJugadas] = useState(0);
@@ -134,6 +139,24 @@ export default function Vendedor() {
       setError(err.message);
     } finally {
       setEnviando(false);
+    }
+  }
+
+  async function compartirFoto() {
+    setCompartiendo(true);
+    setAvisoCompartir(null);
+    try {
+      const resultado = await compartirComprobante(ultimo);
+      if (resultado === 'descargado') {
+        setAvisoCompartir(
+          'Este navegador no comparte archivos, así que el comprobante se descargó. ' +
+            'Adjuntalo desde WhatsApp.',
+        );
+      }
+    } catch {
+      setAvisoCompartir('No se pudo preparar la foto. Probá con el texto o imprimilo.');
+    } finally {
+      setCompartiendo(false);
     }
   }
 
@@ -286,13 +309,16 @@ export default function Vendedor() {
             {/* Mandarlo va primero que imprimirlo: el vendedor está en la calle
                 con el teléfono, no al lado de una impresora. */}
             <div className="no-imprimir acciones-comprobante">
+              <button onClick={compartirFoto} disabled={compartiendo}>
+                {compartiendo ? 'Preparando…' : 'Enviar la foto'}
+              </button>
               <a
-                className="boton"
+                className="boton secundario"
                 href={enlaceWhatsapp(ultimo)}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Enviar por WhatsApp
+                Enviar el texto
               </a>
               <button className="secundario" onClick={() => window.print()}>
                 Imprimir
@@ -302,12 +328,20 @@ export default function Vendedor() {
               </button>
             </div>
 
-            {/* Decir a qué chat va antes de abrirlo: si el número está mal
-                tipeado, es mejor enterarse acá que después de mandarlo. */}
+            {/* Cada camino tiene su costo y conviene decirlo: la foto se ve
+                mejor pero el contacto lo elegís vos; el texto va derecho al chat
+                del comprador y le deja el código buscable. */}
             <p className="no-imprimir pie-comprobante">
-              {numeroWhatsapp(ultimo.comprador.telefono)
-                ? `Se abre el chat con ${ultimo.comprador.telefono}. El mensaje queda escrito; lo mandás vos.`
-                : 'Sin teléfono cargado: WhatsApp te va a pedir el contacto. El mensaje ya va escrito.'}
+              {avisoCompartir ?? (
+                <>
+                  <strong>La foto</strong> se manda por donde elijas y ahí elegís el contacto.{' '}
+                  <strong>El texto</strong>{' '}
+                  {numeroWhatsapp(ultimo.comprador.telefono)
+                    ? `abre directo el chat con ${ultimo.comprador.telefono}`
+                    : 'abre WhatsApp para que elijas el contacto'}
+                  , y le deja el número de comprobante para que después lo pueda buscar.
+                </>
+              )}
             </p>
           </div>
         )}

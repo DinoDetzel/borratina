@@ -1,14 +1,19 @@
+import { comprobanteAImagen } from './comprobanteImagen.js';
 import { pesos } from './utilidades.js';
 
 /**
- * Enviar el comprobante por WhatsApp.
+ * Enviar el comprobante por WhatsApp, de dos maneras.
  *
- * Va como texto y no como imagen a propósito. Una foto del ticket se ve linda
- * pero el número de comprobante queda adentro de un mapa de píxeles: el
- * comprador no lo puede copiar ni encontrar buscando en el chat, que es
- * justamente lo que va a hacer dentro de un mes cuando venga a cobrar. Además
- * evita cargar una librería de captura de 200 kB en una app que se usa con datos
- * móviles.
+ * **La foto** (`compartirComprobante`) es lo que se manda casi siempre: el
+ * comprador recibe el ticket como lo vería en papel. WhatsApp no acepta
+ * adjuntos por URL, así que va por el selector del sistema y el contacto lo
+ * elige el vendedor.
+ *
+ * **El texto** (`enlaceWhatsapp`) queda como segunda opción y no es un plan B
+ * pobre: abre el chat del comprador directamente y deja el número de
+ * comprobante como texto, que se puede copiar y —sobre todo— encontrar
+ * buscando en el chat dentro de un mes, cuando venga a cobrar. Adentro de una
+ * imagen, ese número no se busca.
  */
 
 /**
@@ -82,9 +87,61 @@ export function mensajeComprobante({ codigo, numeros, comprador, sorteo, importe
  * Con el teléfono del comprador abre su chat directo; sin él, WhatsApp pide
  * elegir el contacto. En los dos casos el mensaje queda listo y el envío lo
  * confirma la persona: nunca se manda solo.
+ *
+ * Este camino manda **texto**: `wa.me` no acepta adjuntos. Para mandar la foto
+ * del comprobante está `compartirComprobante()`.
  */
 export function enlaceWhatsapp(comprobante) {
   const numero = numeroWhatsapp(comprobante.comprador.telefono);
   const texto = encodeURIComponent(mensajeComprobante(comprobante));
   return `https://wa.me/${numero ?? ''}?text=${texto}`;
+}
+
+/** Un pie corto para acompañar la imagen, cuando la app de destino lo acepta. */
+const pieDeFoto = ({ codigo, comprador }) =>
+  `Comprobante ${codigo} — ${comprador.nombre}. Guardalo para reclamar el premio.`;
+
+/**
+ * Manda la **foto** del comprobante por donde el teléfono ofrezca compartir.
+ *
+ * WhatsApp no recibe adjuntos por URL, así que la única vía es el selector del
+ * sistema (Web Share API con archivos): se abre la lista de apps, se elige
+ * WhatsApp y el contacto, y la imagen va adjunta. A cambio de eso se pierde
+ * poder abrir el chat del comprador directamente, que es lo que sí hace el
+ * botón de texto.
+ *
+ * Devuelve qué pasó, para que la pantalla pueda decirlo:
+ *   'compartido'  el selector se abrió y la persona eligió a dónde mandarla
+ *   'cancelado'   lo cerró sin elegir
+ *   'descargado'  el navegador no comparte archivos: se bajó el PNG
+ */
+export async function compartirComprobante(comprobante) {
+  const imagen = await comprobanteAImagen(comprobante);
+  const archivo = new File([imagen], `comprobante-${comprobante.codigo}.png`, {
+    type: 'image/png',
+  });
+
+  // `canShare` con el archivo adelante: hay navegadores que tienen `share` pero
+  // no aceptan adjuntos, y preguntar por `share` a secas los deja fallando en
+  // el momento de compartir.
+  if (navigator.canShare?.({ files: [archivo] })) {
+    try {
+      await navigator.share({ files: [archivo], text: pieDeFoto(comprobante) });
+      return 'compartido';
+    } catch (err) {
+      // Cerrar el selector no es un error que haya que mostrar.
+      if (err.name === 'AbortError') return 'cancelado';
+      throw err;
+    }
+  }
+
+  // En la computadora, o en un navegador sin compartir: se descarga y se
+  // adjunta a mano. Es un paso más, pero el comprobante igual sale.
+  const url = URL.createObjectURL(imagen);
+  const enlace = document.createElement('a');
+  enlace.href = url;
+  enlace.download = archivo.name;
+  enlace.click();
+  URL.revokeObjectURL(url);
+  return 'descargado';
 }

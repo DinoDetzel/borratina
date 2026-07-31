@@ -77,16 +77,37 @@ Al imprimir se oculta todo por `visibility` menos el comprobante. Tiene que ser
 `visibility` y no `display`, porque el comprobante cuelga del formulario de
 carga: ocultando por `display` desaparecería con él.
 
-**El comprobante se manda por WhatsApp como texto, no como imagen.** Una foto
-del ticket se ve mejor pero deja el número de comprobante adentro de un mapa de
-píxeles: el comprador no lo puede copiar ni encontrar buscando en el chat, que es
-exactamente lo que va a hacer cuando venga a cobrar. Además evitaría cargar una
-librería de captura de ~200 kB en una app que se usa con datos móviles.
+**El comprobante se manda por WhatsApp de dos formas, y las dos hacen falta.**
 
-`whatsapp.js` arma el enlace `wa.me`. Si el teléfono del comprador se puede
-normalizar, abre su chat directo; si no, WhatsApp pide elegir el contacto. **No
-adivina**: antes que abrir el chat equivocado con los datos de una jugada ajena,
-prefiere que el vendedor elija. La pantalla dice de antemano a qué número va.
+*La foto* es lo que se usa casi siempre: el comprador recibe el ticket como lo
+vería en papel. WhatsApp **no acepta adjuntos por URL** —`wa.me` solo lleva
+texto—, así que la única vía es la Web Share API con archivos: se abre el
+selector del sistema y el contacto lo elige el vendedor.
+
+*El texto* queda como segunda opción y no es un plan B pobre: abre el chat del
+comprador directamente y le deja el número de comprobante como texto, que se
+puede copiar y buscar en el chat dentro de un mes, cuando venga a cobrar. Dentro
+de una imagen ese número no se busca.
+
+**La imagen se dibuja a mano en un canvas** (`comprobanteImagen.js`), no se
+captura el DOM: `html2canvas` no soporta `clip-path: path()` y el escudo saldría
+como un rectángulo; `html-to-image` usa `foreignObject`, que en Safari devuelve
+imágenes en blanco o sin tipografías, y un comprobante que a veces sale vacío es
+peor que ninguno. El costo es que la maqueta está escrita dos veces —canvas y
+JSX—: **si se toca una, hay que tocar la otra.** Las medidas son las mismas y en
+el mismo orden para que compararlas sea directo.
+
+**Ojo al probar en el teléfono:** la Web Share API exige contexto seguro. Sobre
+`https://` (producción) anda; sobre `http://<ip-de-la-lan>` el navegador ni
+expone `navigator.share` y el botón cae en descargar el PNG. Para probarlo de
+verdad en Android: `chrome://flags/#unsafely-treat-insecure-origin-as-secure`,
+agregar ahí el origen y reiniciar el navegador.
+
+`whatsapp.js` arma el enlace `wa.me` del texto. Si el teléfono del comprador se
+puede normalizar, abre su chat directo; si no, WhatsApp pide elegir el contacto.
+**No adivina**: antes que abrir el chat equivocado con los datos de una jugada
+ajena, prefiere que el vendedor elija. La pantalla dice de antemano a qué número
+va.
 
 **Las fechas con hora van en dos controles, no en un `datetime-local`.**
 `CampoFechaHora` es un `input type="date"` más una lista de horas. El campo
