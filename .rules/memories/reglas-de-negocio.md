@@ -135,12 +135,14 @@ resultado   = recaudación − pozo
 - Un **vendedor** ve únicamente las jugadas que él mismo cargó.
 - El **admin** ve todas las jugadas de todos los vendedores.
 
-## Punto abierto
+## Números repetidos dentro de una jugada ✅ CONFIRMADO
 
-- **¿Puede una misma jugada tener números repetidos internamente?** (ej: `07 07 23 45`).
-  Hoy el backend **lo permite** — la normalización ascendente funciona igual. Si el
-  juego real exige 4 números distintos, hay que agregar la validación en
-  `validarNumeros()` y un `CHECK` en la tabla. Confirmar con el usuario.
+- Una jugada **puede llevar números repetidos**: `07 07 23 45` es válida, e incluso
+  `55 55 55 55`. Confirmado por el usuario (2026-07-31).
+- No hay ninguna validación que lo impida, y es a propósito. La normalización
+  ascendente funciona igual y el match las trata como cualquier otra combinación.
+- Si alguna vez cambia, la validación va en `validarNumeros()`
+  (`backend/src/utils/numeros.js`) más un `CHECK` en la tabla.
 
 Detalle de roles y permisos por endpoint en [[tech-stack]].
 Estructura de tablas y queries en [[esquema-base-datos]].

@@ -77,7 +77,13 @@ Registro de decisiones de producto tomadas durante el diseño inicial del proyec
   `memories/esquema-base-datos.md` y se reusan tal cual; menos capas intermedias y
   más control sobre lo que se ejecuta contra Supabase.
 
+## Números repetidos
+
+- **Una jugada puede tener números repetidos** (ej: `07 07 23 45`, o `55 55 55 55`).
+  Confirmado 2026-07-31. Es el comportamiento que ya tenía el backend, así que no
+  hizo falta cambiar nada.
+
 ## Pendiente
 
-- **¿Una jugada puede tener números repetidos internamente?** (ej: `07 07 23 45`).
-  Hoy el backend lo permite. Ver el punto abierto en `memories/reglas-de-negocio.md`.
+- Nada bloqueante. Lo que queda anotado como deuda está en
+  `skills/tech-stack.md` (testing automatizado, peso del bundle).

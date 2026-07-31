@@ -16,9 +16,10 @@ export const normalizar = (numeros) => [...numeros].sort((a, b) => a - b);
  * Valida que venga un array de 4 enteros entre 0 y 99 y lo devuelve normalizado.
  * Es el único punto por el que deben pasar los números antes de tocar la base.
  *
- * Nota: hoy se permiten números repetidos dentro de una misma jugada
- * (ej: 07 07 23 45). Está marcado como punto abierto en las reglas de negocio;
- * si se confirma que deben ser distintos, la validación va acá.
+ * Los números **pueden repetirse** dentro de una misma jugada (07 07 23 45, e
+ * incluso 55 55 55 55): así es el juego, no es un descuido. La normalización
+ * ascendente funciona igual y el match las trata como cualquier otra
+ * combinación.
  */
 export function validarNumeros(numeros, campo = 'numeros') {
   if (!Array.isArray(numeros) || numeros.length !== CANTIDAD_NUMEROS) {
