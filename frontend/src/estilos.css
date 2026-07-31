@@ -393,6 +393,22 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   font-size: 0.82rem;
 }
 
+/* Acción de texto, sin caja. Para filas con varias acciones, donde un botón
+   con borde por cada una convierte la tabla en una pared de cajitas. */
+.enlace {
+  background: none;
+  border: none;
+  padding: 0.15rem 0;
+  color: var(--serie-1);
+  font-size: 0.85rem;
+  font-weight: 550;
+}
+.enlace:hover:not(:disabled) {
+  filter: none;
+  text-decoration: underline;
+}
+.enlace.peligro { color: var(--grave); }
+
 /* Volver a la pantalla de la que se vino. */
 .volver {
   font-size: 0.85rem;
@@ -514,8 +530,10 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   cursor: pointer;
 }
 
-/* Una fila que sigue estando pero ya no cuenta. */
-tr.apagada { opacity: 0.55; }
+/* Una fila que sigue estando pero ya no cuenta. Se apaga todo menos la última
+   celda: ahí está la acción que lo revierte, y era justo la que quedaba más
+   difícil de ver. */
+tr.apagada > td:not(:last-child) { opacity: 0.55; }
 
 /* ---------- Acciones al final de una fila ---------- */
 
@@ -525,6 +543,9 @@ tr.apagada { opacity: 0.55; }
   justify-content: flex-end;
   white-space: nowrap;
 }
+
+/* Sin caja que las separe, las acciones de texto necesitan más aire entre sí. */
+.acciones-fila .enlace + .enlace { margin-left: 0.65rem; }
 
 /* ---------- Números de la jugada ---------- */
 

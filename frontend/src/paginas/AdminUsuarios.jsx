@@ -157,16 +157,19 @@ export default function AdminUsuarios() {
                 <option value="admin">Administrador</option>
               </select>
             </div>
-            <div style={{ flex: '0 0 auto' }}>
-              <button type="submit" disabled={creando}>
-                {creando ? 'Creando…' : 'Crear'}
-              </button>
-            </div>
           </div>
-          <p style={{ color: 'var(--tinta-apagada)', fontSize: '0.8rem', marginBottom: 0 }}>
-            El usuario es con el que entra a la app: entre 3 y 30 caracteres, sin espacios ni
-            acentos. La contraseña, mínimo 8 caracteres.
-          </p>
+
+          {/* El formato a la izquierda y el botón contra el borde derecho: lo
+              que hay que saber antes de crear, separado de crearla. */}
+          <div className="barra-filtros">
+            <p style={{ color: 'var(--tinta-apagada)', fontSize: '0.8rem', margin: 0, flex: 1 }}>
+              El usuario es con el que entra a la app: entre 3 y 30 caracteres, sin espacios ni
+              acentos. La contraseña, mínimo 8 caracteres.
+            </p>
+            <button type="submit" disabled={creando}>
+              {creando ? 'Creando…' : 'Crear'}
+            </button>
+          </div>
         </form>
       </div>
 
@@ -177,34 +180,36 @@ export default function AdminUsuarios() {
           <Vacio>No hay usuarios.</Vacio>
         ) : (
           <div className="tabla-scroll">
-            <table>
+            <table className="tabla-a-lista">
               <thead>
                 <tr>
                   <th>Nombre</th>
                   <th>Usuario</th>
                   <th>Rol</th>
-                  <th>Estado</th>
                   <th>Alta</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 {usuarios.map((u) => (
-                  <tr key={u.id} style={{ opacity: u.activo ? 1 : 0.55 }}>
+                  <tr key={u.id} className={u.activo ? '' : 'apagada'}>
                     <td>
                       {u.nombre}
                       {u.id === yo.id && (
                         <span style={{ color: 'var(--tinta-apagada)' }}> (vos)</span>
                       )}
+                      {/* Estar activo es lo normal: un chip en cada fila sería
+                          ruido. Se marca solo la excepción. */}
+                      {!u.activo && (
+                        <div style={{ marginTop: '0.2rem' }}>
+                          <Chip estado="anulada">Desactivado</Chip>
+                        </div>
+                      )}
                     </td>
                     <td className="codigo">{u.usuario}</td>
-                    <td>{u.rol}</td>
-                    <td>
-                      <Chip estado={u.activo ? 'abierto' : 'anulada'}>
-                        {u.activo ? 'Activo' : 'Desactivado'}
-                      </Chip>
-                    </td>
+                    <td data-movil="Rol">{u.rol}</td>
                     <td
+                      data-movil="Alta"
                       style={{
                         color: 'var(--tinta-2)',
                         fontSize: '0.85rem',
@@ -213,10 +218,13 @@ export default function AdminUsuarios() {
                     >
                       {fechaDia(u.created_at)}
                     </td>
+                    {/* Cuatro botones con borde por fila eran una pared de
+                        cajitas repetida cinco veces. Como acciones de texto se
+                        leen igual y la tabla deja de gritar. */}
                     <td>
                       <div className="acciones-fila">
                         <button
-                          className="secundario chico"
+                          className="enlace"
                           onClick={() =>
                             setCartel({
                               tipo: 'editar',
@@ -231,7 +239,7 @@ export default function AdminUsuarios() {
                         </button>
 
                         <button
-                          className="secundario chico"
+                          className="enlace"
                           onClick={() =>
                             setCartel({ tipo: 'password', usuario: u, password: '', repetida: '' })
                           }
@@ -243,14 +251,14 @@ export default function AdminUsuarios() {
                             mismo; acá ni lo ofrecemos. */}
                         {u.id !== yo.id && (
                           <>
-                            {/* Desactivar no es destructivo: se revierte con el
-                                mismo botón. El rojo queda para Eliminar, que es
+                            {/* Desactivar no es destructivo: se revierte con la
+                                misma acción. El rojo queda para Eliminar, que es
                                 el único que no se puede deshacer. */}
-                            <button className="secundario chico" onClick={() => cambiarActivo(u)}>
+                            <button className="enlace" onClick={() => cambiarActivo(u)}>
                               {u.activo ? 'Desactivar' : 'Activar'}
                             </button>
                             <button
-                              className="peligro chico"
+                              className="enlace peligro"
                               onClick={() => setCartel({ tipo: 'borrar', usuario: u })}
                             >
                               Eliminar

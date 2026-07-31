@@ -62,6 +62,10 @@ Las tarjetas partidas en dos (el pozo con su cobertura, el sorteo abierto con su
 pozo y sus fechas) comparten `.partida`: dos columnas con una línea al medio que
 en pantalla angosta se apilan y la línea pasa a ser horizontal.
 
+Cuando una fila tiene más de dos acciones, van como texto (`.enlace`) y no como
+botones con borde: cuatro cajitas repetidas en cada fila convierten la tabla en
+una pared. El rojo se reserva para la única que no se puede deshacer.
+
 Las tablas anchas llevan `.tabla-a-lista` y en el teléfono dejan de ser tabla:
 cada fila pasa a ser un bloque. Como ahí no hay encabezados, los valores que
 solos no se entienden llevan `data-movil="Pozo"` y el nombre aparece adelante; y
