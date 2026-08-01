@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import Comprobante from '../componentes/Comprobante.jsx';
-import { compartirComprobante, enlaceWhatsapp, numeroWhatsapp } from '../whatsapp.js';
+import { compartirComprobante } from '../whatsapp.js';
 import { Bolillas, Cargando, Chip, MensajeError, Vacio } from '../componentes/comunes.jsx';
 import { cuantoFalta, fechaHora, numero, periodoLargo, pesos } from '../utilidades.js';
 
@@ -154,7 +154,7 @@ export default function Vendedor() {
         );
       }
     } catch {
-      setAvisoCompartir('No se pudo preparar la foto. Probá con el texto o imprimilo.');
+      setAvisoCompartir('No se pudo preparar el comprobante. Probá de nuevo.');
     } finally {
       setCompartiendo(false);
     }
@@ -258,7 +258,17 @@ export default function Vendedor() {
 
           <div className="campo">
             <label htmlFor="telefono">Teléfono (opcional)</label>
-            <input id="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+            {/* `type="tel"` para que el teléfono abra el teclado numérico y no
+                el de letras: se cargan jugadas de a muchas y parado en la calle.
+                No valida ni formatea nada — se guarda tal cual se escribe. */}
+            <input
+              id="telefono"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={telefono}
+              onChange={(e) => setTelefono(e.target.value)}
+            />
           </div>
 
           <button
@@ -303,45 +313,24 @@ export default function Vendedor() {
         </form>
 
         {ultimo && (
-          <div>
+          <div className="columna-comprobante">
             <Comprobante comprobante={ultimo} />
 
-            {/* Mandarlo va primero que imprimirlo: el vendedor está en la calle
-                con el teléfono, no al lado de una impresora. */}
+            {/* Una sola acción: mandarlo. El vendedor está en la calle con el
+                teléfono, no al lado de una impresora — y para imprimir en la
+                sede sigue estando Ctrl+P, que sale igual de bien. */}
             <div className="no-imprimir acciones-comprobante">
               <button onClick={compartirFoto} disabled={compartiendo}>
-                {compartiendo ? 'Preparando…' : 'Enviar la foto'}
-              </button>
-              <a
-                className="boton secundario"
-                href={enlaceWhatsapp(ultimo)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Enviar el texto
-              </a>
-              <button className="secundario" onClick={() => window.print()}>
-                Imprimir
+                {compartiendo ? 'Preparando…' : 'Enviar comprobante'}
               </button>
               <button className="enlace" onClick={() => setUltimo(null)}>
                 Cerrar
               </button>
             </div>
 
-            {/* Cada camino tiene su costo y conviene decirlo: la foto se ve
-                mejor pero el contacto lo elegís vos; el texto va derecho al chat
-                del comprador y le deja el código buscable. */}
             <p className="no-imprimir pie-comprobante">
-              {avisoCompartir ?? (
-                <>
-                  <strong>La foto</strong> se manda por donde elijas y ahí elegís el contacto.{' '}
-                  <strong>El texto</strong>{' '}
-                  {numeroWhatsapp(ultimo.comprador.telefono)
-                    ? `abre directo el chat con ${ultimo.comprador.telefono}`
-                    : 'abre WhatsApp para que elijas el contacto'}
-                  , y le deja el número de comprobante para que después lo pueda buscar.
-                </>
-              )}
+              {avisoCompartir ??
+                'Se abre la lista de apps del teléfono: elegí WhatsApp y después el contacto. Va la foto del comprobante.'}
             </p>
           </div>
         )}

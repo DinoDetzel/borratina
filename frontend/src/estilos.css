@@ -1105,11 +1105,22 @@ td.num { font-variant-numeric: tabular-nums; text-align: right; }
   .comprobante-club .hoja { box-shadow: none; }
 }
 
-/* ---------- Acciones del comprobante recién emitido ---------- */
+/* ---------- El comprobante recién emitido y sus acciones ----------
+   El ticket tiene un ancho fijo (720px escalados con `zoom`), así que en cuanto
+   la columna es más ancha que él queda pegado a la izquierda y se ve torcido.
+   Centrarlo acá y no con `margin: auto` adentro: en impresión el comprobante
+   pasa a `position: absolute` y ahí tiene que arrancar en el borde de la hoja. */
+
+.columna-comprobante {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
 .acciones-comprobante {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.6rem;
   flex-wrap: wrap;
   margin-top: 0.85rem;
@@ -1120,4 +1131,5 @@ td.num { font-variant-numeric: tabular-nums; text-align: right; }
   font-size: 0.82rem;
   margin: 0.5rem 0 0;
   max-width: 46ch;
+  text-align: center;
 }
