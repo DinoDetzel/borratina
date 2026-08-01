@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
@@ -39,6 +39,11 @@ export default function Vendedor() {
   // modesto: mientras tanto el botón lo dice, para que nadie lo toque dos veces.
   const [compartiendo, setCompartiendo] = useState(false);
   const [avisoCompartir, setAvisoCompartir] = useState(null);
+
+  // Para llevar la pantalla al comprobante apenas se emite: en el teléfono el
+  // comprobante queda abajo del formulario y, sin esto, hay que scrollear a
+  // mano justo cuando el comprador está esperando el ticket.
+  const ticket = useRef(null);
 
   const [jugadas, setJugadas] = useState([]);
   const [totalJugadas, setTotalJugadas] = useState(0);
@@ -131,7 +136,9 @@ export default function Vendedor() {
       setNumeros(VACIO);
       setNombre('');
       setTelefono('');
-      document.getElementById('numero-0')?.focus();
+      // Acá no se enfoca el primer número: enfocar arrastra la pantalla de
+      // vuelta al formulario y deja el comprobante abajo, justo cuando lo que
+      // sigue es mandarlo. El foco vuelve al cerrarlo.
 
       traerJugadas();
       traerSorteo(); // cambió el conteo de jugadas
@@ -140,6 +147,20 @@ export default function Vendedor() {
     } finally {
       setEnviando(false);
     }
+  }
+
+  // `nearest` scrollea lo mínimo necesario: en el teléfono sube el comprobante
+  // a la vista, y en la computadora —donde ya está al lado del formulario— no
+  // mueve nada.
+  useEffect(() => {
+    if (ultimo) ticket.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [ultimo]);
+
+  /** Cerrar el comprobante es querer cargar otra: ahí sí vuelve el foco arriba. */
+  function cerrarComprobante() {
+    setUltimo(null);
+    setAvisoCompartir(null);
+    document.getElementById('numero-0')?.focus();
   }
 
   async function compartirFoto() {
@@ -313,7 +334,7 @@ export default function Vendedor() {
         </form>
 
         {ultimo && (
-          <div className="columna-comprobante">
+          <div className="columna-comprobante" ref={ticket}>
             <Comprobante comprobante={ultimo} />
 
             {/* Una sola acción: mandarlo. El vendedor está en la calle con el
@@ -323,7 +344,7 @@ export default function Vendedor() {
               <button onClick={compartirFoto} disabled={compartiendo}>
                 {compartiendo ? 'Preparando…' : 'Enviar comprobante'}
               </button>
-              <button className="enlace" onClick={() => setUltimo(null)}>
+              <button className="enlace" onClick={cerrarComprobante}>
                 Cerrar
               </button>
             </div>
