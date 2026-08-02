@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { api } from '../api.js';
+import BotonCompartir from '../componentes/BotonCompartir.jsx';
 import { Bolillas, Cargando, Chip, MensajeError, MensajeExito, Vacio } from '../componentes/comunes.jsx';
 import { fechaHora, numero, periodoLargo } from '../utilidades.js';
 
@@ -356,6 +357,18 @@ export default function AdminJugadas() {
                     </td>
                     <td>
                       <div className="acciones-fila">
+                        {/* Va también en las anuladas: el comprobante sale con el
+                            sello ANULADA y sirve para avisarle al comprador. */}
+                        <BotonCompartir
+                          codigo={j.codigo}
+                          className="enlace"
+                          onAviso={(texto, esError) => {
+                            setError(esError ? texto : '');
+                            setExito(esError ? '' : (texto ?? ''));
+                          }}
+                        >
+                          Enviar
+                        </BotonCompartir>
                         {j.anulada ? (
                           <button
                             className="enlace"

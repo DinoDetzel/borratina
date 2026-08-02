@@ -20,9 +20,10 @@ const pieDeFoto = ({ codigo, comprador }) =>
  * Manda la foto del comprobante por donde el teléfono ofrezca compartir.
  *
  * Devuelve qué pasó, para que la pantalla pueda decirlo:
- *   'compartido'  el selector se abrió y la persona eligió a dónde mandarla
- *   'cancelado'   lo cerró sin elegir
- *   'descargado'  el navegador no comparte archivos: se bajó el PNG
+ *   'compartido'   el selector se abrió y la persona eligió a dónde mandarla
+ *   'cancelado'    lo cerró sin elegir
+ *   'descargado'   el navegador no comparte archivos: se bajó el PNG
+ *   'sin-permiso'  el toque ya no valía como permiso para abrir el selector
  */
 export async function compartirComprobante(comprobante) {
   const imagen = await comprobanteAImagen(comprobante);
@@ -40,6 +41,14 @@ export async function compartirComprobante(comprobante) {
     } catch (err) {
       // Cerrar el selector no es un error que haya que mostrar.
       if (err.name === 'AbortError') return 'cancelado';
+
+      // El navegador solo deja abrir el selector si el compartir sale del toque
+      // mismo. Cuando antes hubo que pedirle la jugada al servidor —reenviar una
+      // de la lista— ese permiso puede haber vencido en el camino, y entonces
+      // rebota acá. No es un fallo del comprobante: el segundo toque ya lo tiene
+      // en memoria, sale derecho y funciona.
+      if (err.name === 'NotAllowedError') return 'sin-permiso';
+
       throw err;
     }
   }

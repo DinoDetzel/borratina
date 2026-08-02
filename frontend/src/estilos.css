@@ -721,6 +721,20 @@ tr.apagada > td:not(:last-child) { opacity: 0.55; }
      la columna escondida reaparece. */
   .tabla-a-lista td.oculta-en-movil,
   .tabla-a-lista th.oculta-en-movil { display: none; }
+
+  /* Las acciones de la fila son texto, y como texto miden 22px de alto: en el
+     teléfono eso es menos de lo que ocupa un dedo, y abajo empieza la fila
+     siguiente. Se les da el alto de un blanco táctil sin tocar cómo se ven, y
+     el margen negativo devuelve el espacio que ese alto agrega a la tarjeta. */
+  .tabla-a-lista .acciones-fila {
+    flex-wrap: wrap;
+    margin: -0.55rem 0;
+  }
+  .tabla-a-lista .acciones-fila .enlace {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
 }
 
 /* Resumen del sorteo arriba de la carga: el pozo se ve, pero sin comerse la

@@ -42,6 +42,7 @@ async function esperarTipografias() {
     'italic 500 30px Barlow',
     'italic 400 19px Barlow',
     '700 15px "Barlow Semi Condensed"',
+    '800 110px Barlow', // el sello de anulada
   ];
   await Promise.all(caras.map((f) => document.fonts.load(f)));
   await document.fonts.ready;
@@ -68,7 +69,7 @@ export async function comprobanteAImagen(comprobante) {
  * Pinta el comprobante y devuelve el alto total.
  * Con `midiendo` en true no dibuja nada: solo acumula posiciones.
  */
-function pintar(c, { codigo, numeros, comprador, sorteo, importe }, midiendo) {
+function pintar(c, { codigo, numeros, comprador, sorteo, importe, anulada }, midiendo) {
   const PAD_X = 30;
   const ancho = ANCHO - PAD_X * 2; // 660
   const izq = PAD_X;
@@ -306,6 +307,46 @@ function pintar(c, { codigo, numeros, comprador, sorteo, importe }, midiendo) {
     espaciado: 0.5,
   });
   y += 34 + 18;
+
+  // ---- Sello de anulada ----
+  // Va último, encima de todo, como el `.sello-anulada` de la maqueta. Sin esto
+  // la foto de una jugada anulada sale idéntica a una vigente, y desde que el
+  // comprobante se puede reenviar desde la lista eso es un ticket que dice que
+  // vale cuando no vale.
+  if (anulada) {
+    dibujar(() => {
+      const CUERPO = 110;
+      const ESPACIADO = 6;
+      const GIRO = (-18 * Math.PI) / 180;
+
+      c.save();
+      c.font = `800 ${CUERPO}px Barlow`;
+      if ('letterSpacing' in c) c.letterSpacing = `${ESPACIADO}px`;
+
+      // Al girar, lo que ocupa a lo ancho es la palabra proyectada más el alto
+      // volcado. A cuerpo entero la palabra se sale de la hoja, así que se la
+      // achica lo justo para que entre con aire a los costados; el navegador que
+      // no soporte `letterSpacing` la mide más angosta y el ajuste lo contempla.
+      const largo = c.measureText('ANULADA').width;
+      const ancho = largo * Math.cos(GIRO) + CUERPO * Math.abs(Math.sin(GIRO));
+      const factor = Math.min(1, (ANCHO * 0.9) / ancho);
+
+      c.translate(ANCHO / 2, y / 2);
+      c.rotate(GIRO);
+      c.scale(factor, factor);
+
+      // Se dibuja desde la izquierda y no con `textAlign: center`: el espaciado
+      // que el canvas agrega después de la última letra entra en la medición y
+      // con el centrado automático la palabra queda corrida.
+      c.fillStyle = 'rgba(224, 75, 47, 0.28)';
+      c.textAlign = 'left';
+      c.textBaseline = 'middle';
+      c.fillText('ANULADA', -(largo - ESPACIADO) / 2, 0);
+
+      if ('letterSpacing' in c) c.letterSpacing = '0px';
+      c.restore();
+    });
+  }
 
   return y;
 }

@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
+import BotonCompartir from '../componentes/BotonCompartir.jsx';
 import Comprobante from '../componentes/Comprobante.jsx';
-import { compartirComprobante } from '../whatsapp.js';
 import { Bolillas, Cargando, Chip, MensajeError, Vacio } from '../componentes/comunes.jsx';
 import { cuantoFalta, fechaHora, numero, periodoLargo, pesos } from '../utilidades.js';
 
@@ -35,10 +35,11 @@ export default function Vendedor() {
   const [error, setError] = useState('');
   const [ultimo, setUltimo] = useState(null); // comprobante recién emitido
 
-  // Dibujar el comprobante y armar el PNG tarda un instante en un teléfono
-  // modesto: mientras tanto el botón lo dice, para que nadie lo toque dos veces.
-  const [compartiendo, setCompartiendo] = useState(false);
   const [avisoCompartir, setAvisoCompartir] = useState(null);
+
+  // El de la lista va aparte del de arriba: son dos envíos distintos y mezclarlos
+  // dejaría el aviso de uno colgado abajo del otro.
+  const [avisoLista, setAvisoLista] = useState(null);
 
   // Para llevar la pantalla al comprobante apenas se emite: en el teléfono el
   // comprobante queda abajo del formulario y, sin esto, hay que scrollear a
@@ -161,24 +162,6 @@ export default function Vendedor() {
     setUltimo(null);
     setAvisoCompartir(null);
     document.getElementById('numero-0')?.focus();
-  }
-
-  async function compartirFoto() {
-    setCompartiendo(true);
-    setAvisoCompartir(null);
-    try {
-      const resultado = await compartirComprobante(ultimo);
-      if (resultado === 'descargado') {
-        setAvisoCompartir(
-          'Este navegador no comparte archivos, así que el comprobante se descargó. ' +
-            'Adjuntalo desde WhatsApp.',
-        );
-      }
-    } catch {
-      setAvisoCompartir('No se pudo preparar el comprobante. Probá de nuevo.');
-    } finally {
-      setCompartiendo(false);
-    }
   }
 
   if (cargandoSorteo) return <Cargando />;
@@ -341,9 +324,7 @@ export default function Vendedor() {
                 teléfono, no al lado de una impresora — y para imprimir en la
                 sede sigue estando Ctrl+P, que sale igual de bien. */}
             <div className="no-imprimir acciones-comprobante">
-              <button onClick={compartirFoto} disabled={compartiendo}>
-                {compartiendo ? 'Preparando…' : 'Enviar comprobante'}
-              </button>
+              <BotonCompartir comprobante={ultimo} onAviso={setAvisoCompartir} />
               <button className="enlace" onClick={cerrarComprobante}>
                 Cerrar
               </button>
@@ -391,6 +372,8 @@ export default function Vendedor() {
             : `${numero(totalJugadas)} en total.`}
         </p>
 
+        {avisoLista && <div className="aviso">{avisoLista}</div>}
+
         {cargandoJugadas ? (
           <Cargando />
         ) : jugadas.length === 0 ? (
@@ -409,6 +392,7 @@ export default function Vendedor() {
                   <th>Comprador</th>
                   {viendoTodas && <th>Vendedor</th>}
                   <th>Cargada</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -431,6 +415,20 @@ export default function Vendedor() {
                     {viendoTodas && <td data-movil="Cargó">{j.vendedor}</td>}
                     <td style={{ color: 'var(--tinta-2)', fontSize: '0.85rem' }}>
                       {fechaHora(j.created_at)}
+                    </td>
+                    <td>
+                      {/* Para cuando el comprobante quedó sin mandar: se cerró la
+                          pantalla, se cortó el teléfono, el comprador dio mal el
+                          número. Sale el mismo comprobante, no uno nuevo. */}
+                      <div className="acciones-fila">
+                        <BotonCompartir
+                          codigo={j.codigo}
+                          className="enlace"
+                          onAviso={setAvisoLista}
+                        >
+                          Enviar
+                        </BotonCompartir>
+                      </div>
                     </td>
                   </tr>
                 ))}
