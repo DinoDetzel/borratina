@@ -17,6 +17,19 @@ export const pool = new Pool({
   ssl: config.db.ssl,
   max: 10,
   idleTimeoutMillis: 30_000,
+
+  /**
+   * Las conexiones hablan en la zona del club.
+   *
+   * Postgres puede estar en UTC —el nuestro lo está— y ahí todo lo que pase un
+   * `timestamptz` a fecha se corre tres horas: una jugada cargada a las 21:30 de
+   * un martes cae en el miércoles. Eso salía impreso en el código del
+   * comprobante y también movía de día las ventas del gráfico.
+   *
+   * No afecta lo que se guarda: las fechas entran en ISO con Z, que no depende
+   * de ninguna zona. Solo cambia cómo se leen de vuelta.
+   */
+  options: `-c timezone=${config.zonaHoraria}`,
 });
 
 pool.on('error', (err) => {

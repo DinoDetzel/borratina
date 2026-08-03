@@ -19,6 +19,13 @@ function requerida(nombre) {
 export const config = {
   port: Number(process.env.PORT) || 3000,
 
+  /**
+   * La zona del club. Todo lo que sea "qué día es" —la fecha del código de
+   * comprobante, el agrupado por día del gráfico— tiene que resolverse acá y no
+   * donde esté parado el servidor, que puede correr en UTC.
+   */
+  zonaHoraria: process.env.TZ_CLUB || 'America/Argentina/Buenos_Aires',
+
   db: {
     connectionString: requerida('DATABASE_URL'),
     // Supabase y la mayoría de los Postgres administrados exigen SSL, pero
