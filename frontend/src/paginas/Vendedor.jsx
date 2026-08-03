@@ -294,22 +294,42 @@ export default function Vendedor() {
           <div
             style={{ marginTop: '1.1rem', paddingTop: '0.9rem', borderTop: '1px solid var(--linea)' }}
           >
-            <div className="mis-datos">
-              <span>
-                Cargadas por vos: <strong>{numero(sorteo.mis_jugadas)}</strong>
-              </span>
-              <span>
-                Recaudado: <strong>{pesos(sorteo.mis_jugadas * sorteo.precio_jugada)}</strong>
-              </span>
-            </div>
-
-            {esAdmin && (
-              <div className="mis-datos" style={{ marginTop: '0.35rem' }}>
+            {/* Con los totales del sorteo son cuatro cifras que se comparan de
+                a pares, y escritas como frases sueltas no entraban en la
+                columna del formulario: "Recaudado en total" terminaba con el
+                importe en el renglón de abajo, lejos del recaudado propio. En
+                columnas cada cifra queda debajo de la suya. */}
+            {esAdmin ? (
+              <table className="resumen-carga">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Cargadas</th>
+                    <th>Recaudado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">Vos</th>
+                    <td>{numero(sorteo.mis_jugadas)}</td>
+                    <td>{pesos(sorteo.mis_jugadas * sorteo.precio_jugada)}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Todos</th>
+                    <td>{numero(sorteo.jugadas_cargadas)}</td>
+                    <td>{pesos(sorteo.recaudacion)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            ) : (
+              /* Al vendedor no se le cuenta lo de los demás: son dos datos
+                 sueltos y una tabla de una fila sería puro adorno. */
+              <div className="mis-datos">
                 <span>
-                  Cargadas en total: <strong>{numero(sorteo.jugadas_cargadas)}</strong>
+                  Cargadas por vos: <strong>{numero(sorteo.mis_jugadas)}</strong>
                 </span>
                 <span>
-                  Recaudado en total: <strong>{pesos(sorteo.recaudacion)}</strong>
+                  Recaudado: <strong>{pesos(sorteo.mis_jugadas * sorteo.precio_jugada)}</strong>
                 </span>
               </div>
             )}

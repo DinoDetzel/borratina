@@ -756,6 +756,43 @@ tr.apagada > td:not(:last-child) { opacity: 0.55; }
   color: var(--tinta-2);
   font-size: 0.9rem;
 }
+
+/* El resumen de lo cargado cuando además van los totales del sorteo. Es una
+   tabla chica y sin líneas: acá los bordes y el aire de una tabla de datos la
+   harían pesar más que el formulario del que cuelga. */
+.resumen-carga {
+  width: auto;
+  font-size: 0.9rem;
+}
+.resumen-carga th,
+.resumen-carga td {
+  padding: 0.14rem 0 0.14rem 1.4rem;
+  border: none;
+}
+.resumen-carga th:first-child,
+.resumen-carga td:first-child {
+  padding-left: 0;
+}
+
+/* Los encabezados de columna van sobre las cifras, así que alineados como
+   ellas; el de la primera columna queda vacío y no ocupa lugar. */
+.resumen-carga thead th { text-align: right; }
+
+/* El nombre de la fila es una etiqueta, no un encabezado de tabla: se lo saca
+   de las mayúsculas para que se lea como el resto del formulario. */
+.resumen-carga tbody th {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--tinta-2);
+}
+.resumen-carga td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta);
+  font-weight: 600;
+}
 .mis-datos strong {
   color: var(--tinta);
   font-variant-numeric: tabular-nums;
@@ -962,12 +999,32 @@ td.num { font-variant-numeric: tabular-nums; text-align: right; }
 .carga-y-ticket {
   display: grid;
   gap: 1rem;
-  grid-template-columns: minmax(280px, 1fr) auto;
+  /* El formulario primero: es donde se trabaja, y con el ticket a 720px fijos
+     quedaba en 324px, más angosto que el comprobante que lo acompaña. Ahora
+     toma lo que necesita y el ticket se conforma con el resto, escalándose.
+     `minmax(0, …)` es lo que le permite achicarse: con `auto` se plantaba en
+     720px y a 950px de ventana la página scrolleaba de costado. */
+  grid-template-columns: minmax(300px, 400px) minmax(0, 720px);
   align-items: start;
 }
 
 @media (max-width: 900px) {
   .carga-y-ticket { grid-template-columns: 1fr; }
+
+  /* Apilado, el ticket a lo ancho de la pantalla se come toda la vista y deja
+     el formulario como un detalle de arriba. Se lo limita a un tamaño que se
+     lee cómodo; en un teléfono la pantalla ya es más angosta que esto y manda
+     el ancho real.
+
+     Centrado con `justify-self` y no con `margin: 0 auto`: el margen automático
+     le saca el estiramiento a la celda, y como acá la columna es el contenedor
+     que mide el ticket, sin ancho propio se queda en cero y el ticket sale sin
+     escalar. El `width` es lo que le da ese ancho. */
+  .columna-comprobante {
+    width: 100%;
+    max-width: 560px;
+    justify-self: center;
+  }
 }
 
 /* ---------- Comprobante ----------
@@ -1052,13 +1109,26 @@ td.num { font-variant-numeric: tabular-nums; text-align: right; }
   z-index: 2;
 }
 
-/* En pantallas angostas el ticket se achica entero: escalarlo mantiene las
-   proporciones del diseño, que es lo que no se puede perder. */
-@media (max-width: 820px) {
-  .comprobante-club { zoom: 0.62; }
-}
-@media (max-width: 520px) {
-  .comprobante-club { zoom: 0.46; }
+/* El ticket se achica entero: escalarlo mantiene las proporciones del diseño,
+   que es lo que no se puede perder.
+
+   Estos escalones miran el ancho de la ventana, que no es el que le toca al
+   ticket: entre 820 y 1000px salía a tamaño completo al lado del formulario y
+   la página terminaba scrolleando de costado. Quedan de red de seguridad para
+   el navegador que no entienda la fórmula de abajo. */
+@media (max-width: 1120px) { .comprobante-club { zoom: 0.86; } }
+@media (max-width: 900px) { .comprobante-club { zoom: 0.78; } }
+@media (max-width: 700px) { .comprobante-club { zoom: 0.62; } }
+@media (max-width: 520px) { .comprobante-club { zoom: 0.46; } }
+
+/* Lo que corresponde es medir el hueco donde el ticket va a entrar, no la
+   ventana entera. La columna se declara contenedor y el ticket se escala a lo
+   que ella mida: entra siempre justo, sin escalones ni desborde, y da igual si
+   está al lado del formulario o abajo. El tope de 1 es para que no se agrande
+   más allá del tamaño real del talonario. */
+@supports (zoom: calc(100cqw / 720px)) {
+  .columna-comprobante { container-type: inline-size; }
+  .comprobante-club { zoom: min(1, calc(100cqw / 720px)); }
 }
 
 /* ---------- Gráfico ---------- */
