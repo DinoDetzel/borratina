@@ -1004,7 +1004,7 @@ td.num { font-variant-numeric: tabular-nums; text-align: right; }
      toma lo que necesita y el ticket se conforma con el resto, escalándose.
      `minmax(0, …)` es lo que le permite achicarse: con `auto` se plantaba en
      720px y a 950px de ventana la página scrolleaba de costado. */
-  grid-template-columns: minmax(300px, 400px) minmax(0, 720px);
+  grid-template-columns: minmax(300px, 470px) minmax(0, 720px);
   align-items: start;
 }
 
