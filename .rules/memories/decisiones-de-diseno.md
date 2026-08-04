@@ -119,58 +119,83 @@ Registro de decisiones de producto tomadas durante el diseño inicial del proyec
   Confirmado 2026-07-31. Es el comportamiento que ya tenía el backend, así que no
   hizo falta cambiar nada.
 
+## Restaurar una jugada después del sorteo ✅ RESUELTO
+
+> Detectado en revisión de código (2026-08-04) y cerrado el mismo día.
+
+`PATCH /api/jugadas/:id` ya bloqueaba el cambio de números una vez finalizado el
+sorteo, con un argumento explícito: con el extracto a la vista, editar una jugada
+es elegir quién gana. **Restaurar caía en lo mismo y no tenía candado.** Y no
+hace falta inventar una jugada para aprovecharlo: alcanza con anular varias
+mientras el sorteo está abierto —legítimo y habitual— y restaurar después la que
+salió. Equivale a elegir al ganador entre las cargadas.
+
+- `POST /:id/restaurar` lleva ahora la misma condición que el PATCH, y **dentro
+  del `UPDATE`**, no como chequeo previo: si el admin carga el extracto justo
+  entre la lectura y la escritura, no se cuela igual.
+- `errorDeRestauracion()` distingue los tres motivos, como `errorDeCarga()`. Si
+  la jugada además no estaba anulada, gana ese mensaje: es el útil.
+- No se tocó el front. El botón **Restaurar** sigue apareciendo en sorteos
+  finalizados y ahora muestra el error, que es el criterio del resto del sistema
+  —explicar por qué no se puede en vez de esconder el control—. Si molesta, es un
+  condicional sobre `finalizado` en `AdminSorteoDetalle.jsx:641`.
+
+Regla de negocio actualizada en [[reglas-de-negocio]] → "Anulación y corrección".
+
 ## Pendiente
 
-### Anular y restaurar después del sorteo — A DEFINIR
+### Anular después del sorteo — A DEFINIR
 
-> Detectado en revisión de código (2026-08-04). **No hay decisión tomada todavía:
-> lo que sigue es el planteo, no una regla.** Nada de esto está implementado.
+> Mismo origen que lo de arriba. **Acá no hay decisión tomada: es el planteo, no
+> una regla.** Nada de esto está implementado.
 
-**El hueco.** `PATCH /api/jugadas/:id` bloquea el cambio de números una vez
-finalizado el sorteo (`jugadas.routes.js:376-381`), con un argumento explícito:
-con el extracto a la vista, editar una jugada es elegir quién gana. Pero
-`POST /:id/anular` (`:398`) y `POST /:id/restaurar` (`:417`) no miran el estado
-del sorteo en ningún momento — el `WHERE` es solo `id` y `anulada`. Y en
-`AdminSorteoDetalle.jsx` son botones directos sin confirmación (`:641` restaurar,
-`:667` anular), en la misma celda donde `:610-615` pinta el chip **Ganadora**.
+`POST /:id/anular` (`jugadas.routes.js:398`) sigue sin mirar el estado del
+sorteo — el `WHERE` es solo `id` y `anulada`. Y en `AdminSorteoDetalle.jsx:667`
+es un botón directo sin confirmación, en la misma celda donde `:610-615` pinta el
+chip **Ganadora**: la pantalla te dice quién cobra y te ofrece el botón para
+sacarlo, a un click.
 
-**Los dos efectos, que no son iguales:**
+**Por qué se dejó abierto.** Anular post-extracto solo puede *quitar* cobradores,
+no elegirlos, y hay un caso real a favor: un comprobante que nunca se pagó y se
+detecta tarde. Pero inocuo no es — con pozo fijo y reparto entre N, anular a un
+ganador sube a los demás de `pozo/N` a `pozo/(N-1)`, y además mueve la
+recaudación.
 
-- *Anular* post-extracto solo puede quitar cobradores. No es inocuo igual: con
-  pozo fijo y reparto entre N, anular a un ganador sube a los demás de `pozo/N` a
-  `pozo/(N-1)`, y además mueve la recaudación.
-- *Restaurar* post-extracto **puede crear un cobrador**. El camino no requiere
-  inventar nada: se anulan jugadas con el sorteo abierto (legítimo y habitual) y
-  se restaura la que salió. Equivale a elegir el ganador entre las cargadas.
-
-**El rastro se borra.** `restaurar` nulifica `anulada_por` y `anulada_at`
-(`:420-421`), así que después no queda registro de que la jugada estuvo anulada,
-ni de quién la anuló. `editada_por` además pisa a quien hubiera corregido el
-nombre antes. No hay tabla de historial. Y no es un descuido de la ruta: el
-`CHECK chk_jugadas_anulacion` (`001_init.sql:91-94`) **obliga** a nulificarlos
-cuando `anulada = false`. Cualquier arreglo del rastro toca el esquema.
-
-**La pregunta a responder (es de negocio, no técnica):** ¿anular una jugada
-después de cargado el extracto tiene que seguir siendo posible? Hay un caso real
-a favor — un comprobante que no se pagó y se detecta tarde. Para *restaurar* no
-apareció ninguno.
+**La pregunta a responder es de negocio, no técnica:** ¿ese caso justifica dejar
+la puerta abierta, o se resuelve fuera del sistema como ahora se resuelve una
+restauración post-sorteo?
 
 **Opciones anotadas, en orden de costo:**
 
 | # | Qué | Costo | Toca |
 |---|---|---|---|
-| 1 | Bloquear `restaurar` si el sorteo está `finalizado`, con la misma condición que ya usa el PATCH | bajo | 1 ruta |
 | 2 | Permitir `anular` post-sorteo, pero devolver el impacto (si ganaba, cuántos ganadores quedan y cuánto cobra cada uno) | medio | 1 ruta + `utils/ganadores.js` |
 | 3 | Confirmación obligatoria en el front cuando `j.gano`, con el monto en el texto | bajo | 1 pantalla |
 | 4 | Que la anulación deje rastro aunque se restaure | alto | migración + constraint o tabla de eventos |
 
+> La numeración arranca en 2 a propósito: la opción 1 era el candado de restaurar
+> y ya está hecha.
+
 El patrón para 2 ya existe en el repo: `PATCH /api/sorteos/:id/resultado`
 (`sorteos.routes.js:299-352`) resuelve el mismo dilema —corregir el extracto
 *también* cambia quién cobra— y en vez de bloquear hace visible la consecuencia
-con `dejaron_de_ganar`. Anular/restaurar hoy no tienen ni el bloqueo del PATCH de
-jugadas ni el informe del PATCH de resultado.
+con `dejaron_de_ganar`. Anular hoy no tiene ni el bloqueo del PATCH de jugadas ni
+el informe del PATCH de resultado.
 
-Sin el punto 4, los otros tres son controles sin registro.
+### El rastro de la anulación se borra — A DEFINIR
+
+Es el punto 4 de la tabla y sobrevive al arreglo de restaurar, aunque con menos
+gravedad: el camino de "anulo con el sorteo abierto y restauro después" quedó
+cerrado, pero una restauración *antes* del sorteo sigue sin dejar registro.
+
+`restaurar` nulifica `anulada_por` y `anulada_at` (`jugadas.routes.js:460-461`),
+así que después no queda constancia de que la jugada estuvo anulada ni de quién
+la anuló. `editada_por` además pisa a quien hubiera corregido el nombre antes. No
+hay tabla de historial. Y no es un descuido de la ruta: el `CHECK
+chk_jugadas_anulacion` (`001_init.sql:91-94`) **obliga** a nulificarlos cuando
+`anulada = false`. Cualquier arreglo toca el esquema, por eso va aparte.
+
+Mientras esto no exista, los controles de anular son controles sin registro.
 
 ### Deuda ya anotada
 

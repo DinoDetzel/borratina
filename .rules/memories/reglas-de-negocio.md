@@ -174,9 +174,18 @@ resultado   = recaudación − pozo
 
 - Una jugada cargada **no puede ser modificada ni anulada por el vendedor**.
 - Solo el **admin** puede editar o anular una jugada, desde su panel.
-- Anular es **reversible** y **no borra la fila**: se marca la jugada, se registra
-  qué admin lo hizo y cuándo. Nunca se hace `DELETE` sobre `jugadas`.
+- Anular **no borra la fila**: se marca la jugada, se registra qué admin lo hizo y
+  cuándo. Nunca se hace `DELETE` sobre `jugadas`.
 - Una jugada anulada deja de contar tanto para el pozo como para los ganadores.
+- Anular es **reversible, pero solo mientras el sorteo no esté finalizado.** Con
+  el extracto cargado, restaurar una anulada es elegir quién cobra: bastaría con
+  anular varias jugadas mientras el sorteo está abierto —cosa legítima y
+  habitual— y restaurar después la que salió. Es la misma razón por la que no se
+  pueden cambiar los números después del sorteo.
+- **Anular sí sigue siendo posible después del sorteo**, por ahora: quitar un
+  cobrador no es lo mismo que elegirlo, y hay un caso real detrás (un comprobante
+  que nunca se pagó y se detecta tarde). Está anotado como pendiente en
+  [[decisiones-de-diseno]], con las consecuencias que hoy no se informan.
 
 ## Visibilidad
 

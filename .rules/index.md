@@ -22,7 +22,7 @@ el resultado del sorteo mensual.
 | Área | Estado |
 |---|---|
 | Reglas de negocio del juego | ✅ Definidas — orden de números libre (confirmado) |
-| Decisiones de diseño (roles, permisos, flujos) | ✅ Cerradas — salvo anular/restaurar post-sorteo, a definir |
+| Decisiones de diseño (roles, permisos, flujos) | ✅ Cerradas — salvo anular post-sorteo y el rastro de la anulación, a definir |
 | Esquema de base de datos | ✅ v2 cerrado — implementado en `backend/db/migrations/001_init.sql` |
 | Backend (API) | ✅ Operativo — Express + `pg`, probado end-to-end contra Postgres |
 | Frontend | ✅ Operativo — React + Vite, verificado en navegador |
