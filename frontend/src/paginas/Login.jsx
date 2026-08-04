@@ -11,10 +11,10 @@ import { MensajeError } from '../componentes/comunes.jsx';
  * "Ingresando…" y la espera se lee como que la app se colgó: el vendedor
  * recarga, y con eso vuelve a empezar la cuenta.
  *
- * Ocho segundos es bastante más que un login normal, así que en el uso de
+ * Seis segundos es bastante más que un login normal, así que en el uso de
  * todos los días el cartel no llega a aparecer.
  */
-const AVISO_DE_ESPERA_MS = 8_000;
+const AVISO_DE_ESPERA_MS = 6_000;
 
 export default function Login() {
   const { iniciarSesion } = useAuth();
