@@ -13,6 +13,71 @@ import { Vacio } from './comunes.jsx';
 import { fechaCorta, numero, pesos } from '../utilidades.js';
 
 /**
+ * Desde cuántos días con ventas la tabla pasa a agruparse por semana.
+ *
+ * Un sorteo es de un mes, así que día por día son treinta y pico de renglones:
+ * en el teléfono hay que scrollear un rato para llegar al final. Por debajo de
+ * este número la tabla entra de una y agrupar solo escondería datos.
+ */
+const DIAS_PARA_AGRUPAR = 10;
+
+const MES_CORTO = new Intl.DateTimeFormat('es-AR', { month: 'short' });
+
+/**
+ * Junta la serie diaria en semanas del mes: 1–7, 8–14, 15–21, 22–28 y de 29 en
+ * adelante, que absorbe el resto del mes.
+ *
+ * Se corta por número de día y no cada 7 días desde la primera venta, para que
+ * las filas caigan siempre en las mismas fechas y dos sorteos se puedan comparar
+ * renglón contra renglón. El año y el mes entran en la clave porque la ventana
+ * de carga puede empezar antes del mes del sorteo.
+ */
+function porSemana(serie) {
+  const grupos = new Map();
+
+  for (const d of serie) {
+    const [anio, mes, dia] = d.dia.split('-').map(Number);
+    const clave = `${anio}-${mes}-${Math.min(Math.floor((dia - 1) / 7), 4)}`;
+
+    const grupo = grupos.get(clave);
+    if (!grupo) {
+      grupos.set(clave, {
+        clave,
+        anio,
+        mes,
+        desde: dia,
+        hasta: dia,
+        jugadas: Number(d.jugadas_del_dia),
+        recaudacion: Number(d.recaudacion_del_dia),
+        acumuladas: Number(d.jugadas_acumuladas),
+      });
+      continue;
+    }
+
+    grupo.hasta = dia;
+    grupo.jugadas += Number(d.jugadas_del_dia);
+    grupo.recaudacion += Number(d.recaudacion_del_dia);
+    // La serie viene ordenada por día, así que el último acumulado que se ve es
+    // el que cierra la semana.
+    grupo.acumuladas = Number(d.jugadas_acumuladas);
+  }
+
+  return [...grupos.values()];
+}
+
+/**
+ * "8 – 14 ago", o "9 ago" si esa semana tuvo un solo día con ventas.
+ *
+ * Los extremos son los días que efectivamente vendieron, no el 1 y el 7 de la
+ * semana: la fila dice qué pasó, y una semana que arrancó recién el jueves no
+ * tiene por qué anunciarse desde el lunes.
+ */
+function rangoDeLaSemana(g) {
+  const mes = MES_CORTO.format(new Date(g.anio, g.mes - 1, 1)).replace('.', '');
+  return g.desde === g.hasta ? `${g.desde} ${mes}` : `${g.desde} – ${g.hasta} ${mes}`;
+}
+
+/**
  * Evolución de jugadas por día dentro de un sorteo.
  *
  * Una sola serie, así que no lleva leyenda: el título ya dice qué se grafica.
@@ -44,6 +109,24 @@ export default function GraficoVentas({ serie }) {
     );
   }
 
+  // Las dos formas de la tabla se arman iguales, así que el JSX es uno solo.
+  const agrupada = serie.length > DIAS_PARA_AGRUPAR;
+  const filas = agrupada
+    ? porSemana(serie).map((g) => ({
+        clave: g.clave,
+        etiqueta: rangoDeLaSemana(g),
+        jugadas: g.jugadas,
+        acumuladas: g.acumuladas,
+        recaudacion: g.recaudacion,
+      }))
+    : serie.map((d) => ({
+        clave: d.dia,
+        etiqueta: fechaCorta(d.dia),
+        jugadas: d.jugadas_del_dia,
+        acumuladas: d.jugadas_acumuladas,
+        recaudacion: d.recaudacion_del_dia,
+      }));
+
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
@@ -53,28 +136,37 @@ export default function GraficoVentas({ serie }) {
       </div>
 
       {verTabla ? (
-        <div className="tabla-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Día</th>
-                <th style={{ textAlign: 'right' }}>Jugadas</th>
-                <th style={{ textAlign: 'right' }}>Acumuladas</th>
-                <th style={{ textAlign: 'right' }}>Recaudación</th>
-              </tr>
-            </thead>
-            <tbody>
-              {serie.map((d) => (
-                <tr key={d.dia}>
-                  <td>{fechaCorta(d.dia)}</td>
-                  <td className="num">{numero(d.jugadas_del_dia)}</td>
-                  <td className="num">{numero(d.jugadas_acumuladas)}</td>
-                  <td className="num">{pesos(d.recaudacion_del_dia)}</td>
+        <>
+          <div className="tabla-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>{agrupada ? 'Semana' : 'Día'}</th>
+                  <th style={{ textAlign: 'right' }}>Jugadas</th>
+                  <th style={{ textAlign: 'right' }}>Acumuladas</th>
+                  <th style={{ textAlign: 'right' }}>Recaudación</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filas.map((f) => (
+                  <tr key={f.clave}>
+                    <td style={{ whiteSpace: 'nowrap' }}>{f.etiqueta}</td>
+                    <td className="num">{numero(f.jugadas)}</td>
+                    <td className="num">{numero(f.acumuladas)}</td>
+                    <td className="num">{pesos(f.recaudacion)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {agrupada && (
+            <p style={{ color: 'var(--tinta-apagada)', fontSize: '0.8rem', margin: '0.7rem 0 0' }}>
+              Agrupado por semana: el sorteo lleva {serie.length} días con ventas. El gráfico los
+              muestra uno por uno.
+            </p>
+          )}
+        </>
       ) : (
         <div className="grafico-caja">
           <ResponsiveContainer width="100%" height="100%">
