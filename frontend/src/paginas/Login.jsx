@@ -3,6 +3,19 @@ import { useState } from 'react';
 import { useAuth } from '../auth.jsx';
 import { MensajeError } from '../componentes/comunes.jsx';
 
+/**
+ * Cuánto se espera antes de avisar que el servidor puede estar despertando.
+ *
+ * El backend duerme cuando no tiene tráfico y el primer request del día tarda
+ * hasta un minuto en levantarlo. Sin este aviso el botón se queda en
+ * "Ingresando…" y la espera se lee como que la app se colgó: el vendedor
+ * recarga, y con eso vuelve a empezar la cuenta.
+ *
+ * Ocho segundos es bastante más que un login normal, así que en el uso de
+ * todos los días el cartel no llega a aparecer.
+ */
+const AVISO_DE_ESPERA_MS = 8_000;
+
 export default function Login() {
   const { iniciarSesion } = useAuth();
 
@@ -10,11 +23,14 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [despertando, setDespertando] = useState(false);
 
   async function enviar(evento) {
     evento.preventDefault();
     setError('');
     setEnviando(true);
+
+    const aviso = setTimeout(() => setDespertando(true), AVISO_DE_ESPERA_MS);
 
     try {
       // El redirect lo resuelve App al cambiar el usuario del contexto.
@@ -22,6 +38,9 @@ export default function Login() {
     } catch (err) {
       setError(err.message);
       setEnviando(false);
+      setDespertando(false);
+    } finally {
+      clearTimeout(aviso);
     }
   }
 
@@ -66,6 +85,14 @@ export default function Login() {
         <button type="submit" disabled={enviando}>
           {enviando ? 'Ingresando…' : 'Ingresar'}
         </button>
+
+        {/* Debajo del botón y no arriba del formulario: es sobre lo que está
+            pasando recién ahora, no sobre lo que hay que completar. */}
+        {despertando && (
+          <div className="aviso" role="status" style={{ margin: '0.9rem 0 0' }}>
+            El servidor está despertando. Puede tardar hasta un minuto: no cierres la pantalla.
+          </div>
+        )}
       </form>
     </div>
   );
