@@ -308,6 +308,13 @@ h3 { font-size: 1.05rem; }
   gap: 1rem;
 }
 
+/* Una celda de grid no baja de lo que mide su contenido salvo que se le diga.
+   Sin esto, la tabla de "Ver tabla" ensanchaba su columna en vez de scrollear
+   adentro: en el teléfono empujaba la tarjeta de al lado fuera de la pantalla y
+   la página entera se iba al costado. */
+.panel-fila > *,
+.grilla > * { min-width: 0; }
+
 /* ---------- Ranking por vendedor ---------- */
 
 .ranking {
