@@ -112,3 +112,7 @@ Convenciones:
 - Manejo de variables de entorno / secretos entre Vercel, Render y Supabase.
 - El bundle del frontend pesa ~616 kB sin comprimir (183 kB gzip), casi todo
   Recharts. Si molesta, se parte con `import()` dinámico del gráfico.
+- Si anular/restaurar quedan restringidos después del sorteo, cambia el contrato
+  de dos endpoints y posiblemente el `CHECK chk_jugadas_anulacion`. El planteo
+  está en `memories/decisiones-de-diseno.md` → "Anular y restaurar después del
+  sorteo". Sin resolver.
