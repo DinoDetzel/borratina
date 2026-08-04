@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { api } from '../api.js';
@@ -37,6 +37,9 @@ const SIN_FILTROS = {
   solo_ganadoras: '',
 };
 
+/** Si un juego de filtros acota algo, o es lo que trae la pantalla al abrirse. */
+const tieneFiltros = (f) => Object.keys(SIN_FILTROS).some((k) => f[k] !== SIN_FILTROS[k]);
+
 export default function AdminSorteoDetalle() {
   const { id } = useParams();
 
@@ -59,14 +62,18 @@ export default function AdminSorteoDetalle() {
   const [filtros, setFiltros] = useState(SIN_FILTROS);
   // Con qué se armó la lista que está en pantalla. Escribir en el buscador no
   // tiene que cambiarle el criterio al "Ver más" antes de apretar Buscar.
-  const aplicados = useRef(SIN_FILTROS);
+  const [aplicados, setAplicados] = useState(SIN_FILTROS);
 
   const [cargando, setCargando] = useState(true);
   const [buscando, setBuscando] = useState(false);
   const [trayendoMas, setTrayendoMas] = useState(false);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
+
+  // Corrección de una jugada: `editando` son sus datos en el cartel, y
+  // `guardandoJugada` el viaje al servidor.
   const [editando, setEditando] = useState(null);
+  const [guardandoJugada, setGuardandoJugada] = useState(false);
 
   // Corrección del extracto: `corrigiendo` son los 20 campos como texto, y
   // `confirmando` el cartel que aparece antes de guardar.
@@ -74,8 +81,9 @@ export default function AdminSorteoDetalle() {
   const [confirmando, setConfirmando] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
+  /** La lista, con los filtros que se le pasen. Los errores los ve quien llama. */
   const traerJugadas = useCallback(
-    async (offset, criterios = aplicados.current) => {
+    async (offset, criterios) => {
       const respuesta = await api.jugadas.listar({
         ...criterios,
         sorteo_id: id,
@@ -88,41 +96,38 @@ export default function AdminSorteoDetalle() {
     [id],
   );
 
-  const traerTodo = useCallback(
+  /**
+   * Todo lo que no es la lista: el sorteo, sus dos totales y el reparto.
+   *
+   * Va aparte a propósito, y no depende de los filtros: así el efecto de abajo
+   * no se vuelve a disparar con cada búsqueda.
+   */
+  const traerResumen = useCallback(
     async (sigueVigente = () => true) => {
-      setError('');
-      try {
-        const { sorteo } = await api.sorteos.uno(id);
-        if (!sigueVigente()) return;
-        setSorteo(sorteo);
+      const { sorteo } = await api.sorteos.uno(id);
+      if (!sigueVigente()) return;
+      setSorteo(sorteo);
 
-        await traerJugadas(0);
+      // Independientes entre sí: se piden juntos. De cada uno solo interesa el
+      // total, así que se trae una sola fila.
+      const [conAnuladas, soloValidas] = await Promise.all([
+        api.jugadas.listar({ sorteo_id: id, incluir_anuladas: 'true', limit: 1 }),
+        api.jugadas.listar({ sorteo_id: id, limit: 1 }),
+      ]);
+      if (!sigueVigente()) return;
+      setTotalSorteo(conAnuladas.total);
+      setValidas(soloValidas.total);
 
-        // Solo interesa el total, así que se pide una sola fila.
-        const conAnuladas = await api.jugadas.listar({
-          sorteo_id: id,
-          incluir_anuladas: 'true',
-          limit: 1,
-        });
-        const soloValidas = await api.jugadas.listar({ sorteo_id: id, limit: 1 });
-        if (sigueVigente()) {
-          setTotalSorteo(conAnuladas.total);
-          setValidas(soloValidas.total);
-        }
-
-        // Los ganadores solo existen una vez cargado el extracto: antes de eso
-        // el endpoint responde 409 a propósito.
-        if (sorteo.estado === 'finalizado') {
-          const reparto = await api.sorteos.ganadores(id);
-          if (sigueVigente()) setResultado(reparto);
-        } else {
-          setResultado(null);
-        }
-      } catch (err) {
-        if (sigueVigente()) setError(err.message);
+      // Los ganadores solo existen una vez cargado el extracto: antes de eso
+      // el endpoint responde 409 a propósito.
+      if (sorteo.estado === 'finalizado') {
+        const reparto = await api.sorteos.ganadores(id);
+        if (sigueVigente()) setResultado(reparto);
+      } else {
+        setResultado(null);
       }
     },
-    [id, traerJugadas],
+    [id],
   );
 
   useEffect(() => {
@@ -138,18 +143,32 @@ export default function AdminSorteoDetalle() {
     let vigente = true;
 
     setCargando(true);
-    traerTodo(() => vigente).finally(() => {
-      if (vigente) setCargando(false);
-    });
+    setError('');
+    // La lista arranca sin filtros, así que el buscador tiene que decir lo
+    // mismo: si esto corre de nuevo es porque cambió el sorteo.
+    setFiltros(SIN_FILTROS);
+    setAplicados(SIN_FILTROS);
+    Promise.all([traerResumen(() => vigente), traerJugadas(0, SIN_FILTROS)])
+      .catch((err) => {
+        if (vigente) setError(err.message);
+      })
+      .finally(() => {
+        if (vigente) setCargando(false);
+      });
 
     return () => {
       vigente = false;
     };
-  }, [traerTodo]);
+  }, [traerResumen, traerJugadas]);
+
+  /** Vuelve a pedir todo lo que una acción sobre una jugada pudo mover. */
+  async function refrescar() {
+    await Promise.all([traerResumen(), traerJugadas(0, aplicados)]);
+  }
 
   /** Vuelve a listar desde cero con los filtros que se pidan. */
   async function buscar(criterios = filtros) {
-    aplicados.current = criterios;
+    setAplicados(criterios);
     setBuscando(true);
     setError('');
     try {
@@ -167,10 +186,10 @@ export default function AdminSorteoDetalle() {
     setFiltros((f) => ({ ...f, [campo]: valor }));
   }
 
-  /** Si hay algo distinto de lo que trae la pantalla al abrirse. */
-  const hayFiltros = Object.keys(SIN_FILTROS).some((k) => filtros[k] !== SIN_FILTROS[k]);
-
-  /** Corre una acción sobre una jugada y refresca todo lo que pudo cambiar. */
+  /**
+   * Corre una acción sobre una jugada y refresca lo que pudo cambiar.
+   * Devuelve si salió bien, para que el cartel de corregir sepa si cerrarse.
+   */
   async function accion(fn, mensaje) {
     setError('');
     setExito('');
@@ -179,17 +198,19 @@ export default function AdminSorteoDetalle() {
       setExito(mensaje);
       // Anular o restaurar mueve los contadores y, con el extracto cargado,
       // también quién cobra: se refresca la pantalla entera, no solo la lista.
-      await traerTodo();
+      await refrescar();
+      return true;
     } catch (err) {
       setError(err.message);
+      return false;
     }
   }
 
-  async function guardarEdicion(evento) {
-    evento.preventDefault();
+  async function guardarEdicion() {
     const { id: jugadaId, numeros, comprador_nombre, comprador_telefono, sorteado } = editando;
 
-    await accion(
+    setGuardandoJugada(true);
+    const anduvo = await accion(
       () =>
         api.jugadas.editar(jugadaId, {
           // Con el sorteo ya sorteado no se mandan: el backend los rechaza, y
@@ -200,7 +221,11 @@ export default function AdminSorteoDetalle() {
         }),
       'Jugada corregida.',
     );
-    setEditando(null);
+    setGuardandoJugada(false);
+
+    // Si falló, el cartel queda abierto con lo escrito y el error adentro: es
+    // lo único que se ve, así que cerrarlo sería esconder el motivo.
+    if (anduvo) setEditando(null);
   }
 
   /** Guarda el extracto corregido y cuenta qué cambió. */
@@ -219,7 +244,7 @@ export default function AdminSorteoDetalle() {
 
       setConfirmando(false);
       setCorrigiendo(null);
-      await traerTodo();
+      await refrescar();
     } catch (err) {
       setError(err.message);
       setConfirmando(false);
@@ -232,7 +257,7 @@ export default function AdminSorteoDetalle() {
   async function verMas() {
     setTrayendoMas(true);
     try {
-      await traerJugadas(jugadas.length);
+      await traerJugadas(jugadas.length, aplicados);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -252,11 +277,11 @@ export default function AdminSorteoDetalle() {
 
   const finalizado = sorteo.estado === 'finalizado';
   const anuladas = totalSorteo - validas;
-  // Con el buscador tocado, el encabezado de la lista habla de la búsqueda; sin
-  // tocar, del sorteo.
-  const filtrando = Object.keys(SIN_FILTROS).some(
-    (k) => aplicados.current[k] !== SIN_FILTROS[k],
-  );
+  /** Si hay algo distinto de lo que trae la pantalla al abrirse. */
+  const hayFiltros = tieneFiltros(filtros);
+  // Con el buscador usado, el encabezado de la lista habla de la búsqueda; sin
+  // usar, del sorteo.
+  const filtrando = tieneFiltros(aplicados);
 
   return (
     <>
@@ -271,7 +296,9 @@ export default function AdminSorteoDetalle() {
         </div>
       </div>
 
-      <MensajeError>{error}</MensajeError>
+      {/* Con el cartel de corregir abierto el error va adentro, que es lo único
+          que se ve. */}
+      <MensajeError>{editando ? '' : error}</MensajeError>
       <MensajeExito>{exito}</MensajeExito>
 
       {/* Lo primero que se quiere saber: si hubo ganadores o quedó vacante. */}
@@ -413,83 +440,6 @@ export default function AdminSorteoDetalle() {
         </div>
       )}
 
-      {editando && (
-        <div className="tarjeta">
-          <h2 style={{ marginBottom: '0.75rem' }}>
-            Corregir jugada <span className="codigo">{editando.codigo}</span>
-          </h2>
-
-          <form onSubmit={guardarEdicion}>
-            <div className="campo">
-              <label>Números</label>
-              <div className="numeros" style={{ maxWidth: 260 }}>
-                {editando.numeros.map((valor, i) => (
-                  <input
-                    key={i}
-                    inputMode="numeric"
-                    value={valor}
-                    aria-label={`Número ${i + 1}`}
-                    // Con el extracto cargado, cambiar los números es elegir
-                    // quién gana. Lo impide el backend; acá ni se ofrece.
-                    disabled={editando.sorteado}
-                    onChange={(e) => {
-                      const limpio = e.target.value.replace(/\D/g, '').slice(0, 2);
-                      setEditando((prev) => ({
-                        ...prev,
-                        numeros: prev.numeros.map((n, j) => (j === i ? limpio : n)),
-                      }));
-                    }}
-                  />
-                ))}
-              </div>
-
-              <p
-                style={{
-                  color: 'var(--tinta-apagada)',
-                  fontSize: '0.8rem',
-                  margin: '0.4rem 0 0',
-                }}
-              >
-                {editando.sorteado
-                  ? 'Este sorteo ya se sorteó: los números no se tocan más. El nombre y el teléfono sí se pueden corregir.'
-                  : 'Se guarda lo que decían antes, por si después hay que mostrarlo.'}
-              </p>
-            </div>
-
-            <div className="fila" style={{ marginTop: '0.9rem' }}>
-              <div>
-                <label htmlFor="e-nombre">Comprador</label>
-                <input
-                  id="e-nombre"
-                  value={editando.comprador_nombre}
-                  onChange={(e) =>
-                    setEditando((p) => ({ ...p, comprador_nombre: e.target.value }))
-                  }
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="e-telefono">Teléfono</label>
-                <input
-                  id="e-telefono"
-                  value={editando.comprador_telefono ?? ''}
-                  onChange={(e) =>
-                    setEditando((p) => ({ ...p, comprador_telefono: e.target.value }))
-                  }
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-              <button type="submit">Guardar</button>
-              <button type="button" className="secundario" onClick={() => setEditando(null)}>
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
       <div className="tarjeta">
         <div className="encabezado-tarjeta">
           <h2 style={{ margin: 0 }}>Jugadas cargadas ({numero(totalSorteo)})</h2>
@@ -577,24 +527,27 @@ export default function AdminSorteoDetalle() {
               Mostrar también las anuladas
             </label>
 
-            {/* La lista con la que se pagan los premios. */}
-            <label className="casilla">
-              <input
-                type="checkbox"
-                checked={filtros.solo_ganadoras === 'true'}
-                onChange={(e) => {
-                  const marcado = e.target.checked ? 'true' : '';
-                  // Una anulada no cobra aunque acierte: mostrarla en la lista de
-                  // pagos sería pedir un error.
-                  setFiltros((f) => ({
-                    ...f,
-                    solo_ganadoras: marcado,
-                    incluir_anuladas: marcado ? '' : f.incluir_anuladas,
-                  }));
-                }}
-              />
-              Solo las ganadoras
-            </label>
+            {/* La lista con la que se pagan los premios. Sin extracto cargado no
+                hay ganadoras todavía, y la casilla solo devolvía la lista vacía. */}
+            {finalizado && (
+              <label className="casilla">
+                <input
+                  type="checkbox"
+                  checked={filtros.solo_ganadoras === 'true'}
+                  onChange={(e) => {
+                    const marcado = e.target.checked ? 'true' : '';
+                    // Una anulada no cobra aunque acierte: mostrarla en la lista de
+                    // pagos sería pedir un error.
+                    setFiltros((f) => ({
+                      ...f,
+                      solo_ganadoras: marcado,
+                      incluir_anuladas: marcado ? '' : f.incluir_anuladas,
+                    }));
+                  }}
+                />
+                Solo las ganadoras
+              </label>
+            )}
 
             <div className="acciones-fila" style={{ marginLeft: 'auto' }}>
               {hayFiltros && (
@@ -730,8 +683,8 @@ export default function AdminSorteoDetalle() {
               </table>
             </div>
 
-            {/* Sin esto, una búsqueda con más resultados que la página se cortaba
-                en silencio: el encabezado decía 340 y la tabla mostraba 100. */}
+            {/* Sin esto, una búsqueda más larga que la página se cortaba en
+                silencio: el encabezado decía el total y la tabla mostraba menos. */}
             {jugadas.length < total && (
               <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <button className="secundario" onClick={verMas} disabled={trayendoMas}>
@@ -745,6 +698,80 @@ export default function AdminSorteoDetalle() {
           </>
         )}
       </div>
+
+      {/* En cartel y no en una tarjeta al principio de la pantalla: con la lista
+          larga, el formulario quedaba lejos de la fila que se tocó. */}
+      {editando && (
+        <Dialogo
+          titulo={
+            <>
+              Corregir jugada <span className="codigo">{editando.codigo}</span>
+            </>
+          }
+          confirmar="Guardar"
+          ocupado={guardandoJugada}
+          onCerrar={() => setEditando(null)}
+          onConfirmar={guardarEdicion}
+        >
+          <MensajeError>{error}</MensajeError>
+
+          <div className="campo">
+            <label>Números</label>
+            <div className="numeros" style={{ maxWidth: 260 }}>
+              {editando.numeros.map((valor, i) => (
+                <input
+                  key={i}
+                  inputMode="numeric"
+                  value={valor}
+                  aria-label={`Número ${i + 1}`}
+                  // Con el extracto cargado, cambiar los números es elegir
+                  // quién gana. Lo impide el backend; acá ni se ofrece.
+                  disabled={editando.sorteado}
+                  onChange={(e) => {
+                    const limpio = e.target.value.replace(/\D/g, '').slice(0, 2);
+                    setEditando((prev) => ({
+                      ...prev,
+                      numeros: prev.numeros.map((n, j) => (j === i ? limpio : n)),
+                    }));
+                  }}
+                />
+              ))}
+            </div>
+
+            <p
+              style={{
+                color: 'var(--tinta-apagada)',
+                fontSize: '0.8rem',
+                margin: '0.4rem 0 0',
+              }}
+            >
+              {editando.sorteado
+                ? 'Este sorteo ya se sorteó: los números no se tocan más. El nombre y el teléfono sí se pueden corregir.'
+                : 'Se guarda lo que decían antes, por si después hay que mostrarlo.'}
+            </p>
+          </div>
+
+          <div className="fila" style={{ marginTop: '0.9rem' }}>
+            <div>
+              <label htmlFor="e-nombre">Comprador</label>
+              <input
+                id="e-nombre"
+                value={editando.comprador_nombre}
+                onChange={(e) => setEditando((p) => ({ ...p, comprador_nombre: e.target.value }))}
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="e-telefono">Teléfono</label>
+              <input
+                id="e-telefono"
+                value={editando.comprador_telefono ?? ''}
+                onChange={(e) => setEditando((p) => ({ ...p, comprador_telefono: e.target.value }))}
+              />
+            </div>
+          </div>
+        </Dialogo>
+      )}
 
       {confirmando && (
         <Dialogo
