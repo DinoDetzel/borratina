@@ -48,6 +48,21 @@ Registro de decisiones de producto tomadas durante el diseño inicial del proyec
   - Buscador/filtro de jugadas por número o por nombre de comprador.
   - Gráficos de evolución de ventas en el tiempo.
 
+## Vendedores en el panel
+
+- La tarjeta **"Por vendedor" del panel es un podio: muestra los 5 que más
+  cargaron** y nada más (confirmado 2026-08-04). Con más filas le sacaba altura
+  al gráfico que tiene al lado.
+- El enlace **"Ver todos"** lleva a `/admin/vendedores`, que lista **todas las
+  cuentas del sistema**, incluidas las inactivas, las del admin y las que **no
+  cargaron ninguna jugada** en ese sorteo: la pregunta que contesta esa pantalla
+  es quién *no* está vendiendo, y ahí un ausente es el dato.
+- Muestra del sorteo elegido las jugadas, las anuladas y la recaudación, y de
+  todos los sorteos el total histórico y la última carga, para distinguir al que
+  nunca cargó nada del que este mes no cargó.
+- No va en la barra de navegación: se llega desde el panel, como al detalle de
+  un sorteo.
+
 ## Dónde se buscan y se corrigen las jugadas
 
 - **El buscador vive dentro del detalle del sorteo** (`/admin/sorteos/:id`), y ahí

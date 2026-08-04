@@ -7,6 +7,7 @@ import Vendedor from './paginas/Vendedor.jsx';
 import AdminDashboard from './paginas/AdminDashboard.jsx';
 import AdminSorteos from './paginas/AdminSorteos.jsx';
 import AdminSorteoDetalle from './paginas/AdminSorteoDetalle.jsx';
+import AdminVendedores from './paginas/AdminVendedores.jsx';
 import AdminUsuarios from './paginas/AdminUsuarios.jsx';
 
 /**
@@ -136,6 +137,18 @@ export default function App() {
           <Protegida soloAdmin>
             <Estructura>
               <AdminSorteoDetalle />
+            </Estructura>
+          </Protegida>
+        }
+      />
+      {/* Se llega desde el panel, igual que al detalle de un sorteo: es el
+          desarrollo de una tarjeta, no una sección aparte. */}
+      <Route
+        path="/admin/vendedores"
+        element={
+          <Protegida soloAdmin>
+            <Estructura>
+              <AdminVendedores />
             </Estructura>
           </Protegida>
         }

@@ -6,6 +6,15 @@ import GraficoVentas from '../componentes/GraficoVentas.jsx';
 import { Bolillas, Cargando, Chip, MensajeError, Ficha, Vacio } from '../componentes/comunes.jsx';
 import { numero, periodoLargo, pesos } from '../utilidades.js';
 
+/**
+ * Cuántos vendedores entran en la tarjeta del panel.
+ *
+ * Es un podio, no una lista: con más, la tarjeta le saca altura al gráfico que
+ * tiene al lado y hay que hacer scroll para leer el resto del panel. La lista
+ * completa está en /admin/vendedores.
+ */
+const EN_EL_PANEL = 5;
+
 export default function AdminDashboard() {
   const [sorteos, setSorteos] = useState([]);
   const [sorteoId, setSorteoId] = useState('');
@@ -176,7 +185,14 @@ export default function AdminDashboard() {
         </div>
 
         <div className="tarjeta">
-          <h2 style={{ marginBottom: '0.2rem' }}>Por vendedor</h2>
+          <div className="encabezado-tarjeta">
+            <h2 style={{ margin: 0 }}>Por vendedor</h2>
+            {/* La tarjeta muestra el podio y nada más. Quién no vendió es una
+                pregunta distinta, y se contesta del otro lado del enlace. */}
+            <Link to={`/admin/vendedores${sorteoId ? `?sorteo=${sorteoId}` : ''}`}>
+              Ver todos →
+            </Link>
+          </div>
           <p style={{ color: 'var(--tinta-2)', fontSize: '0.85rem', margin: '0 0 0.9rem' }}>
             Jugadas cargadas, de mayor a menor.
           </p>
@@ -185,7 +201,7 @@ export default function AdminDashboard() {
             <Vacio>Nadie cargó jugadas en este sorteo.</Vacio>
           ) : (
             <ol className="ranking">
-              {vendedores.map((v) => (
+              {vendedores.slice(0, EN_EL_PANEL).map((v) => (
                 <li key={v.id}>
                   <div className="linea">
                     <span>{v.nombre}</span>
@@ -203,6 +219,12 @@ export default function AdminDashboard() {
                 </li>
               ))}
             </ol>
+          )}
+
+          {vendedores.length > EN_EL_PANEL && (
+            <p style={{ color: 'var(--tinta-apagada)', fontSize: '0.82rem', margin: '0.9rem 0 0' }}>
+              Y {numero(vendedores.length - EN_EL_PANEL)} más.
+            </p>
           )}
         </div>
       </div>

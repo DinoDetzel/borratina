@@ -92,6 +92,44 @@ router.get('/por-vendedor', async (req, res) => {
 });
 
 /**
+ * GET /api/dashboard/vendedores?sorteo_id=
+ * Todas las cuentas, hayan cargado o no en el sorteo.
+ *
+ * Es el detrás del ranking del panel, que solo muestra a los primeros y deja
+ * afuera a quien no cargó nada. Acá la pregunta es la contraria: quién no está
+ * vendiendo. Por eso salen también las cuentas inactivas y las del admin, que
+ * también carga jugadas.
+ */
+router.get('/vendedores', async (req, res) => {
+  const sorteoId = await resolverSorteoId(req.query.sorteo_id);
+
+  const { rows } = await query(
+    // El CROSS JOIN trae el precio de la única fila que deja el WHERE, y el
+    // LEFT JOIN es lo que hace aparecer a los que no cargaron: sin él, la
+    // cuenta sin jugadas simplemente no estaría.
+    `SELECT u.id, u.nombre, u.usuario, u.rol, u.activo,
+            COUNT(j.id) FILTER (WHERE j.anulada = false) AS cantidad_jugadas,
+            COUNT(j.id) FILTER (WHERE j.anulada = true)  AS jugadas_anuladas,
+            COUNT(j.id) FILTER (WHERE j.anulada = false) * s.precio_jugada AS recaudacion,
+            -- De todos los sorteos, no solo del elegido: distingue al que
+            -- nunca cargó nada del que este mes no cargó.
+            (SELECT COUNT(*) FROM jugadas t
+              WHERE t.vendedor_id = u.id AND t.anulada = false) AS jugadas_historicas,
+            (SELECT MAX(t.created_at) FROM jugadas t
+              WHERE t.vendedor_id = u.id) AS ultima_carga
+     FROM usuarios u
+     CROSS JOIN sorteos s
+     LEFT JOIN jugadas j ON j.vendedor_id = u.id AND j.sorteo_id = s.id
+     WHERE s.id = $1
+     GROUP BY u.id, u.nombre, u.usuario, u.rol, u.activo, s.precio_jugada
+     ORDER BY cantidad_jugadas DESC, u.nombre`,
+    [sorteoId],
+  );
+
+  res.json({ sorteo_id: sorteoId, vendedores: rows });
+});
+
+/**
  * GET /api/dashboard/ventas?sorteo_id=
  * Serie diaria de jugadas para el gráfico de evolución de ventas.
  */

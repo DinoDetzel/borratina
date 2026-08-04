@@ -117,6 +117,8 @@ export const api = {
   dashboard: {
     resumen: (sorteoId) => pedir(`/dashboard/resumen${qs({ sorteo_id: sorteoId })}`),
     porVendedor: (sorteoId) => pedir(`/dashboard/por-vendedor${qs({ sorteo_id: sorteoId })}`),
+    // Todas las cuentas, incluidas las que no cargaron nada en ese sorteo.
+    vendedores: (sorteoId) => pedir(`/dashboard/vendedores${qs({ sorteo_id: sorteoId })}`),
     ventas: (sorteoId) => pedir(`/dashboard/ventas${qs({ sorteo_id: sorteoId })}`),
     historial: () => pedir('/dashboard/historial'),
     numerosMasJugados: (sorteoId) =>
