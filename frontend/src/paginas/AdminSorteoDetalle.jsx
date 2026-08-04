@@ -32,6 +32,7 @@ const SIN_FILTROS = {
   comprador: '',
   codigo: '',
   numeros: '',
+  vendedor_id: '',
   incluir_anuladas: 'true',
   solo_ganadoras: '',
 };
@@ -50,6 +51,10 @@ export default function AdminSorteoDetalle() {
   // y además puede estar filtrada.
   const [totalSorteo, setTotalSorteo] = useState(0);
   const [validas, setValidas] = useState(0);
+  // Para el desplegable del buscador. Van todas las cuentas y no solo las que
+  // cargaron algo acá: un vendedor dado de baja igual tiene jugadas viejas, y
+  // el admin también carga.
+  const [vendedores, setVendedores] = useState([]);
 
   const [filtros, setFiltros] = useState(SIN_FILTROS);
   // Con qué se armó la lista que está en pantalla. Escribir en el buscador no
@@ -119,6 +124,15 @@ export default function AdminSorteoDetalle() {
     },
     [id, traerJugadas],
   );
+
+  useEffect(() => {
+    // Si falla, el buscador queda sin el desplegable de vendedor y el resto de
+    // la pantalla sigue andando: no vale un cartel de error.
+    api.usuarios
+      .listar()
+      .then(({ usuarios }) => setVendedores(usuarios))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     let vigente = true;
@@ -531,6 +545,23 @@ export default function AdminSorteoDetalle() {
                 onChange={(e) => cambiar('numeros', e.target.value)}
                 placeholder="7,23,45,88"
               />
+            </div>
+
+            <div>
+              <label htmlFor="f-vendedor">Vendedor</label>
+              <select
+                id="f-vendedor"
+                value={filtros.vendedor_id}
+                onChange={(e) => cambiar('vendedor_id', e.target.value)}
+              >
+                <option value="">Todos</option>
+                {vendedores.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.nombre}
+                    {!v.activo && ' (inactivo)'}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
