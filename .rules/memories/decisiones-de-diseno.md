@@ -48,6 +48,15 @@ Registro de decisiones de producto tomadas durante el diseño inicial del proyec
   - Buscador/filtro de jugadas por número o por nombre de comprador.
   - Gráficos de evolución de ventas en el tiempo.
 
+## Dónde se buscan y se corrigen las jugadas
+
+- **El buscador vive dentro del detalle del sorteo** (`/admin/sorteos/:id`), y ahí
+  mismo se anula, se restaura, se corrige y se reenvía el comprobante
+  (confirmado 2026-08-03).
+- Antes había además una pantalla `/admin/jugadas` con la lista de todas las
+  jugadas y un selector de sorteo. Decía lo mismo que el detalle: se eliminó, y
+  el sorteo pasó a elegirse entrando al sorteo, no desde un desplegable.
+
 ## Comparación de números: orden libre
 
 - **Confirmado (2026-07-30): el orden de los 4 números NO importa.** Una jugada gana

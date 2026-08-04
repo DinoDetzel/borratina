@@ -7,7 +7,6 @@ import Vendedor from './paginas/Vendedor.jsx';
 import AdminDashboard from './paginas/AdminDashboard.jsx';
 import AdminSorteos from './paginas/AdminSorteos.jsx';
 import AdminSorteoDetalle from './paginas/AdminSorteoDetalle.jsx';
-import AdminJugadas from './paginas/AdminJugadas.jsx';
 import AdminUsuarios from './paginas/AdminUsuarios.jsx';
 
 /**
@@ -32,7 +31,6 @@ function Navegacion() {
     ? [
         ['/admin', 'Panel'],
         ['/admin/sorteos', 'Sorteos'],
-        ['/admin/jugadas', 'Jugadas'],
         ['/admin/usuarios', 'Usuarios'],
         ['/cargar', 'Cargar jugada'],
       ]
@@ -138,16 +136,6 @@ export default function App() {
           <Protegida soloAdmin>
             <Estructura>
               <AdminSorteoDetalle />
-            </Estructura>
-          </Protegida>
-        }
-      />
-      <Route
-        path="/admin/jugadas"
-        element={
-          <Protegida soloAdmin>
-            <Estructura>
-              <AdminJugadas />
             </Estructura>
           </Protegida>
         }
