@@ -52,8 +52,8 @@ Registro de decisiones de producto tomadas durante el diseño inicial del proyec
 
 - El gráfico es siempre **diario**. La **tabla** que está detrás del botón "Ver
   tabla" se **agrupa por semana del mes** (1–7, 8–14, 15–21, 22–28 y 29 en
-  adelante) cuando el sorteo pasa de 10 días con ventas (2026-08-04): día por
-  día eran treinta y pico de renglones en el teléfono.
+  adelante) desde los 8 días con ventas (2026-08-04): día por día eran treinta
+  y pico de renglones en el teléfono.
 - Se corta por número de día y no cada 7 días desde la primera venta, para que
   las filas caigan siempre en las mismas fechas y dos sorteos se puedan comparar
   renglón contra renglón.

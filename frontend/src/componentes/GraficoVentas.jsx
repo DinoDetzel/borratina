@@ -19,7 +19,7 @@ import { fechaCorta, numero, pesos } from '../utilidades.js';
  * en el teléfono hay que scrollear un rato para llegar al final. Por debajo de
  * este número la tabla entra de una y agrupar solo escondería datos.
  */
-const DIAS_PARA_AGRUPAR = 10;
+const DIAS_PARA_AGRUPAR = 8;
 
 const MES_CORTO = new Intl.DateTimeFormat('es-AR', { month: 'short' });
 
@@ -110,7 +110,7 @@ export default function GraficoVentas({ serie }) {
   }
 
   // Las dos formas de la tabla se arman iguales, así que el JSX es uno solo.
-  const agrupada = serie.length > DIAS_PARA_AGRUPAR;
+  const agrupada = serie.length >= DIAS_PARA_AGRUPAR;
   const filas = agrupada
     ? porSemana(serie).map((g) => ({
         clave: g.clave,
