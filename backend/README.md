@@ -78,7 +78,7 @@ Todo cuelga de `/api`. Salvo `login` y `health`, todos piden
 | GET | `/jugadas/:id` | cualquiera | Una jugada |
 | PATCH | `/jugadas/:id` | admin | Corrige una jugada |
 | POST | `/jugadas/:id/anular` | admin | Anula (reversible, no borra) |
-| POST | `/jugadas/:id/restaurar` | admin | Revierte una anulación |
+| POST | `/jugadas/:id/restaurar` | admin | Revierte una anulación (no, si el sorteo ya se finalizó) |
 
 Filtros de `GET /jugadas`: `sorteo_id`, `vendedor_id` (solo admin), `comprador`,
 `codigo`, `numeros` (ej: `numeros=7,23,45,88`), `incluir_anuladas`,

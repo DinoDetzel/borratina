@@ -413,22 +413,62 @@ router.post('/:id/anular', requireAuth, requireAdmin, async (req, res) => {
   res.json({ jugada: rows[0] });
 });
 
-/** POST /api/jugadas/:id/restaurar → revierte una anulación. Solo admin. */
+/**
+ * Por qué no entró la restauración: la jugada no existe, no estaba anulada, o su
+ * sorteo ya se sorteó. Se averigua recién en el camino de error.
+ */
+async function errorDeRestauracion(jugadaId) {
+  const { rows } = await query(
+    `SELECT j.anulada, s.periodo
+     FROM jugadas j JOIN sorteos s ON s.id = j.sorteo_id
+     WHERE j.id = $1`,
+    [jugadaId],
+  );
+  const fila = rows[0];
+
+  if (!fila) return new AppError(404, 'No existe esa jugada.');
+  // Antes que el sorteo: si además no estaba anulada, eso es lo que hay que decir.
+  if (!fila.anulada) return new AppError(409, 'La jugada no está anulada.');
+
+  return new AppError(
+    409,
+    `El sorteo de ${fila.periodo} ya tiene el extracto cargado: una jugada anulada ` +
+      'no se puede restaurar después del sorteo, porque eso cambia quién cobra. ' +
+      'Si la anulación fue un error, hay que resolverlo fuera del sistema.',
+  );
+}
+
+/**
+ * POST /api/jugadas/:id/restaurar → revierte una anulación. Solo admin.
+ *
+ * **No se puede restaurar una vez sorteado**, por el mismo motivo que no se
+ * pueden cambiar los números: con el extracto a la vista, restaurar es elegir
+ * quién cobra. Y no hace falta inventar una jugada para aprovecharlo — alcanza
+ * con anular varias mientras el sorteo está abierto, que es legítimo y habitual,
+ * y restaurar después la que salió.
+ *
+ * Anular sigue abierto post-sorteo: quitar un cobrador no es lo mismo que
+ * elegirlo, y hay casos reales (un comprobante que nunca se pagó y se detecta
+ * tarde). Queda pendiente de definir si eso también se restringe.
+ */
 router.post('/:id/restaurar', requireAuth, requireAdmin, async (req, res) => {
+  // La condición del sorteo va dentro del UPDATE y no en un chequeo previo: si el
+  // admin carga el extracto justo entre la lectura y la escritura, no se cuela
+  // una restauración con el resultado ya a la vista.
   const { rows } = await query(
     `UPDATE jugadas
      SET anulada = false, anulada_por = NULL, anulada_at = NULL,
          editada_por = $1, updated_at = now()
      WHERE id = $2 AND anulada = true
+       AND EXISTS (
+         SELECT 1 FROM sorteos s
+         WHERE s.id = jugadas.sorteo_id AND s.estado <> 'finalizado'
+       )
      RETURNING ${CAMPOS}`,
     [req.user.id, req.params.id],
   );
 
-  if (!rows[0]) {
-    const { rows: existe } = await query('SELECT anulada FROM jugadas WHERE id = $1', [req.params.id]);
-    if (!existe[0]) throw new AppError(404, 'No existe esa jugada.');
-    throw new AppError(409, 'La jugada no está anulada.');
-  }
+  if (!rows[0]) throw await errorDeRestauracion(req.params.id);
 
   res.json({ jugada: rows[0] });
 });
