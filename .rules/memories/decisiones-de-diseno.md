@@ -151,10 +151,16 @@ salió. Equivale a elegir al ganador entre las cargadas.
   entre la lectura y la escritura, no se cuela igual.
 - `errorDeRestauracion()` distingue los tres motivos, como `errorDeCarga()`. Si
   la jugada además no estaba anulada, gana ese mensaje: es el útil.
-- No se tocó el front. El botón **Restaurar** sigue apareciendo en sorteos
-  finalizados y ahora muestra el error, que es el criterio del resto del sistema
-  —explicar por qué no se puede en vez de esconder el control—. Si molesta, es un
-  condicional sobre `finalizado` en `AdminSorteoDetalle.jsx:648`.
+- El botón **Restaurar** sigue apareciendo en sorteos finalizados, porque el
+  criterio del sistema es explicar por qué no se puede en vez de esconder el
+  control. Al principio eso se cumplía mal: el motivo llegaba como error del
+  backend *después* de apretarlo, o sea que la forma de enterarte era chocarte.
+  Desde el 2026-08-26 el botón va atenuado y al tocarlo abre un cartel con el
+  motivo, sin viaje al servidor.
+- Va como botón normal y **no deshabilitado**, a propósito: un `button` con
+  `disabled` no recibe eventos de mouse, así que el navegador nunca muestra su
+  `title`, y en el teléfono directamente no hay hover con el que llegar al
+  motivo. Por lo mismo el aviso es un cartel y no un tooltip.
 
 Regla de negocio actualizada en [[reglas-de-negocio]] → "Anulación y corrección".
 
@@ -167,13 +173,14 @@ Regla de negocio actualizada en [[reglas-de-negocio]] → "Anulación y correcci
 ### Anular después del sorteo — A DEFINIR
 
 > Mismo origen que lo de arriba. **Acá no hay decisión tomada: es el planteo, no
-> una regla.** Nada de esto está implementado.
+> una regla.** La opción 3 sí se hizo (ver abajo); el fondo del asunto sigue
+> abierto.
 
 `POST /:id/anular` (`jugadas.routes.js:398`) sigue sin mirar el estado del
-sorteo — el `WHERE` es solo `id` y `anulada`. Y en `AdminSorteoDetalle.jsx:673`
-es un botón directo sin confirmación, en la misma celda donde `:613` pinta el
-chip **Ganadora**: la pantalla te dice quién cobra y te ofrece el botón para
-sacarlo, a un click.
+sorteo — el `WHERE` es solo `id` y `anulada`. Del lado del front, anular a una
+jugada que está cobrando **ya no es un click directo**: desde el 2026-08-26 abre
+un cartel que dice a quién le sacás el premio y qué pasa con el reparto. Antes
+era un botón suelto en la misma celda donde se pinta el chip **Ganadora**.
 
 **Por qué se dejó abierto.** Anular post-extracto solo puede *quitar* cobradores,
 no elegirlos, y hay un caso real a favor: un comprobante que nunca se pagó y se
@@ -190,11 +197,24 @@ restauración post-sorteo?
 | # | Qué | Costo | Toca |
 |---|---|---|---|
 | 2 | Permitir `anular` post-sorteo, pero devolver el impacto (si ganaba, cuántos ganadores quedan y cuánto cobra cada uno) | medio | 1 ruta + `utils/ganadores.js` |
-| 3 | Confirmación obligatoria en el front cuando `j.gano`, con el monto en el texto | bajo | 1 pantalla |
+| 3 | ✅ **Hecha (2026-08-26).** Confirmación obligatoria en el front cuando `j.gano`, con el monto en el texto | bajo | 1 pantalla |
 | 4 | Que la anulación deje rastro aunque se restaure | alto | migración + constraint o tabla de eventos |
 
 > La numeración arranca en 2 a propósito: la opción 1 era el candado de restaurar
 > y ya está hecha.
+
+**Lo que hace la opción 3.** El cartel nombra a quién le sacás el premio, cuánto
+cobra, y **qué les pasa a los demás**: con el pozo fijo, sacar a un ganador no
+libera plata, la reparte entre los que quedan, que pasan de `pozo/N` a
+`pozo/(N-1)`. Eso mueve plata de gente ajena al error que se está corrigiendo y
+no se deduce mirando la pantalla. Si era el único ganador, avisa que el sorteo
+pasa a vacante. Anular una que no gana sigue saliendo derecho: el cartel en todas
+lo volvería un trámite que se aprieta sin leer.
+
+**Esto no reemplaza a la decisión de fondo**, solo saca lo peligroso de la
+pantalla. La pregunta de si `anular` tiene que seguir siendo posible después del
+sorteo sigue sin responderse, y la opción 2 sigue siendo la que la contestaría
+del lado del servidor.
 
 El patrón para 2 ya existe en el repo: `PATCH /api/sorteos/:id/resultado`
 (`sorteos.routes.js:299-352`) resuelve el mismo dilema —corregir el extracto
