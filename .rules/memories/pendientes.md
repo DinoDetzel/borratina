@@ -20,32 +20,28 @@ verdad — no para subir de tono un pendiente que llevamos semanas postergando.
 
 | # | Pendiente | Urgencia | Detalle en |
 |---|---|---|---|
-| 1 | Decidir si se permite anular después del sorteo | **MEDIA** | [[decisiones-de-diseno]] → Pendiente |
-| 2 | Tests de las reglas que están escritas dos veces | **MEDIA** | [[tech-stack]] → Pendiente de definir |
-| 3 | Que la anulación deje rastro aunque se restaure | **MEDIA** | [[decisiones-de-diseno]] → Pendiente, opción 4 |
-| 4 | Secretos y variables entre Vercel, Render y Supabase | **BAJA** | [[tech-stack]] → Pendiente de definir |
-| 5 | Limpiar la clase muerta `no-imprimir` | **BAJA** | `frontend/README.md` → regla de impresión |
-| 6 | Partir el bundle del frontend | **BAJA** | [[tech-stack]] → Pendiente de definir |
+| 1 | Tests de las reglas que están escritas dos veces | **MEDIA** | [[tech-stack]] → Pendiente de definir |
+| 2 | Que la anulación deje rastro aunque se restaure | **MEDIA** | [[decisiones-de-diseno]] → Pendiente, opción 4 |
+| 3 | Secretos y variables entre Vercel, Render y Supabase | **BAJA** | [[tech-stack]] → Pendiente de definir |
+| 4 | Limpiar la clase muerta `no-imprimir` | **BAJA** | `frontend/README.md` → regla de impresión |
+| 5 | Partir el bundle del frontend | **BAJA** | [[tech-stack]] → Pendiente de definir |
 
-> **Resuelto el 2026-08-26:** la confirmación al anular una jugada ganadora, que
-> encabezaba esta tabla y era el único pendiente con ventana temporal. Detalle en
-> [[decisiones-de-diseno]] → "Anular después del sorteo", opción 3.
+> **Cerrados el 2026-08-26**, los dos que encabezaban esta tabla:
 >
-> Sacarlo **no cierra la decisión de fondo**, que es la que quedó primera: el
-> cartel avisa lo que estás por hacer, pero si `anular` tiene que seguir siendo
-> posible después del sorteo sigue sin responderse.
+> - **La confirmación al anular una ganadora** — hecha. Era el único pendiente
+>   con ventana temporal. Detalle en [[decisiones-de-diseno]] → "Anular después
+>   del sorteo", opción 3.
+> - **Si anular post-sorteo tiene que seguir siendo posible** — decidido que sí,
+>   sin cambio de código. Con el cartel avisando la consecuencia y el rastro
+>   permanente (post-sorteo ya no se puede restaurar), el caso real a favor pesó
+>   más que el riesgo. La opción 2 quedó descartada de paso.
+>
+> Lo que quedó abierto de todo eso es solo el rastro de una anulación revertida,
+> que es el punto 2 de ahora y toca el esquema.
 
 ## Por qué ese orden
 
-**1 — Decidir anular post-sorteo.** No es una tarea de código sino una decisión de
-negocio, y no tiene fecha propia. Pero le da la forma al 3, que hasta entonces se
-diseñaría a ciegas. Cuesta pensarlo y anotarlo, nada más.
-
-Ya no urge como antes: el cartel de confirmación sacó lo peligroso del asunto
-—anular a un cobrador de un solo click y sin enterarte—, así que lo que queda es
-la pregunta de fondo, sin apuro.
-
-**2 — Tests de las reglas duplicadas.** Va por encima del 3, aunque el 3 se
+**1 — Tests de las reglas duplicadas.** Va por encima del 2, aunque el 2 se
 planteó antes, porque protege el cálculo con el que se paga y cuesta mucho menos
 que tocar el esquema. El repo tiene **dos reglas escritas dos veces cada una**:
 `condicionGanadora()` / `esGanadora()` en `utils/ganadores.js`, y el comprobante
@@ -53,7 +49,7 @@ maquetado en canvas y en JSX. Cada pareja se desincroniza en silencio: ninguna
 pantalla avisa. Unos pocos casos sobre "4 dentro de 20 con repetidos" cubren lo
 más caro de equivocar.
 
-**3 — El rastro de la anulación.** El agujero grave —anular y restaurar alrededor
+**2 — El rastro de la anulación.** El agujero grave —anular y restaurar alrededor
 del extracto— ya está cerrado; lo que queda es auditoría. Es el más caro de la
 lista: toca el esquema y el `CHECK chk_jugadas_anulacion`.
 
@@ -63,7 +59,10 @@ mitad visible está. Falta la otra: mientras `restaurar` nulifique `anulada_por`
 anuló una jugada que **sigue** anulada, no quién anuló una que después se
 restauró. Con varios admins es justo el caso que se querría poder reconstruir.
 
-**4, 5 y 6 — Cuando haya un rato.** Los secretos llevan tiempo anotados y sin
+Alcanza solo a los **sorteos abiertos**: una vez sorteado no se puede restaurar,
+así que ahí el registro ya es permanente.
+
+**3, 4 y 5 — Cuando haya un rato.** Los secretos llevan tiempo anotados y sin
 síntoma. `no-imprimir` son cinco atributos que no hacen nada y ya está advertido
 en el README, así que el riesgo de confundir a alguien está contenido. El bundle
 es una molestia de carga inicial, y el aviso de "servidor despertando" del login

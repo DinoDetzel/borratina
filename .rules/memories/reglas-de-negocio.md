@@ -188,10 +188,16 @@ resultado   = recaudación − pozo
   anular varias jugadas mientras el sorteo está abierto —cosa legítima y
   habitual— y restaurar después la que salió. Es la misma razón por la que no se
   pueden cambiar los números después del sorteo.
-- **Anular sí sigue siendo posible después del sorteo**, por ahora: quitar un
-  cobrador no es lo mismo que elegirlo, y hay un caso real detrás (un comprobante
-  que nunca se pagó y se detecta tarde). Está anotado como pendiente en
-  [[decisiones-de-diseno]], con las consecuencias que hoy no se informan.
+- **Anular sí es posible después del sorteo** (confirmado 2026-08-26). Quitar un
+  cobrador no es lo mismo que elegirlo —esa es la diferencia con restaurar, que
+  podía fabricar un ganador— y hay un caso real detrás: un comprobante que nunca
+  se pagó y se detecta tarde.
+- Antes de anular, el sistema **muestra lo que provoca**: a quién le saca el
+  premio, cuánto cobraba, y que los demás pasan de `pozo/N` a `pozo/(N-1)`. No se
+  prohíbe la operación, se hace visible la consecuencia — el mismo criterio con
+  el que se corrige el extracto.
+- Toda anulación queda **registrada a nombre de quien la hizo**, y después del
+  sorteo ese registro es permanente, porque ya no se puede restaurar.
 
 ## Visibilidad
 

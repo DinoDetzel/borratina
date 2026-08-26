@@ -164,44 +164,52 @@ salió. Equivale a elegir al ganador entre las cargadas.
 
 Regla de negocio actualizada en [[reglas-de-negocio]] → "Anulación y corrección".
 
-## Pendiente
+## Anular después del sorteo ✅ SIGUE PERMITIDO
 
-> Acá está el planteo de los pendientes **de producto**. La lista completa —con
-> los técnicos, la urgencia y el orden en que conviene encararlos— está en
-> [[pendientes]], que es el único índice.
+> **Confirmado 2026-08-26.** Se evaluó restringirlo, como se restringió
+> restaurar, y se decidió que **no**: anular sigue siendo posible con el sorteo
+> finalizado. No hubo cambio de código; lo que cambió es que ahora está decidido.
 
-### Anular después del sorteo — A DEFINIR
+`POST /:id/anular` (`jugadas.routes.js:398`) no mira el estado del sorteo — el
+`WHERE` es solo `id` y `anulada`— y así se queda. Del lado del front, anular una
+jugada que está cobrando abre un cartel con a quién le sacás el premio y qué pasa
+con el reparto.
 
-> Mismo origen que lo de arriba. **Acá no hay decisión tomada: es el planteo, no
-> una regla.** La opción 3 sí se hizo (ver abajo); el fondo del asunto sigue
-> abierto.
+**Por qué se permite.** Anular post-extracto solo puede *quitar* cobradores, no
+elegirlos, que es la diferencia con restaurar: restaurar podía fabricar un
+ganador, anular no. Y hay un caso real detrás — un comprobante que nunca se pagó
+y se detecta tarde. Cerrarlo obligaría a resolver a mano algo que el sistema
+puede registrar.
 
-`POST /:id/anular` (`jugadas.routes.js:398`) sigue sin mirar el estado del
-sorteo — el `WHERE` es solo `id` y `anulada`. Del lado del front, anular a una
-jugada que está cobrando **ya no es un click directo**: desde el 2026-08-26 abre
-un cartel que dice a quién le sacás el premio y qué pasa con el reparto. Antes
-era un botón suelto en la misma celda donde se pinta el chip **Ganadora**.
+**Inocuo no es**, y por eso se decidió con lo otro ya hecho: con pozo fijo y
+reparto entre N, anular a un ganador sube a los demás de `pozo/N` a `pozo/(N-1)`
+y mueve la recaudación. Lo que volvía eso peligroso era que pasara de un click y
+sin enterarse; con el cartel de por medio, la consecuencia se ve antes de
+confirmar.
 
-**Por qué se dejó abierto.** Anular post-extracto solo puede *quitar* cobradores,
-no elegirlos, y hay un caso real a favor: un comprobante que nunca se pagó y se
-detecta tarde. Pero inocuo no es — con pozo fijo y reparto entre N, anular a un
-ganador sube a los demás de `pozo/N` a `pozo/(N-1)`, y además mueve la
-recaudación.
-
-**La pregunta a responder es de negocio, no técnica:** ¿ese caso justifica dejar
-la puerta abierta, o se resuelve fuera del sistema como ahora se resuelve una
-restauración post-sorteo?
+**El rastro, acá, es permanente.** Es el argumento que terminó de cerrar la
+discusión: como restaurar está bloqueado una vez sorteado, `anulada_por` y
+`anulada_at` de una anulación post-sorteo **no se pueden borrar nunca**. El
+agujero del rastro (ver abajo) afecta a las anulaciones de sorteos abiertos, no a
+estas. La operación más delicada es, justamente, la única que queda auditada para
+siempre.
 
 **Opciones anotadas, en orden de costo:**
 
 | # | Qué | Costo | Toca |
 |---|---|---|---|
-| 2 | Permitir `anular` post-sorteo, pero devolver el impacto (si ganaba, cuántos ganadores quedan y cuánto cobra cada uno) | medio | 1 ruta + `utils/ganadores.js` |
+| 2 | ⛔ **Descartada (2026-08-26).** Permitir `anular` post-sorteo, pero devolver el impacto (si ganaba, cuántos ganadores quedan y cuánto cobra cada uno) | medio | 1 ruta + `utils/ganadores.js` |
 | 3 | ✅ **Hecha (2026-08-26).** Confirmación obligatoria en el front cuando `j.gano`, con el monto en el texto | bajo | 1 pantalla |
 | 4 | Que la anulación deje rastro aunque se restaure | alto | migración + constraint o tabla de eventos |
 
 > La numeración arranca en 2 a propósito: la opción 1 era el candado de restaurar
 > y ya está hecha.
+
+La 2 se descartó porque la 3 ya cubre lo que resolvía. El impacto se muestra
+**antes** de anular, que es cuando sirve para no hacerlo; devolverlo después, con
+la anulación consumada, informa algo que ya no se puede evitar. Si alguna vez se
+necesita el número exacto del servidor —por concurrencia, o para registrarlo—,
+el planteo queda acá.
 
 **Lo que hace la opción 3.** El cartel nombra a quién le sacás el premio, cuánto
 cobra, y **qué les pasa a los demás**: con el pozo fijo, sacar a un ganador no
@@ -218,16 +226,17 @@ bloqueado, así que anular por error una jugada cualquiera tampoco tiene vuelta
 atrás. El riesgo de que se vuelva un trámite se ataca con el texto —qué jugada,
 de quién, y si se puede restaurar o no— y no sacando el freno.
 
-**Esto no reemplaza a la decisión de fondo**, solo saca lo peligroso de la
-pantalla. La pregunta de si `anular` tiene que seguir siendo posible después del
-sorteo sigue sin responderse, y la opción 2 sigue siendo la que la contestaría
-del lado del servidor.
-
-El patrón para 2 ya existe en el repo: `PATCH /api/sorteos/:id/resultado`
+El criterio no es original de acá: `PATCH /api/sorteos/:id/resultado`
 (`sorteos.routes.js:299-352`) resuelve el mismo dilema —corregir el extracto
 *también* cambia quién cobra— y en vez de bloquear hace visible la consecuencia
-con `dejaron_de_ganar`. Anular hoy no tiene ni el bloqueo del PATCH de jugadas ni
-el informe del PATCH de resultado.
+con `dejaron_de_ganar`. Anular queda igual: no se prohíbe, se muestra lo que
+provoca.
+
+## Pendiente
+
+> Acá está el planteo del único pendiente **de producto** que queda abierto. La
+> lista completa —con los técnicos, la urgencia y el orden en que conviene
+> encararlos— está en [[pendientes]], que es el único índice.
 
 ### El rastro de la anulación se borra — A DEFINIR
 
