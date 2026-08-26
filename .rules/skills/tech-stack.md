@@ -120,15 +120,29 @@ Convenciones:
 
 ## Pendiente de definir
 
+> Acá está el planteo de los pendientes **técnicos**. La lista completa —con los
+> de producto, la urgencia y el orden— está en `memories/pendientes.md`, que es el
+> único índice.
+
 - Estrategia de testing (hoy no hay tests automatizados; la verificación fue
-  manual contra un Postgres real y un navegador real).
+  manual contra un Postgres real y un navegador real). Lo primero que conviene
+  cubrir son las dos reglas que están escritas dos veces y se desincronizan sin
+  hacer ruido: `condicionGanadora()` / `esGanadora()` en `utils/ganadores.js`, y
+  el comprobante maquetado en canvas y en JSX.
 - Manejo de variables de entorno / secretos entre Vercel, Render y Supabase.
 - El bundle del frontend pesa ~654 kB sin comprimir (194 kB gzip), casi todo
   Recharts, y el build avisa que pasa los 500 kB. Si molesta, se parte con
   `import()` dinámico del gráfico. Las tipografías (~228 kB en nueve `.woff2`)
   van aparte y se piden solo cuando hacen falta. Medido el 2026-08-26.
-- Si `anular` queda restringido después del sorteo, cambia el contrato de ese
-  endpoint; y dejar rastro de una anulación revertida toca el `CHECK
-  chk_jugadas_anulacion`. Los dos planteos están en
-  `memories/decisiones-de-diseno.md` → "Pendiente". El de `restaurar`, que era el
-  tercero, ya se resolvió.
+- **Qué cuesta técnicamente cada decisión de anulación que sigue abierta.**
+  Restringir `anular` después del sorteo **cambia el contrato del endpoint**: hoy
+  responde 404 y 409 (ya anulada), y sumaría un 409 por sorteo finalizado, que el
+  front tiene que saber mostrar. El patrón para no bloquear sino informar la
+  consecuencia ya existe en `PATCH /api/sorteos/:id/resultado`, que devuelve
+  `dejaron_de_ganar`.
+
+  Dejar rastro de una anulación revertida es más caro y **toca el esquema**: el
+  `CHECK chk_jugadas_anulacion` obliga a nulificar `anulada_por` y `anulada_at`
+  cuando `anulada = false`, así que no alcanza con cambiar la ruta. Hay que
+  relajar el `CHECK` o mover el historial a una tabla de eventos, y en los dos
+  casos va una migración.

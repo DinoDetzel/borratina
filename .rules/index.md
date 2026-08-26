@@ -7,8 +7,11 @@ Mapa de navegación del proyecto. Define las reglas maestras que rigen a los dem
 1. **`skills/`** → **[CAPACIDADES TÉCNICAS]**
    El *cómo* construimos: stack, arquitectura, convenciones, permisos.
 2. **`memories/`** → **[HISTORIAL Y PROCESOS]**
-   El *qué* estamos haciendo: reglas de negocio del juego, decisiones tomadas, esquema de datos.
+   El *qué* estamos haciendo: reglas de negocio del juego, decisiones tomadas, esquema de datos, pendientes priorizados.
 3. **`index.md`** → Este archivo.
+
+**Por dónde empezar:** qué falta y en qué orden está en
+[[pendientes]]. El porqué de cada uno vive en el archivo donde se planteó.
 
 ## Resumen del proyecto
 
@@ -37,6 +40,7 @@ el resultado del sorteo mensual.
 ## Reglas maestras
 
 - Toda nueva regla de negocio o decisión de producto se registra en `memories/reglas-de-negocio.md` o `memories/decisiones-de-diseno.md`, según corresponda.
+- Todo pendiente que sobreviva a la sesión en que apareció entra en `memories/pendientes.md`, con su urgencia y un enlace al archivo donde está el planteo. Ahí va el orden, nunca el argumento: duplicarlo garantiza que las dos copias se contradigan.
 - Todo cambio de stack, convención de código o arquitectura se registra en `skills/tech-stack.md`.
 - El esquema de base de datos vive en `memories/esquema-base-datos.md`. Ya existen migraciones reales: la fuente de verdad ejecutable es `backend/db/migrations/`, y el `.md` documenta el porqué de cada decisión. Si cambia una, cambian los dos.
 - Antes de escribir código nuevo, revisar `memories/` para no contradecir una decisión ya tomada.

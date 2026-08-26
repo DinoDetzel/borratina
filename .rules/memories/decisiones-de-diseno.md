@@ -160,6 +160,10 @@ Regla de negocio actualizada en [[reglas-de-negocio]] → "Anulación y correcci
 
 ## Pendiente
 
+> Acá está el planteo de los pendientes **de producto**. La lista completa —con
+> los técnicos, la urgencia y el orden en que conviene encararlos— está en
+> [[pendientes]], que es el único índice.
+
 ### Anular después del sorteo — A DEFINIR
 
 > Mismo origen que lo de arriba. **Acá no hay decisión tomada: es el planteo, no
@@ -212,7 +216,3 @@ chk_jugadas_anulacion` (`001_init.sql:91-94`) **obliga** a nulificarlos cuando
 `anulada = false`. Cualquier arreglo toca el esquema, por eso va aparte.
 
 Mientras esto no exista, los controles de anular son controles sin registro.
-
-### Deuda ya anotada
-
-- Testing automatizado y peso del bundle, en `skills/tech-stack.md`.
