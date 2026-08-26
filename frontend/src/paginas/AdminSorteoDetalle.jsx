@@ -107,9 +107,10 @@ export default function AdminSorteoDetalle() {
   const [confirmando, setConfirmando] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
-  // Anular una jugada que está ganando pide confirmación; el resto no. Guarda la
-  // jugada entera porque el cartel necesita su nombre y su código.
-  const [anulandoGanadora, setAnulandoGanadora] = useState(null);
+  // Anular siempre pide confirmación: no se puede deshacer una vez sorteado, y
+  // queda registrada a nombre de quien la hizo. Guarda la jugada entera porque
+  // el cartel necesita su nombre, su código y si estaba ganando.
+  const [anulando, setAnulando] = useState(null);
   const [anulandoJugada, setAnulandoJugada] = useState(false);
 
   // El cartel que explica por qué no se restaura una vez sorteado.
@@ -246,15 +247,15 @@ export default function AdminSorteoDetalle() {
    * El cartel queda abierto si falla, como el de corregir: si se cerrara, el
    * error sería lo único que quedó en pantalla sin nada que lo explique.
    */
-  async function confirmarAnulacionGanadora() {
+  async function confirmarAnulacion() {
     setAnulandoJugada(true);
     const anduvo = await accion(
-      () => api.jugadas.anular(anulandoGanadora.id),
-      'Jugada anulada. Ya no cobra el premio.',
+      () => api.jugadas.anular(anulando.id),
+      anulando.gano ? 'Jugada anulada. Ya no cobra el premio.' : 'Jugada anulada.',
     );
     setAnulandoJugada(false);
 
-    if (anduvo) setAnulandoGanadora(null);
+    if (anduvo) setAnulando(null);
   }
 
   async function guardarEdicion() {
@@ -664,6 +665,14 @@ export default function AdminSorteoDetalle() {
                               {j.gano && <Chip estado="gano">Ganadora</Chip>}
                             </div>
                           )}
+                          {/* Quién la anuló y cuándo. Con varios admins, "anulada"
+                              a secas no alcanza: si después se discute, hay que
+                              poder decir quién fue sin ir a mirar la base. */}
+                          {j.anulada && j.anulada_por_nombre && (
+                            <div style={{ color: 'var(--tinta-apagada)', fontSize: '0.82rem' }}>
+                              Anulada por {j.anulada_por_nombre} · {fechaHora(j.anulada_at)}
+                            </div>
+                          )}
                         </td>
                         <td data-movil="Cargó">{j.vendedor}</td>
                         <td
@@ -733,18 +742,7 @@ export default function AdminSorteoDetalle() {
                                 >
                                   Corregir
                                 </button>
-                                {/* Anular a quien está cobrando se confirma; el
-                                    resto sale derecho. Poner el cartel en todas
-                                    haría que se apriete sin leer, que es
-                                    justamente lo que acá no puede pasar. */}
-                                <button
-                                  className="enlace peligro"
-                                  onClick={() =>
-                                    j.gano
-                                      ? setAnulandoGanadora(j)
-                                      : accion(() => api.jugadas.anular(j.id), 'Jugada anulada.')
-                                  }
-                                >
+                                <button className="enlace peligro" onClick={() => setAnulando(j)}>
                                   Anular
                                 </button>
                               </>
@@ -873,26 +871,41 @@ export default function AdminSorteoDetalle() {
         </Dialogo>
       )}
 
-      {/* La pantalla te dice quién cobra y te da el botón para sacarlo al lado.
-          Antes de que eso pase por un solo click, el cartel dice a quién le
-          sacás el premio y qué les pasa a los demás. */}
-      {anulandoGanadora && (
+      {/* Anular siempre se confirma. Cuando la jugada está cobrando, el cartel
+          además dice a quién le sacás el premio y qué les pasa a los demás: eso
+          no se deduce mirando la pantalla. */}
+      {anulando && (
         <Dialogo
-          titulo="¿Anular una jugada ganadora?"
+          titulo={anulando.gano ? '¿Anular una jugada ganadora?' : '¿Anular esta jugada?'}
           confirmar="Sí, anular"
           peligro
           ocupado={anulandoJugada}
-          onCerrar={() => setAnulandoGanadora(null)}
-          onConfirmar={confirmarAnulacionGanadora}
+          onCerrar={() => setAnulando(null)}
+          onConfirmar={confirmarAnulacion}
         >
-          <p>
-            <strong>{anulandoGanadora.comprador_nombre}</strong> está cobrando{' '}
-            <strong>{pesos(resultado?.premio_por_ganador)}</strong> con la jugada{' '}
-            <span className="codigo">{anulandoGanadora.codigo}</span>. Si la anulás, deja de
-            cobrar.
-          </p>
+          {anulando.gano ? (
+            <>
+              <p>
+                <strong>{anulando.comprador_nombre}</strong> está cobrando{' '}
+                <strong>{pesos(resultado?.premio_por_ganador)}</strong> con la jugada{' '}
+                <span className="codigo">{anulando.codigo}</span>. Si la anulás, deja de cobrar.
+              </p>
+              <p>{queda(resultado, sorteo)}</p>
+            </>
+          ) : (
+            <p>
+              Se anula la jugada <span className="codigo">{anulando.codigo}</span> de{' '}
+              <strong>{anulando.comprador_nombre}</strong>. Deja de contar para la recaudación y
+              no puede ganar.
+            </p>
+          )}
 
-          <p style={{ marginBottom: 0 }}>{queda(resultado, sorteo)}</p>
+          <p style={{ marginBottom: 0 }}>
+            {finalizado
+              ? 'El sorteo ya se sorteó, así que esto no se puede deshacer. '
+              : 'Se puede restaurar mientras el sorteo no esté sorteado. '}
+            Queda registrada a tu nombre.
+          </p>
         </Dialogo>
       )}
 

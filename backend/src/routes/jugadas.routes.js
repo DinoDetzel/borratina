@@ -204,7 +204,11 @@ router.get('/', requireAuth, async (req, res) => {
     // que la pantalla necesita el dato ya resuelto.
     // `sorteo_estado` va explícito y no deducido de `gano`: la pantalla lo
     // necesita para saber si todavía se pueden corregir los números.
+    // `anulada_por` es un id y no le dice nada a nadie en pantalla: va también
+    // el nombre. LEFT JOIN porque la enorme mayoría de las jugadas no está
+    // anulada y ahí la columna es NULL.
     `SELECT ${CAMPOS_J}, u.nombre AS vendedor, s.estado AS sorteo_estado,
+            anulador.nombre AS anulada_por_nombre,
             CASE WHEN s.estado = 'finalizado'
                  THEN (j.anulada = false AND ${condicionGanadora('j', 's')})
                  ELSE NULL
@@ -213,6 +217,7 @@ router.get('/', requireAuth, async (req, res) => {
      FROM jugadas j
      JOIN usuarios u ON u.id = j.vendedor_id
      JOIN sorteos s ON s.id = j.sorteo_id
+     LEFT JOIN usuarios anulador ON anulador.id = j.anulada_por
      ${where}
      ORDER BY j.created_at DESC
      LIMIT $${params.length - 1} OFFSET $${params.length}`,
