@@ -154,7 +154,8 @@ resultado   = recaudación − pozo
 
 - Los primeros seis dígitos son la **fecha en que se cargó la jugada**, no la de
   hoy: un comprobante regenerado o cargado con fecha anterior conserva la de la
-  venta.
+  venta. Y es la fecha **en la hora del club**: con el servidor en UTC, una venta
+  de las 21:30 se llevaba impreso el día siguiente.
 - La segunda parte es **aleatoria, no correlativa**: si fuera un número
   secuencial, cualquiera podría adivinar los comprobantes ajenos probando
   números cercanos.
@@ -164,9 +165,14 @@ resultado   = recaudación − pozo
   desambigua, y por eso cada mitad se valida por separado.
 - El comprobante incluye: código, los 4 números jugados (formateados a dos
   dígitos), nombre y teléfono del comprador, período del sorteo, importe pagado,
-  vendedor y fecha de carga.
+  vendedor y fecha de carga. Y dos cosas que son la venta en sí: **el pozo** —el
+  premio que el comprador está comprando, y que tiene que quedarle por escrito— y
+  **el día en que se sortea**, que es el del cierre de la ventana de carga.
 - Presentando el código se puede recuperar la jugada. Si el sorteo ya se
   finalizó, además se informa si esa jugada ganó.
+- Además de imprimirse, **se manda por WhatsApp**: como foto del ticket o como
+  texto con el número de comprobante. Las dos formas hacen falta y por qué está
+  en el README del frontend.
 - La visibilidad es la misma que para el resto: un vendedor solo puede consultar
   los comprobantes de las jugadas que él cargó; el admin, todos.
 

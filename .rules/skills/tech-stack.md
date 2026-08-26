@@ -50,19 +50,20 @@ backend/
 ├── .env.example
 ├── db/
 │   ├── migrate.js               # runner de migraciones
-│   ├── seed.js                  # admin + vendedor de prueba
-│   └── migrations/
-│       └── 001_init.sql
+│   ├── seed.js                  # admin + vendedores de prueba
+│   └── migrations/              # 001 … 012, ver memories/esquema-base-datos.md
 └── src/
     ├── server.js                # arranque HTTP
     ├── app.js                   # Express + montaje de rutas
-    ├── config.js                # env vars validadas
+    ├── config.js                # env vars validadas + zona horaria del club
     ├── db.js                    # pool de pg + helpers query/tx
     ├── middleware/
     │   ├── auth.js              # requireAuth / requireAdmin
     │   └── errors.js            # AppError + handler central
     ├── utils/
-    │   └── numeros.js           # normalizar / validar los 4 números
+    │   ├── numeros.js           # normalizar / validar los 4 números
+    │   ├── ganadores.js         # la regla "4 dentro de 20", en SQL y en JS
+    │   └── comprobante.js       # normalizar el código + armar el comprobante
     └── routes/
         ├── auth.routes.js
         ├── sorteos.routes.js
@@ -78,20 +79,32 @@ Convenciones:
 - Toda query va parametrizada. Nunca interpolar valores en el string SQL.
 - La normalización de números vive **solo** en `utils/numeros.js`; las rutas no ordenan
   a mano.
+- **La zona horaria del club es del sistema, no del servidor.** `config.zonaHoraria`
+  (`TZ_CLUB`, por defecto `America/Argentina/Buenos_Aires`) se le pasa al pool en
+  `db.js`, así que las conexiones leen los `timestamptz` en hora argentina aunque
+  el Postgres corra en UTC. Sin eso, todo lo que sea "qué día es" —la fecha del
+  código de comprobante, el agrupado diario del gráfico— se corre tres horas y una
+  jugada de las 21:30 cae en el día siguiente. No cambia lo que se guarda, solo
+  cómo se lee.
 
 ## Estructura del frontend
 
 ```
 frontend/
-├── vite.config.js           # proxy de /api al backend en desarrollo
+├── vite.config.js           # proxy de /api al backend + https opcional en dev
 └── src/
     ├── main.jsx             # router + contexto de auth
     ├── App.jsx              # rutas y layout
     ├── api.js               # cliente HTTP, token, manejo de 401
     ├── auth.jsx             # contexto de sesión
-    ├── utilidades.js        # formato de números, pesos, fechas
+    ├── utilidades.js        # formato de números, pesos, fechas, períodos
+    ├── comprobanteImagen.js # dibuja el comprobante en un canvas (para compartir)
+    ├── whatsapp.js          # arma el enlace wa.me y dispara la Web Share API
     ├── estilos.css          # tokens de color y estilos
-    ├── componentes/         # comunes, Comprobante, GraficoVentas
+    ├── fuentes.css          # @font-face de las tipografías locales
+    ├── fuentes/             # woff2 propios: Inter, Oswald, Barlow, Yellowtail
+    ├── componentes/         # comunes, Comprobante, GraficoVentas,
+    │                        # BotonCompartir, CampoFechaHora, CamposExtracto
     └── paginas/             # Login, Vendedor, Admin*
 ```
 
@@ -110,8 +123,10 @@ Convenciones:
 - Estrategia de testing (hoy no hay tests automatizados; la verificación fue
   manual contra un Postgres real y un navegador real).
 - Manejo de variables de entorno / secretos entre Vercel, Render y Supabase.
-- El bundle del frontend pesa ~616 kB sin comprimir (183 kB gzip), casi todo
-  Recharts. Si molesta, se parte con `import()` dinámico del gráfico.
+- El bundle del frontend pesa ~654 kB sin comprimir (194 kB gzip), casi todo
+  Recharts, y el build avisa que pasa los 500 kB. Si molesta, se parte con
+  `import()` dinámico del gráfico. Las tipografías (~228 kB en nueve `.woff2`)
+  van aparte y se piden solo cuando hacen falta. Medido el 2026-08-26.
 - Si `anular` queda restringido después del sorteo, cambia el contrato de ese
   endpoint; y dejar rastro de una anulación revertida toca el `CHECK
   chk_jugadas_anulacion`. Los dos planteos están en

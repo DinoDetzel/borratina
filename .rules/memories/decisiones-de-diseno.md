@@ -119,6 +119,22 @@ Registro de decisiones de producto tomadas durante el diseño inicial del proyec
   Confirmado 2026-07-31. Es el comportamiento que ya tenía el backend, así que no
   hizo falta cambiar nada.
 
+## El sistema piensa en la hora del club, no en la del servidor
+
+- **Confirmado 2026-08-04.** Todo lo que sea "qué día es" se resuelve en
+  `America/Argentina/Buenos_Aires`, aunque el Postgres y el Render corran en UTC.
+  Con el servidor en UTC, una jugada cargada a las 21:30 caía al día siguiente:
+  salía impreso en el código del comprobante y movía de día las ventas del
+  gráfico. Tres horas por noche, que es cuando más se vende.
+- La zona es configurable por `TZ_CLUB`, con la de Buenos Aires por defecto. Se
+  aplica en dos lugares y a propósito: el pool la fija para toda la sesión
+  (`src/db.js`) y la función que genera el código la lleva **escrita adentro**
+  (migración 012), porque ese código sale impreso en un papel que la gente guarda
+  para reclamar un premio y no puede depender de cómo arrancó el servidor.
+- **Los comprobantes ya emitidos con la fecha corrida no se tocaron.** Siguen
+  siendo válidos: se buscan por el código entero, que no cambió. Detalle en
+  [[esquema-base-datos]].
+
 ## Restaurar una jugada después del sorteo ✅ RESUELTO
 
 > Detectado en revisión de código (2026-08-04) y cerrado el mismo día.
@@ -138,7 +154,7 @@ salió. Equivale a elegir al ganador entre las cargadas.
 - No se tocó el front. El botón **Restaurar** sigue apareciendo en sorteos
   finalizados y ahora muestra el error, que es el criterio del resto del sistema
   —explicar por qué no se puede en vez de esconder el control—. Si molesta, es un
-  condicional sobre `finalizado` en `AdminSorteoDetalle.jsx:641`.
+  condicional sobre `finalizado` en `AdminSorteoDetalle.jsx:648`.
 
 Regla de negocio actualizada en [[reglas-de-negocio]] → "Anulación y corrección".
 
@@ -150,8 +166,8 @@ Regla de negocio actualizada en [[reglas-de-negocio]] → "Anulación y correcci
 > una regla.** Nada de esto está implementado.
 
 `POST /:id/anular` (`jugadas.routes.js:398`) sigue sin mirar el estado del
-sorteo — el `WHERE` es solo `id` y `anulada`. Y en `AdminSorteoDetalle.jsx:667`
-es un botón directo sin confirmación, en la misma celda donde `:610-615` pinta el
+sorteo — el `WHERE` es solo `id` y `anulada`. Y en `AdminSorteoDetalle.jsx:673`
+es un botón directo sin confirmación, en la misma celda donde `:613` pinta el
 chip **Ganadora**: la pantalla te dice quién cobra y te ofrece el botón para
 sacarlo, a un click.
 
