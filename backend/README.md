@@ -38,6 +38,31 @@ Contra Supabase, `DATABASE_SSL=true`.
 | vendedor | `vendedor1` | `vende1234` |
 | vendedor | `vendedor2` | `vende1234` |
 
+## Tests
+
+```bash
+npm test          # node --test test/
+```
+
+Corren con el runner de Node (`node:test`), sin dependencias agregadas.
+
+Cubren lo que **no** se puede revisar a ojo: la regla de quién gana, la
+normalización de los números y el código de comprobante. No son tests de las
+rutas — eso sigue siendo verificación manual.
+
+**Lo importante es `test/ganadores.test.js`.** La regla vive escrita dos veces
+—`condicionGanadora()` en SQL y `esGanadora()` en JS— y nada en el sistema avisa
+si se separan: el listado usa una y el comprobante la otra, así que una jugada
+podría figurar ganadora en la pantalla y perdedora en el papel. El bloque de
+paridad corre **las dos sobre los mismos casos y compara**, incluidas 200
+combinaciones al azar sobre un rango chico, que es donde aparecen los repetidos.
+
+Ese bloque necesita un Postgres de verdad, porque la mitad SQL depende de `<@` y
+`unnest`. Si no hay `DATABASE_URL` los tests de paridad **se saltean** en vez de
+fallar: el resto de la suite no tiene por qué exigir una base. Los datos van por
+`VALUES`, así que no tocan ninguna tabla — alcanza con que la base exista, ni
+siquiera hace falta correr las migraciones.
+
 ## Endpoints
 
 Todo cuelga de `/api`. Salvo `login` y `health`, todos piden

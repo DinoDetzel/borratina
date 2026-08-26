@@ -20,8 +20,8 @@ verdad — no para subir de tono un pendiente que llevamos semanas postergando.
 
 | # | Pendiente | Urgencia | Detalle en |
 |---|---|---|---|
-| 1 | Tests de las reglas que están escritas dos veces | **MEDIA** | [[tech-stack]] → Pendiente de definir |
-| 2 | Que la anulación deje rastro aunque se restaure | **MEDIA** | [[decisiones-de-diseno]] → Pendiente, opción 4 |
+| 1 | Que la anulación deje rastro aunque se restaure | **MEDIA** | [[decisiones-de-diseno]] → Pendiente, opción 4 |
+| 2 | Tests del comprobante: canvas contra JSX | **BAJA** | [[tech-stack]] → Pendiente de definir |
 | 3 | Secretos y variables entre Vercel, Render y Supabase | **BAJA** | [[tech-stack]] → Pendiente de definir |
 | 4 | Limpiar la clase muerta `no-imprimir` | **BAJA** | `frontend/README.md` → regla de impresión |
 | 5 | Partir el bundle del frontend | **BAJA** | [[tech-stack]] → Pendiente de definir |
@@ -37,19 +37,16 @@ verdad — no para subir de tono un pendiente que llevamos semanas postergando.
 >   más que el riesgo. La opción 2 quedó descartada de paso.
 >
 > Lo que quedó abierto de todo eso es solo el rastro de una anulación revertida,
-> que es el punto 2 de ahora y toca el esquema.
+> que es el punto 1 de ahora y toca el esquema.
+>
+> - **Los tests de la regla de ganadores** — hechos, con `node:test`. El backend
+>   tiene suite propia y la paridad entre `condicionGanadora()` y `esGanadora()`
+>   se verifica contra un Postgres real. Queda afuera la otra pareja duplicada,
+>   el comprobante en canvas y en JSX, que es el punto 2 de ahora.
 
 ## Por qué ese orden
 
-**1 — Tests de las reglas duplicadas.** Va por encima del 2, aunque el 2 se
-planteó antes, porque protege el cálculo con el que se paga y cuesta mucho menos
-que tocar el esquema. El repo tiene **dos reglas escritas dos veces cada una**:
-`condicionGanadora()` / `esGanadora()` en `utils/ganadores.js`, y el comprobante
-maquetado en canvas y en JSX. Cada pareja se desincroniza en silencio: ninguna
-pantalla avisa. Unos pocos casos sobre "4 dentro de 20 con repetidos" cubren lo
-más caro de equivocar.
-
-**2 — El rastro de la anulación.** El agujero grave —anular y restaurar alrededor
+**1 — El rastro de la anulación.** El agujero grave —anular y restaurar alrededor
 del extracto— ya está cerrado; lo que queda es auditoría. Es el más caro de la
 lista: toca el esquema y el `CHECK chk_jugadas_anulacion`.
 
@@ -61,6 +58,13 @@ restauró. Con varios admins es justo el caso que se querría poder reconstruir.
 
 Alcanza solo a los **sorteos abiertos**: una vez sorteado no se puede restaurar,
 así que ahí el registro ya es permanente.
+
+**2 — El comprobante, canvas contra JSX.** Es la otra regla escrita dos veces
+(`comprobanteImagen.js` y `Comprobante.jsx`) y también se desincroniza en
+silencio. Queda en BAJA y no en MEDIA porque el daño no se compara: si se
+separan, sale un ticket feo o con un dato de menos, no un premio mal pagado.
+Además es bastante más caro de probar — hace falta render y comparación visual, y
+el frontend todavía no tiene runner.
 
 **3, 4 y 5 — Cuando haya un rato.** Los secretos llevan tiempo anotados y sin
 síntoma. `no-imprimir` son cinco atributos que no hacen nada y ya está advertido

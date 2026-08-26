@@ -124,11 +124,16 @@ Convenciones:
 > de producto, la urgencia y el orden— está en `memories/pendientes.md`, que es el
 > único índice.
 
-- Estrategia de testing (hoy no hay tests automatizados; la verificación fue
-  manual contra un Postgres real y un navegador real). Lo primero que conviene
-  cubrir son las dos reglas que están escritas dos veces y se desincronizan sin
-  hacer ruido: `condicionGanadora()` / `esGanadora()` en `utils/ganadores.js`, y
-  el comprobante maquetado en canvas y en JSX.
+- Testing: **el backend tiene tests desde el 2026-08-26**, con `node:test` (viene
+  con Node 20, no agrega dependencias). Cubren `utils/`: la regla de ganadores
+  —incluida la paridad entre la versión SQL y la JS, contra un Postgres real—,
+  la normalización de números y el código de comprobante. `npm test` en
+  `backend/`, detalle en su README.
+
+  Lo que **no** está cubierto: las rutas, que se siguen verificando a mano, y la
+  otra regla duplicada —el comprobante maquetado en canvas y en JSX
+  (`comprobanteImagen.js` vs `Comprobante.jsx`)—, que necesitaría render y
+  comparación visual. El frontend no tiene runner configurado.
 - Manejo de variables de entorno / secretos entre Vercel, Render y Supabase.
 - El bundle del frontend pesa ~654 kB sin comprimir (194 kB gzip), casi todo
   Recharts, y el build avisa que pasa los 500 kB. Si molesta, se parte con
