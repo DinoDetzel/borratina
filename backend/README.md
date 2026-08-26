@@ -101,7 +101,12 @@ HTML: el maquetado (imprimir, mandar por WhatsApp) es del frontend.
   "codigo": "260815-K7M3XQ",
   "numeros": ["07", "23", "45", "88"],
   "comprador": { "nombre": "Dora Silva", "telefono": "351-9876" },
-  "sorteo": { "periodo": "2026-08", "estado": "abierto" },
+  "sorteo": {
+    "periodo": "2026-08",
+    "estado": "abierto",
+    "pozo": 1500000,
+    "sortea_el": "2026-08-31T23:59:00.000Z"
+  },
   "importe": 2000,
   "vendedor": "Vendedor Uno",
   "fecha": "2026-07-30T22:02:14.006Z",
@@ -112,6 +117,10 @@ HTML: el maquetado (imprimir, mandar por WhatsApp) es del frontend.
 El comprobante incluye el **pozo**: es el premio que el comprador está comprando
 y tiene que quedarle por escrito en el papel.
 
+`sortea_el` es el cierre de la ventana de carga (`finaliza_at`), que es el día en
+que se sortea. Va la fecha completa y el frontend imprime solo el día: la hora del
+cierre es asunto interno y en el papel no significa nada.
+
 `GET /jugadas/comprobante/:codigo` lo recupera después, para cuando el comprador
 se presenta con el papel en la mano. Acepta el código con o sin guion y en
 minúsculas. Si el sorteo ya está finalizado, agrega `sorteado: true` y `gano`.
@@ -120,10 +129,21 @@ minúsculas. Si el sorteo ya está finalizado, agrega `sorteado: true` y `gano`.
 | Método | Ruta | Qué hace |
 |---|---|---|
 | GET | `/dashboard/resumen` | Estado del sorteo, pozo y totales |
-| GET | `/dashboard/por-vendedor` | Jugadas y recaudación por vendedor |
+| GET | `/dashboard/por-vendedor` | Jugadas y recaudación por vendedor (los que cargaron) |
+| GET | `/dashboard/vendedores` | Todas las cuentas, hayan cargado o no |
 | GET | `/dashboard/ventas` | Serie diaria para el gráfico de evolución |
 | GET | `/dashboard/historial` | Sorteos finalizados, ganadores y reparto |
 | GET | `/dashboard/numeros-mas-jugados` | Combinaciones más repetidas |
+
+Todos aceptan `?sorteo_id=`; sin él usan el sorteo abierto, y si no hay ninguno,
+el más reciente.
+
+`por-vendedor` y `vendedores` contestan preguntas opuestas. El primero es el
+podio del panel: quién más cargó. El segundo es la lista entera —incluidas las
+cuentas inactivas, las del admin y las que **no cargaron nada**— porque ahí la
+pregunta es quién *no* está vendiendo, y un ausente es el dato. Trae además el
+total histórico y la última carga de cada cuenta, para distinguir al que nunca
+cargó nada del que este mes no cargó.
 
 ## Lo que hay que tener en cuenta al tocar esto
 
@@ -215,6 +235,26 @@ Si alguna vez se cambia el alfabeto, hay que cambiarlo también en `ALFABETO` de
 `src/utils/comprobante.js`, que es lo que valida la entrada. Ojo con validar el
 código entero contra el alfabeto: la parte de la fecha lleva `0` y `1`, que el
 alfabeto no incluye, así que cada mitad se valida por separado.
+
+**El día se decide en la hora del club, no en la del servidor.** Postgres corre en
+UTC y ahí todo lo que pase un `timestamptz` a fecha se corre tres horas: una
+jugada de las 21:30 de un martes cae en el miércoles. Eso salía impreso en el
+código del comprobante y también movía de día las ventas del gráfico.
+
+Se arregla en dos lugares y los dos hacen falta:
+
+- El **pool** le pasa `-c timezone=…` a cada conexión (`src/db.js`), tomándolo de
+  `config.zonaHoraria` (`TZ_CLUB`, por defecto Buenos Aires). Eso cubre el
+  `date_trunc('day', …)` del gráfico y cualquier otra lectura por día.
+- La función `generar_codigo_jugada()` lleva la zona **escrita adentro**
+  (migración 012), no librada a la sesión: ese código sale impreso en un papel que
+  la gente guarda para reclamar un premio y no puede depender de cómo arrancó el
+  servidor.
+
+Nada de esto cambia lo que se guarda —las fechas entran en ISO con `Z`— solo cómo
+se lee de vuelta. Y **los códigos ya emitidos no se regeneraron**: para la 012 el
+sistema ya estaba en uso. Uno con la fecha corrida sigue siendo válido, porque se
+busca por el código entero y la fecha real está en `created_at`.
 
 **La ventana de carga la hace cumplir la base, no el frontend.** El
 `INSERT ... SELECT` de `POST /jugadas` incluye
