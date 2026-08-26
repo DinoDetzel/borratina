@@ -63,6 +63,10 @@ export function Dialogo({
   confirmar = 'Confirmar',
   peligro = false,
   ocupado = false,
+  // Cartel que solo informa: no hay nada que cancelar, porque cerrarlo y
+  // aceptarlo son lo mismo. Dos botones ahí obligan a elegir entre opciones que
+  // hacen lo mismo.
+  soloAceptar = false,
   onConfirmar,
   onCerrar,
 }) {
@@ -94,9 +98,11 @@ export function Dialogo({
         <div className="cuerpo">{children}</div>
 
         <div className="acciones">
-          <button type="button" className="secundario" onClick={onCerrar} disabled={ocupado}>
-            Cancelar
-          </button>
+          {!soloAceptar && (
+            <button type="button" className="secundario" onClick={onCerrar} disabled={ocupado}>
+              Cancelar
+            </button>
+          )}
           <button type="submit" className={peligro ? 'peligro lleno' : ''} disabled={ocupado}>
             {ocupado ? 'Un momento…' : confirmar}
           </button>

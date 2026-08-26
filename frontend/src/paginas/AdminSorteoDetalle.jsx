@@ -40,6 +40,32 @@ const SIN_FILTROS = {
 /** Si un juego de filtros acota algo, o es lo que trae la pantalla al abrirse. */
 const tieneFiltros = (f) => Object.keys(SIN_FILTROS).some((k) => f[k] !== SIN_FILTROS[k]);
 
+/**
+ * Qué les pasa a los demás si se anula a uno de los que están cobrando.
+ *
+ * Con el pozo fijo el premio no se achica: se reparte entre menos, así que
+ * sacar a un ganador les *sube* lo que cobran los otros. Eso no es obvio y es
+ * justamente lo que hay que tener a la vista antes de anular, porque mueve
+ * plata de gente que no tiene nada que ver con el error que se está corrigiendo.
+ *
+ * El cálculo se hace acá y no se le pide al servidor porque los dos datos que
+ * necesita —cuántos ganan y cuánto vale el pozo— ya están en pantalla.
+ */
+function queda(resultado, sorteo) {
+  const restantes = (resultado?.ganadores.length ?? 1) - 1;
+
+  if (restantes < 1) {
+    return 'Era la única ganadora: el sorteo pasa a figurar vacante y el pozo no se paga.';
+  }
+
+  const nuevoPremio = pesos(sorteo.pozo / restantes);
+  const premioHoy = pesos(resultado.premio_por_ganador);
+
+  return restantes === 1
+    ? `El otro ganador pasa de cobrar ${premioHoy} a ${nuevoPremio}, porque el pozo se reparte entre menos.`
+    : `Los otros ${restantes} pasan de cobrar ${premioHoy} a ${nuevoPremio} cada uno, porque el pozo se reparte entre menos.`;
+}
+
 export default function AdminSorteoDetalle() {
   const { id } = useParams();
 
@@ -80,6 +106,14 @@ export default function AdminSorteoDetalle() {
   const [corrigiendo, setCorrigiendo] = useState(null);
   const [confirmando, setConfirmando] = useState(false);
   const [guardando, setGuardando] = useState(false);
+
+  // Anular una jugada que está ganando pide confirmación; el resto no. Guarda la
+  // jugada entera porque el cartel necesita su nombre y su código.
+  const [anulandoGanadora, setAnulandoGanadora] = useState(null);
+  const [anulandoJugada, setAnulandoJugada] = useState(false);
+
+  // El cartel que explica por qué no se restaura una vez sorteado.
+  const [avisoRestaurar, setAvisoRestaurar] = useState(false);
 
   /** La lista, con los filtros que se le pasen. Los errores los ve quien llama. */
   const traerJugadas = useCallback(
@@ -204,6 +238,23 @@ export default function AdminSorteoDetalle() {
       setError(err.message);
       return false;
     }
+  }
+
+  /**
+   * Anula la jugada que está en el cartel de confirmación.
+   *
+   * El cartel queda abierto si falla, como el de corregir: si se cerrara, el
+   * error sería lo único que quedó en pantalla sin nada que lo explique.
+   */
+  async function confirmarAnulacionGanadora() {
+    setAnulandoJugada(true);
+    const anduvo = await accion(
+      () => api.jugadas.anular(anulandoGanadora.id),
+      'Jugada anulada. Ya no cobra el premio.',
+    );
+    setAnulandoJugada(false);
+
+    if (anduvo) setAnulandoGanadora(null);
   }
 
   async function guardarEdicion() {
@@ -639,14 +690,32 @@ export default function AdminSorteoDetalle() {
                               Enviar
                             </BotonCompartir>
                             {j.anulada ? (
-                              <button
-                                className="enlace"
-                                onClick={() =>
-                                  accion(() => api.jugadas.restaurar(j.id), 'Jugada restaurada.')
-                                }
-                              >
-                                Restaurar
-                              </button>
+                              // Con el extracto cargado no se restaura. El botón queda
+                              // a la vista pero apagado, y el motivo sale al pasarle
+                              // por encima: enterarse recién al tocarlo era chocarse.
+                              // Sorteado, el botón se aprieta igual pero no restaura:
+                              // explica por qué no se puede. Va atenuado para que se
+                              // note que no es una acción como las otras, y sigue
+                              // siendo un botón de verdad porque en el teléfono no
+                              // hay `title` que valga — sin poder tocarlo, el motivo
+                              // sería inalcanzable.
+                              finalizado ? (
+                                <button
+                                  className="enlace atenuado"
+                                  onClick={() => setAvisoRestaurar(true)}
+                                >
+                                  Restaurar
+                                </button>
+                              ) : (
+                                <button
+                                  className="enlace"
+                                  onClick={() =>
+                                    accion(() => api.jugadas.restaurar(j.id), 'Jugada restaurada.')
+                                  }
+                                >
+                                  Restaurar
+                                </button>
+                              )
                             ) : (
                               <>
                                 <button
@@ -664,10 +733,16 @@ export default function AdminSorteoDetalle() {
                                 >
                                   Corregir
                                 </button>
+                                {/* Anular a quien está cobrando se confirma; el
+                                    resto sale derecho. Poner el cartel en todas
+                                    haría que se apriete sin leer, que es
+                                    justamente lo que acá no puede pasar. */}
                                 <button
                                   className="enlace peligro"
                                   onClick={() =>
-                                    accion(() => api.jugadas.anular(j.id), 'Jugada anulada.')
+                                    j.gano
+                                      ? setAnulandoGanadora(j)
+                                      : accion(() => api.jugadas.anular(j.id), 'Jugada anulada.')
                                   }
                                 >
                                   Anular
@@ -794,6 +869,47 @@ export default function AdminSorteoDetalle() {
               : `Hoy figuran ${resultado?.ganadores.length} ganadores.`}{' '}
             Si eso cambia, avisale a quien corresponda: la corrección queda registrada a tu
             nombre.
+          </p>
+        </Dialogo>
+      )}
+
+      {/* La pantalla te dice quién cobra y te da el botón para sacarlo al lado.
+          Antes de que eso pase por un solo click, el cartel dice a quién le
+          sacás el premio y qué les pasa a los demás. */}
+      {anulandoGanadora && (
+        <Dialogo
+          titulo="¿Anular una jugada ganadora?"
+          confirmar="Sí, anular"
+          peligro
+          ocupado={anulandoJugada}
+          onCerrar={() => setAnulandoGanadora(null)}
+          onConfirmar={confirmarAnulacionGanadora}
+        >
+          <p>
+            <strong>{anulandoGanadora.comprador_nombre}</strong> está cobrando{' '}
+            <strong>{pesos(resultado?.premio_por_ganador)}</strong> con la jugada{' '}
+            <span className="codigo">{anulandoGanadora.codigo}</span>. Si la anulás, deja de
+            cobrar.
+          </p>
+
+          <p style={{ marginBottom: 0 }}>{queda(resultado, sorteo)}</p>
+        </Dialogo>
+      )}
+
+      {avisoRestaurar && (
+        <Dialogo
+          titulo="No se puede restaurar"
+          confirmar="Entendido"
+          soloAceptar
+          onCerrar={() => setAvisoRestaurar(false)}
+          onConfirmar={() => setAvisoRestaurar(false)}
+        >
+          <p>
+            El sorteo ya tiene el extracto cargado, y restaurar una jugada anulada ahora sería
+            elegir quién cobra.
+          </p>
+          <p style={{ marginBottom: 0 }}>
+            Si la anulación fue un error, hay que resolverlo fuera del sistema.
           </p>
         </Dialogo>
       )}

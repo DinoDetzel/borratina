@@ -472,6 +472,13 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   color: var(--text);
 }
 
+/* Acción que sigue estando pero ya no hace lo que dice: apretarla explica por
+   qué no se puede. Se atenúa para que no se lea como una acción más, y no va
+   `disabled` a propósito — un botón deshabilitado no se puede tocar, y en el
+   teléfono tocarlo es la única forma de llegar al motivo. */
+.enlace.atenuado { opacity: 0.55; }
+.enlace.atenuado:hover { opacity: 1; }
+
 /* Lo destructivo no tiene un rojo propio: el primario ya es rojo y dos rojos
    distintos no se distinguen. Se marca con el tono oscuro, y el freno de verdad
    es el cartel de confirmación. */
