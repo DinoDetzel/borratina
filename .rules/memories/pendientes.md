@@ -54,10 +54,14 @@ pantalla avisa. Unos pocos casos sobre "4 dentro de 20 con repetidos" cubren lo
 más caro de equivocar.
 
 **3 — El rastro de la anulación.** El agujero grave —anular y restaurar alrededor
-del extracto— ya está cerrado; lo que queda es auditoría. Pero mientras
-`restaurar` nulifique `anulada_por` y `anulada_at`, los controles de anulación son
-controles sin registro, en un sistema donde se reparte plata. Es el más caro de
-la lista: toca el esquema y el `CHECK chk_jugadas_anulacion`.
+del extracto— ya está cerrado; lo que queda es auditoría. Es el más caro de la
+lista: toca el esquema y el `CHECK chk_jugadas_anulacion`.
+
+Desde el 2026-08-26 la pantalla **muestra quién anuló y cuándo**, así que la
+mitad visible está. Falta la otra: mientras `restaurar` nulifique `anulada_por` y
+`anulada_at`, un anular-y-restaurar no deja constancia de que pasó. Se ve quién
+anuló una jugada que **sigue** anulada, no quién anuló una que después se
+restauró. Con varios admins es justo el caso que se querría poder reconstruir.
 
 **4, 5 y 6 — Cuando haya un rato.** Los secretos llevan tiempo anotados y sin
 síntoma. `no-imprimir` son cinco atributos que no hacen nada y ya está advertido

@@ -208,8 +208,15 @@ cobra, y **qué les pasa a los demás**: con el pozo fijo, sacar a un ganador no
 libera plata, la reparte entre los que quedan, que pasan de `pozo/N` a
 `pozo/(N-1)`. Eso mueve plata de gente ajena al error que se está corrigiendo y
 no se deduce mirando la pantalla. Si era el único ganador, avisa que el sorteo
-pasa a vacante. Anular una que no gana sigue saliendo derecho: el cartel en todas
-lo volvería un trámite que se aprieta sin leer.
+pasa a vacante.
+
+**Anular se confirma siempre, no solo cuando gana** (2026-08-26, pedido del
+usuario). Al principio la anulación común salía derecho, con el argumento de que
+el cartel en todas se termina apretando sin leer. Ese argumento no se sostiene
+cuando la acción no se puede deshacer: una vez sorteado, restaurar está
+bloqueado, así que anular por error una jugada cualquiera tampoco tiene vuelta
+atrás. El riesgo de que se vuelva un trámite se ataca con el texto —qué jugada,
+de quién, y si se puede restaurar o no— y no sacando el freno.
 
 **Esto no reemplaza a la decisión de fondo**, solo saca lo peligroso de la
 pantalla. La pregunta de si `anular` tiene que seguir siendo posible después del

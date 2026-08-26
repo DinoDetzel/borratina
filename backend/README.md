@@ -88,6 +88,10 @@ Cada jugada del listado trae `gano`, que es **`null` mientras el sorteo no esté
 finalizado** — distinto de `false`. Con un extracto de 20 números no hay forma de
 compararlo a ojo, así que el dato viene resuelto desde la base.
 
+Las anuladas traen además `anulada_por_nombre`, que sale de un `LEFT JOIN` sobre
+`usuarios`. `anulada_por` a secas es un id y en pantalla no le dice nada a nadie:
+con varios admins, lo que hace falta saber es quién fue.
+
 `solo_ganadoras=true` es la lista con la que se pagan los premios: excluye las
 anuladas aunque sus números coincidan.
 
