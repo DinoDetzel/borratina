@@ -194,7 +194,7 @@ src/
 │   ├── BotonCompartir.jsx # manda el comprobante, esté a la vista o no
 │   ├── CampoFechaHora.jsx # date + lista de horas, en vez de datetime-local
 │   ├── CamposExtracto.jsx # los 20 casilleros del extracto
-│   └── GraficoVentas.jsx  # evolución diaria + su tabla equivalente
+│   └── GraficoVentas.jsx  # evolución diaria + su tabla equivalente (lazy)
 └── paginas/
     ├── Login.jsx
     ├── Vendedor.jsx
@@ -249,6 +249,18 @@ fila son de texto, no botones con borde.
 **La app es de tema claro.** El modo oscuro se retiró con el rediseño: la paleta
 nueva se define sobre un fondo crema y no tiene equivalentes oscuros; inventarlos
 habría sido diseñar otra cosa.
+
+**El gráfico se carga aparte del resto.** `AdminDashboard` lo trae con
+`React.lazy`, así que Recharts —que es casi todo el peso del bundle y no se usa
+en ningún otro lado— viaja en su propio archivo. Sin eso, el vendedor se bajaba
+la librería entera de gráficos para cargar una jugada, parado en la calle y con
+datos móviles: la carga inicial pasó de 195 kB gzip a 91 kB.
+
+Es **el único import diferido del proyecto**, y conviene que siga siéndolo salvo
+que aparezca otro corte igual de limpio. Acá vale porque cae justo entre las dos
+pantallas: el vendedor nunca ve un gráfico. El `fallback` del `Suspense` lleva la
+misma altura que `.grafico-caja` a propósito — si no, la tarjeta arranca chata y
+pega un salto cuando el gráfico llega.
 
 **El color del gráfico está validado** para contraste (≥3:1 sobre la superficie)
 con `scripts/validate_palette.js` de la skill de dataviz. El gráfico lee

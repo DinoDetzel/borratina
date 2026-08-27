@@ -135,10 +135,15 @@ Convenciones:
   (`comprobanteImagen.js` vs `Comprobante.jsx`)—, que necesitaría render y
   comparación visual. El frontend no tiene runner configurado.
 - Manejo de variables de entorno / secretos entre Vercel, Render y Supabase.
-- El bundle del frontend pesa ~654 kB sin comprimir (194 kB gzip), casi todo
-  Recharts, y el build avisa que pasa los 500 kB. Si molesta, se parte con
-  `import()` dinámico del gráfico. Las tipografías (~228 kB en nueve `.woff2`)
-  van aparte y se piden solo cuando hacen falta. Medido el 2026-08-26.
+- El bundle está partido en dos desde el 2026-08-27: **302 kB / 91 kB gzip** de
+  carga inicial y **355 kB / 103 kB gzip** del gráfico, que se pide aparte. Antes
+  era un solo archivo de 657 kB (195 gzip) y el build avisaba que pasaba los
+  500 kB. Las tipografías (~228 kB en nueve `.woff2`) van aparte desde siempre.
+
+  El corte es `React.lazy` sobre `GraficoVentas` en `AdminDashboard.jsx`, que es
+  el único lugar que toca Recharts. Es el único import diferido del proyecto y no
+  conviene multiplicarlos a ciegas: acá vale porque el corte cae justo entre las
+  dos pantallas — el vendedor no ve gráficos nunca.
 - El rastro de las anulaciones **ya está** (migración 013, 2026-08-27): el
   historial vive en `jugadas_eventos` y no en `jugadas`, porque el
   `CHECK chk_jugadas_anulacion` obliga a limpiar `anulada_por` al restaurar y esa

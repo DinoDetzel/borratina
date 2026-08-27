@@ -29,7 +29,6 @@ distinta cada semana. Se nombran por lo que son.
 |---|---|---|
 | Tests del comprobante: canvas contra JSX | **BAJA** | [[tech-stack]] → Pendiente de definir |
 | Secretos y variables entre Vercel, Render y Supabase | **BAJA** | [[tech-stack]] → Pendiente de definir |
-| Partir el bundle del frontend | **BAJA** | [[tech-stack]] → Pendiente de definir |
 
 ## Por qué están donde están
 
@@ -40,14 +39,16 @@ compara: si se separan sale un ticket feo o con un dato de menos, no un premio
 mal pagado. Y es bastante más caro de probar — hace falta render y comparación
 visual, y el frontend no tiene runner configurado.
 
-**Los otros dos.** Los secretos llevan tiempo anotados y sin síntoma. El bundle
-es una molestia de carga inicial, y el aviso de "servidor despertando" del login
-ya ataca la parte de la espera que de verdad se nota.
+**Los secretos entre Vercel, Render y Supabase.** Llevan tiempo anotados y sin
+síntoma: hoy se cargan a mano en cada panel y funciona. Se volvería urgente si
+entra alguien más al proyecto o si hay que rotar el `JWT_SECRET`.
 
 ## Cerrados
 
 **2026-08-27**
 
+- **Partir el bundle.** `React.lazy` sobre el gráfico: la carga inicial pasó de
+  195 kB gzip a 91 kB. El vendedor ya no se baja Recharts para cargar una jugada.
 - **La clase muerta `no-imprimir`.** Sacada de los cinco lugares del JSX donde
   seguía puesta sin ninguna regla CSS detrás. Nada que ver en pantalla: la
   impresión ya se resolvía escondiendo todo menos el comprobante.
