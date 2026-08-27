@@ -343,14 +343,14 @@ export default function Vendedor() {
             {/* Una sola acción: mandarlo. El vendedor está en la calle con el
                 teléfono, no al lado de una impresora — y para imprimir en la
                 sede sigue estando Ctrl+P, que sale igual de bien. */}
-            <div className="no-imprimir acciones-comprobante">
+            <div className="acciones-comprobante">
               <BotonCompartir comprobante={ultimo} onAviso={setAvisoCompartir} />
               <button className="enlace" onClick={cerrarComprobante}>
                 Cerrar
               </button>
             </div>
 
-            <p className="no-imprimir pie-comprobante">
+            <p className="pie-comprobante">
               {avisoCompartir ??
                 'Se abre la lista de apps del teléfono: elegí WhatsApp y después el contacto. Va la foto del comprobante.'}
             </p>
@@ -358,7 +358,7 @@ export default function Vendedor() {
         )}
       </div>
 
-      <div className="tarjeta no-imprimir" style={{ marginTop: '1.5rem' }}>
+      <div className="tarjeta" style={{ marginTop: '1.5rem' }}>
         <div className="encabezado-tarjeta">
           <h2 style={{ margin: 0 }}>
             {viendoTodas ? 'Jugadas de este sorteo' : 'Mis jugadas de este sorteo'}

@@ -29,7 +29,6 @@ distinta cada semana. Se nombran por lo que son.
 |---|---|---|
 | Tests del comprobante: canvas contra JSX | **BAJA** | [[tech-stack]] → Pendiente de definir |
 | Secretos y variables entre Vercel, Render y Supabase | **BAJA** | [[tech-stack]] → Pendiente de definir |
-| Limpiar la clase muerta `no-imprimir` | **BAJA** | `frontend/README.md` → regla de impresión |
 | Partir el bundle del frontend | **BAJA** | [[tech-stack]] → Pendiente de definir |
 
 ## Por qué están donde están
@@ -41,16 +40,17 @@ compara: si se separan sale un ticket feo o con un dato de menos, no un premio
 mal pagado. Y es bastante más caro de probar — hace falta render y comparación
 visual, y el frontend no tiene runner configurado.
 
-**Los otros tres.** Los secretos llevan tiempo anotados y sin síntoma.
-`no-imprimir` son cinco atributos que no hacen nada, ya advertido en el README,
-así que el riesgo de confundir a alguien está contenido. El bundle es una
-molestia de carga inicial, y el aviso de "servidor despertando" del login ya
-ataca la parte de la espera que de verdad se nota.
+**Los otros dos.** Los secretos llevan tiempo anotados y sin síntoma. El bundle
+es una molestia de carga inicial, y el aviso de "servidor despertando" del login
+ya ataca la parte de la espera que de verdad se nota.
 
 ## Cerrados
 
 **2026-08-27**
 
+- **La clase muerta `no-imprimir`.** Sacada de los cinco lugares del JSX donde
+  seguía puesta sin ninguna regla CSS detrás. Nada que ver en pantalla: la
+  impresión ya se resolvía escondiendo todo menos el comprobante.
 - **El rastro de la anulación.** Migración 013: `jugadas_eventos` guarda quién
   anuló y quién restauró, y sobrevive a las restauraciones. Era el último
   pendiente de producto. Detalle en [[decisiones-de-diseno]] → "El rastro de la

@@ -263,12 +263,13 @@ equivalente.
 **Se imprime solo el comprobante.** La regla `@media print` de `estilos.css`
 esconde **toda la página** (`body * { visibility: hidden }`) y vuelve a mostrar
 únicamente `.comprobante-club`. Antes se listaban a mano los bloques a ocultar con
-la clase `no-imprimir` y salía impresa la pantalla entera —el pozo, el formulario,
-los avisos— cada vez que aparecía algo nuevo que nadie se había acordado de
-marcar.
+una clase `no-imprimir` y salía impresa la pantalla entera —el pozo, el
+formulario, los avisos— cada vez que aparecía algo nuevo que nadie se había
+acordado de marcar.
 
-> La clase `no-imprimir` **sigue puesta en el JSX pero ya no tiene ninguna regla
-> CSS**: quedó sin efecto con ese cambio. No agregarla esperando que haga algo.
+Por eso **no hay nada que marcar para excluir de la impresión**: lo que no sea el
+comprobante ya queda afuera. Si aparece una clase `no-imprimir` en algún lado, es
+un resto de aquel enfoque y no hace nada.
 
 ## Deploy en Vercel
 
