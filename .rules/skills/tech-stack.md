@@ -139,12 +139,8 @@ Convenciones:
   Recharts, y el build avisa que pasa los 500 kB. Si molesta, se parte con
   `import()` dinámico del gráfico. Las tipografías (~228 kB en nueve `.woff2`)
   van aparte y se piden solo cuando hacen falta. Medido el 2026-08-26.
-- **Dejar rastro de una anulación revertida toca el esquema**, no la ruta: el
-  `CHECK chk_jugadas_anulacion` obliga a nulificar `anulada_por` y `anulada_at`
-  cuando `anulada = false`. Hay que relajar el `CHECK` o mover el historial a una
-  tabla de eventos, y en los dos casos va una migración.
-
-  El contrato de `POST /jugadas/:id/anular` **no** entra en esto: restringirlo
-  después del sorteo se evaluó y se descartó el 2026-08-26, así que ese endpoint
-  se queda como está. Ver `memories/decisiones-de-diseno.md` → "Anular después
-  del sorteo".
+- El rastro de las anulaciones **ya está** (migración 013, 2026-08-27): el
+  historial vive en `jugadas_eventos` y no en `jugadas`, porque el
+  `CHECK chk_jugadas_anulacion` obliga a limpiar `anulada_por` al restaurar y esa
+  columna es el estado de hoy, no el pasado. Quien agregue una operación que
+  cambie `anulada` tiene que escribir su evento en la misma transacción.

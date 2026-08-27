@@ -232,23 +232,30 @@ El criterio no es original de acá: `PATCH /api/sorteos/:id/resultado`
 con `dejaron_de_ganar`. Anular queda igual: no se prohíbe, se muestra lo que
 provoca.
 
-## Pendiente
+## El rastro de la anulación ✅ RESUELTO
 
-> Acá está el planteo del único pendiente **de producto** que queda abierto. La
-> lista completa —con los técnicos, la urgencia y el orden en que conviene
-> encararlos— está en [[pendientes]], que es el único índice.
+> **Cerrado el 2026-08-27** con la migración 013. Era la opción 4 de la tabla de
+> arriba y el último pendiente de producto que quedaba.
 
-### El rastro de la anulación se borra — A DEFINIR
+`restaurar` nulificaba `anulada_por` y `anulada_at`, así que después no quedaba
+constancia de que la jugada hubiera estado anulada ni de quién lo hizo. No era un
+descuido de la ruta: el `CHECK chk_jugadas_anulacion` (`001_init.sql:91-94`)
+**obliga** a nulificarlos cuando `anulada = false`. Mientras eso fuera así, los
+controles de anular eran controles sin registro.
 
-Es el punto 4 de la tabla y sobrevive al arreglo de restaurar, aunque con menos
-gravedad: el camino de "anulo con el sorteo abierto y restauro después" quedó
-cerrado, pero una restauración *antes* del sorteo sigue sin dejar registro.
+- El historial se mudó a **`jugadas_eventos`** en vez de relajar el `CHECK`. Cada
+  anulación y cada restauración deja una fila con quién y cuándo, y sobrevive a
+  las que vengan después. El porqué de la tabla aparte está en
+  [[esquema-base-datos]].
+- Los eventos se escriben **en la misma transacción** que el `UPDATE`.
+- **Restaurar dejó de escribir `editada_por`**, que hasta ahora pisaba a quien
+  hubiera corregido el nombre del comprador. Quién restauró vive en el evento.
+- El listado trae `veces_anulada`, y una jugada activa que estuvo anulada lo dice
+  en pantalla: **"Estuvo anulada y se restauró"**. Antes no se distinguía en nada
+  de una que nunca se tocó, que era el punto de todo esto.
+- Una cuenta que dejó eventos **ya no se puede borrar**: `DELETE /auth/usuarios/:id`
+  los cuenta y responde 409. Sin eso, un admin que anuló y restauró no dejaba nada
+  en `jugadas` y la cuenta figuraba como borrable.
 
-`restaurar` nulifica `anulada_por` y `anulada_at` (`jugadas.routes.js:460-461`),
-así que después no queda constancia de que la jugada estuvo anulada ni de quién
-la anuló. `editada_por` además pisa a quien hubiera corregido el nombre antes. No
-hay tabla de historial. Y no es un descuido de la ruta: el `CHECK
-chk_jugadas_anulacion` (`001_init.sql:91-94`) **obliga** a nulificarlos cuando
-`anulada = false`. Cualquier arreglo toca el esquema, por eso va aparte.
-
-Mientras esto no exista, los controles de anular son controles sin registro.
+Lo que no se recupera es lo anterior a la migración: una anulación revertida
+antes del 2026-08-27 se perdió y no hay de dónde sacarla.

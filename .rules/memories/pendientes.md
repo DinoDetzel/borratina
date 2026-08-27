@@ -1,6 +1,6 @@
 # memories/pendientes.md — Qué falta, y en qué orden
 
-> **Prioridades al 2026-08-26.** Este archivo es el orden, no el planteo: el
+> **Prioridades al 2026-08-27.** Este archivo es el orden, no el planteo: el
 > *porqué* de cada pendiente vive donde se discutió, y acá va enlazado. Si una
 > entrada de esta lista y su detalle se contradicen, **manda el detalle**.
 
@@ -13,64 +13,58 @@
 | **MEDIA** | Importa, pero puede esperar a que haya un rato largo |
 | **BAJA** | Cuando sobre tiempo |
 
-Hoy no hay ninguna CRÍTICA. El nivel queda para cuando algo esté bloqueando de
-verdad — no para subir de tono un pendiente que llevamos semanas postergando.
+Los niveles altos quedan para cuando algo esté bloqueando de verdad, no para
+subir de tono un pendiente que llevamos semanas postergando.
 
-## El orden
+## Lo que falta
 
-| # | Pendiente | Urgencia | Detalle en |
-|---|---|---|---|
-| 1 | Que la anulación deje rastro aunque se restaure | **MEDIA** | [[decisiones-de-diseno]] → Pendiente, opción 4 |
-| 2 | Tests del comprobante: canvas contra JSX | **BAJA** | [[tech-stack]] → Pendiente de definir |
-| 3 | Secretos y variables entre Vercel, Render y Supabase | **BAJA** | [[tech-stack]] → Pendiente de definir |
-| 4 | Limpiar la clase muerta `no-imprimir` | **BAJA** | `frontend/README.md` → regla de impresión |
-| 5 | Partir el bundle del frontend | **BAJA** | [[tech-stack]] → Pendiente de definir |
+**No queda nada de producto, ni nada de urgencia media o mayor.** Los cuatro que
+siguen son deuda técnica sin síntoma y ninguno bloquea nada.
 
-> **Cerrados el 2026-08-26**, los dos que encabezaban esta tabla:
->
-> - **La confirmación al anular una ganadora** — hecha. Era el único pendiente
->   con ventana temporal. Detalle en [[decisiones-de-diseno]] → "Anular después
->   del sorteo", opción 3.
-> - **Si anular post-sorteo tiene que seguir siendo posible** — decidido que sí,
->   sin cambio de código. Con el cartel avisando la consecuencia y el rastro
->   permanente (post-sorteo ya no se puede restaurar), el caso real a favor pesó
->   más que el riesgo. La opción 2 quedó descartada de paso.
->
-> Lo que quedó abierto de todo eso es solo el rastro de una anulación revertida,
-> que es el punto 1 de ahora y toca el esquema.
->
-> - **Los tests de la regla de ganadores** — hechos, con `node:test`. El backend
->   tiene suite propia y la paridad entre `condicionGanadora()` y `esGanadora()`
->   se verifica contra un Postgres real. Queda afuera la otra pareja duplicada,
->   el comprobante en canvas y en JSX, que es el punto 2 de ahora.
+Van sin numerar a propósito: el número salía de la posición en la tabla y se
+reciclaba cada vez que se cerraba algo, así que "el punto 1" significaba una cosa
+distinta cada semana. Se nombran por lo que son.
 
-## Por qué ese orden
+| Pendiente | Urgencia | Detalle en |
+|---|---|---|
+| Tests del comprobante: canvas contra JSX | **BAJA** | [[tech-stack]] → Pendiente de definir |
+| Secretos y variables entre Vercel, Render y Supabase | **BAJA** | [[tech-stack]] → Pendiente de definir |
+| Limpiar la clase muerta `no-imprimir` | **BAJA** | `frontend/README.md` → regla de impresión |
+| Partir el bundle del frontend | **BAJA** | [[tech-stack]] → Pendiente de definir |
 
-**1 — El rastro de la anulación.** El agujero grave —anular y restaurar alrededor
-del extracto— ya está cerrado; lo que queda es auditoría. Es el más caro de la
-lista: toca el esquema y el `CHECK chk_jugadas_anulacion`.
+## Por qué están donde están
 
-Desde el 2026-08-26 la pantalla **muestra quién anuló y cuándo**, así que la
-mitad visible está. Falta la otra: mientras `restaurar` nulifique `anulada_por` y
-`anulada_at`, un anular-y-restaurar no deja constancia de que pasó. Se ve quién
-anuló una jugada que **sigue** anulada, no quién anuló una que después se
-restauró. Con varios admins es justo el caso que se querría poder reconstruir.
+**El comprobante, canvas contra JSX.** Es la única regla que queda escrita dos
+veces (`comprobanteImagen.js` y `Comprobante.jsx`) y se desincroniza en silencio,
+igual que se desincronizaba la de ganadores. Va en BAJA porque el daño no se
+compara: si se separan sale un ticket feo o con un dato de menos, no un premio
+mal pagado. Y es bastante más caro de probar — hace falta render y comparación
+visual, y el frontend no tiene runner configurado.
 
-Alcanza solo a los **sorteos abiertos**: una vez sorteado no se puede restaurar,
-así que ahí el registro ya es permanente.
+**Los otros tres.** Los secretos llevan tiempo anotados y sin síntoma.
+`no-imprimir` son cinco atributos que no hacen nada, ya advertido en el README,
+así que el riesgo de confundir a alguien está contenido. El bundle es una
+molestia de carga inicial, y el aviso de "servidor despertando" del login ya
+ataca la parte de la espera que de verdad se nota.
 
-**2 — El comprobante, canvas contra JSX.** Es la otra regla escrita dos veces
-(`comprobanteImagen.js` y `Comprobante.jsx`) y también se desincroniza en
-silencio. Queda en BAJA y no en MEDIA porque el daño no se compara: si se
-separan, sale un ticket feo o con un dato de menos, no un premio mal pagado.
-Además es bastante más caro de probar — hace falta render y comparación visual, y
-el frontend todavía no tiene runner.
+## Cerrados
 
-**3, 4 y 5 — Cuando haya un rato.** Los secretos llevan tiempo anotados y sin
-síntoma. `no-imprimir` son cinco atributos que no hacen nada y ya está advertido
-en el README, así que el riesgo de confundir a alguien está contenido. El bundle
-es una molestia de carga inicial, y el aviso de "servidor despertando" del login
-ya ataca la parte de la espera que de verdad se nota.
+**2026-08-27**
+
+- **El rastro de la anulación.** Migración 013: `jugadas_eventos` guarda quién
+  anuló y quién restauró, y sobrevive a las restauraciones. Era el último
+  pendiente de producto. Detalle en [[decisiones-de-diseno]] → "El rastro de la
+  anulación".
+
+**2026-08-26**
+
+- **La confirmación al anular.** Primero solo para las ganadoras, con el reparto
+  a la vista; después para todas. Era el único pendiente con ventana temporal.
+- **Si anular post-sorteo tiene que seguir siendo posible.** Decidido que sí, sin
+  cambio de código: el caso real a favor pesó más que el riesgo, con el cartel
+  avisando y el rastro permanente. La opción 2 quedó descartada de paso.
+- **Los tests de la regla de ganadores.** Con `node:test`. La paridad entre
+  `condicionGanadora()` y `esGanadora()` se verifica contra un Postgres real.
 
 ## Cómo se mantiene esto
 
@@ -78,8 +72,8 @@ ya ataca la parte de la espera que de verdad se nota.
   donde corresponde —`decisiones-de-diseno.md` si es de producto,
   `tech-stack.md` si es técnico— y desde acá se enlaza. Duplicar el argumento
   garantiza que las dos copias se contradigan en un mes.
-- **Cuando un pendiente se resuelve, se saca de esta tabla** y el detalle queda
-  marcado como resuelto donde vive, con lo que se hizo y por qué. Ver
+- **Cuando un pendiente se resuelve, se saca de la tabla** y pasa a "Cerrados"
+  con su fecha; el detalle queda marcado como resuelto donde vive. Ver
   "Restaurar una jugada después del sorteo" en [[decisiones-de-diseno]] como
   modelo.
 - **Las prioridades caducan**: la fecha de arriba es parte del contenido. Una

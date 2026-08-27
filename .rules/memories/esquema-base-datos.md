@@ -24,6 +24,7 @@
 | `010_corregir_extracto.sql` | El extracto se puede corregir, y queda quién, cuándo y qué decía antes |
 | `011_correccion_de_jugada.sql` | `jugadas.numeros_anteriores`: qué decía la jugada antes de corregirla |
 | `012_fecha_del_codigo_en_hora_argentina.sql` | La fecha del código de comprobante se calcula en hora del club, no en UTC |
+| `013_historial_de_anulaciones.sql` | `jugadas_eventos`: quién anuló y quién restauró, aunque la jugada vuelva a estar activa |
 
 ## El resultado es un extracto de 20
 
@@ -167,6 +168,38 @@ RETURNS TEXT AS $$ ... to_char(fecha AT TIME ZONE 'America/Argentina/Buenos_Aire
   con la fecha corrida sigue siendo válido: se busca por el código entero, que no
   cambió, y la fecha real de la venta está en `created_at`. Regenerarlos habría
   roto el papel.
+
+## El historial de anulaciones va aparte (migración 013)
+
+```sql
+CREATE TABLE jugadas_eventos (
+    id SERIAL PRIMARY KEY,
+    jugada_id INTEGER NOT NULL REFERENCES jugadas(id),
+    tipo VARCHAR(20) NOT NULL,
+    usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT chk_jugadas_eventos_tipo CHECK (tipo IN ('anulada', 'restaurada'))
+);
+```
+
+- **Tabla aparte y no relajar el `CHECK`.** Conservar `anulada_por` con
+  `anulada = false` volvería ambigua esa columna: dejaría de significar "quién la
+  tiene anulada" para pasar a "quién la anuló alguna vez", y hay código leyéndola
+  con el primer sentido. Así quedan separadas dos preguntas distintas: `jugadas`
+  dice **cómo está hoy**, `jugadas_eventos` **qué le fue pasando**.
+- `chk_jugadas_anulacion` **se conserva igual**: sigue garantizando que el estado
+  actual sea coherente, que es para lo que servía.
+- Los eventos se escriben **dentro de la misma transacción** que el `UPDATE`. Un
+  historial al que a veces le falta una entrada no sirve como historial.
+- Restaurar dejó de escribir `editada_por`. Antes lo hacía y pisaba a quien
+  hubiera corregido el nombre del comprador; ahora quién restauró vive en el
+  evento, que es su lugar.
+- La FK sin `ON DELETE` es a propósito: una cuenta que dejó eventos no se puede
+  borrar. `DELETE /auth/usuarios/:id` los cuenta y responde 409, así que el freno
+  llega como mensaje y no como error de clave foránea.
+- El backfill traslada las anulaciones **vigentes**, que son las únicas
+  recuperables. Lo que se anuló y se restauró antes de esta migración se perdió y
+  no hay de dónde sacarlo.
 
 ## Cambios respecto de v1
 

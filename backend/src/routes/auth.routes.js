@@ -188,10 +188,13 @@ router.delete('/usuarios/:id', requireAuth, requireAdmin, async (req, res) => {
   if (!existe[0]) throw new AppError(404, 'No existe ese usuario.');
 
   const { rows: uso } = await query(
+    // Los eventos cuentan como "tocó algo" por dos motivos: son historial que se
+    // perdería, y además la FK de jugadas_eventos impediría el DELETE igual.
+    // Mejor un 409 que explica que un error de clave foránea.
     `SELECT
-       COUNT(*) FILTER (WHERE vendedor_id = $1)::int AS cargadas,
-       COUNT(*) FILTER (WHERE anulada_por = $1 OR editada_por = $1)::int AS tocadas
-     FROM jugadas`,
+       (SELECT COUNT(*) FROM jugadas WHERE vendedor_id = $1)::int AS cargadas,
+       (SELECT COUNT(*) FROM jugadas WHERE anulada_por = $1 OR editada_por = $1)::int
+       + (SELECT COUNT(*) FROM jugadas_eventos WHERE usuario_id = $1)::int AS tocadas`,
     [id],
   );
   const { cargadas, tocadas } = uso[0];

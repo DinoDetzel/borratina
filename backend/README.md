@@ -238,6 +238,21 @@ justo cuando importa.
 
 **Anular no borra.** Se marca la fila y se registra qué admin lo hizo y cuándo.
 
+**El historial de anulaciones vive en `jugadas_eventos`** (migración 013), no en
+`jugadas`. Es que son dos preguntas distintas: `jugadas.anulada_por` dice **quién
+la tiene anulada hoy** —y el `CHECK` obliga a limpiarla al restaurar, así que se
+pierde— mientras que la tabla de eventos dice **qué le fue pasando**, y eso
+sobrevive a las restauraciones. Sin ella, anular y restaurar no dejaba huella.
+
+Anular y restaurar escriben su evento **dentro de la misma transacción** que el
+`UPDATE`: un historial al que a veces le falta una entrada no sirve como
+historial. Si agregás otra operación que cambie `anulada`, tiene que anotar su
+evento igual, o el historial vuelve a mentir.
+
+`GET /jugadas/:id` devuelve el `historial` **solo al admin**. El listado no lo
+trae entero —serían N consultas— pero sí `veces_anulada`, que es lo que permite
+distinguir una jugada activa que estuvo anulada de una que nunca se tocó.
+
 **Una cuenta con historial no se borra, se desactiva.** `DELETE
 /auth/usuarios/:id` solo pasa si esa cuenta no cargó, no anuló y no corrigió
 ninguna jugada; si tocó algo, responde 409 y sugiere desactivarla. Borrarla sería

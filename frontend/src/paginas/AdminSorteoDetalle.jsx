@@ -673,6 +673,15 @@ export default function AdminSorteoDetalle() {
                               Anulada por {j.anulada_por_nombre} · {fechaHora(j.anulada_at)}
                             </div>
                           )}
+                          {/* Una jugada activa que estuvo anulada no se distinguía
+                              en nada de una que nunca se tocó. Es el caso que el
+                              historial vino a hacer visible. */}
+                          {!j.anulada && j.veces_anulada > 0 && (
+                            <div style={{ color: 'var(--tinta-apagada)', fontSize: '0.82rem' }}>
+                              Estuvo anulada y se restauró
+                              {j.veces_anulada > 1 ? ` (${j.veces_anulada} veces)` : ''}
+                            </div>
+                          )}
                         </td>
                         <td data-movil="Cargó">{j.vendedor}</td>
                         <td
