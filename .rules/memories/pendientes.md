@@ -27,26 +27,29 @@ distinta cada semana. Se nombran por lo que son.
 
 | Pendiente | Urgencia | Detalle en |
 |---|---|---|
-| Tests del comprobante: canvas contra JSX | **BAJA** | [[tech-stack]] → Pendiente de definir |
 | Secretos y variables entre Vercel, Render y Supabase | **BAJA** | [[tech-stack]] → Pendiente de definir |
+| Ver el comprobante renderizado, no solo su contenido | **BAJA** | `frontend/README.md` → la imagen en canvas |
 
 ## Por qué están donde están
-
-**El comprobante, canvas contra JSX.** Es la única regla que queda escrita dos
-veces (`comprobanteImagen.js` y `Comprobante.jsx`) y se desincroniza en silencio,
-igual que se desincronizaba la de ganadores. Va en BAJA porque el daño no se
-compara: si se separan sale un ticket feo o con un dato de menos, no un premio
-mal pagado. Y es bastante más caro de probar — hace falta render y comparación
-visual, y el frontend no tiene runner configurado.
 
 **Los secretos entre Vercel, Render y Supabase.** Llevan tiempo anotados y sin
 síntoma: hoy se cargan a mano en cada panel y funciona. Se volvería urgente si
 entra alguien más al proyecto o si hay que rotar el `JWT_SECRET`.
 
+**Ver el comprobante renderizado.** Los tests de sincronía cubren que las dos
+versiones digan lo mismo, pero no que se vean igual: posiciones, tamaños y
+espaciados siguen sin red. Haría falta render en headless y comparación de
+imágenes, que es mucha maquinaria para un riesgo que además avisa solo — un
+ticket descuadrado se ve a simple vista la primera vez que se manda uno.
+
 ## Cerrados
 
 **2026-08-27**
 
+- **Los tests del comprobante.** Sincronía entre el canvas y el JSX: que consuman
+  los mismos datos y digan los mismos textos. No hizo falta DOM ni navegador, se
+  comparan los fuentes. Queda afuera cómo se ven, que pasó a ser su propio
+  pendiente.
 - **Partir el bundle.** `React.lazy` sobre el gráfico: la carga inicial pasó de
   195 kB gzip a 91 kB. El vendedor ya no se baja Recharts para cargar una jugada.
 - **La clase muerta `no-imprimir`.** Sacada de los cinco lugares del JSX donde

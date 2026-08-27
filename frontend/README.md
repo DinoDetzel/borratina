@@ -7,7 +7,13 @@ React + Vite. Consume la API de `../backend`.
 ```bash
 npm install
 npm run dev     # http://localhost:5173
+npm run lint
+npm test        # node --test test/
 ```
+
+Los tests son de **sincronía entre las dos versiones del comprobante**, el canvas
+y el JSX (ver más abajo). No hay tests de componentes: no hace falta DOM ni
+runner de navegador, se comparan los fuentes.
 
 Necesita el backend corriendo en `http://localhost:3000`. En desarrollo no hace
 falta configurar nada: Vite redirige `/api` al backend (ver `vite.config.js`), así
@@ -116,6 +122,11 @@ imágenes en blanco o sin tipografías, y un comprobante que a veces sale vacío
 peor que ninguno. El costo es que la maqueta está escrita dos veces —canvas y
 JSX—: **si se toca una, hay que tocar la otra.** Las medidas son las mismas y en
 el mismo orden para que compararlas sea directo.
+
+`npm test` cubre la mitad que se puede automatizar: que las dos consuman los
+mismos datos y digan los mismos textos. Lo que sigue sin red es **cómo se ven** —
+posiciones, tamaños, espaciados—, así que después de tocar la maqueta hay que
+mirar la foto y el papel.
 
 **Ojo al probar en el teléfono:** la Web Share API exige contexto seguro. Sobre
 `https://` (producción) anda; sobre `http://<ip-de-la-lan>` el navegador ni

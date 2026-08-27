@@ -130,10 +130,14 @@ Convenciones:
   la normalización de números y el código de comprobante. `npm test` en
   `backend/`, detalle en su README.
 
-  Lo que **no** está cubierto: las rutas, que se siguen verificando a mano, y la
-  otra regla duplicada —el comprobante maquetado en canvas y en JSX
-  (`comprobanteImagen.js` vs `Comprobante.jsx`)—, que necesitaría render y
-  comparación visual. El frontend no tiene runner configurado.
+  **El frontend también tiene, desde el 2026-08-27**, con el mismo runner: un
+  test de sincronía entre las dos versiones del comprobante, que compara los
+  fuentes de `comprobanteImagen.js` y `Comprobante.jsx` para que consuman los
+  mismos datos y digan los mismos textos. No hace falta DOM ni navegador.
+
+  Lo que **no** está cubierto: las rutas del backend, que se siguen verificando a
+  mano, y **cómo se ve** el comprobante —posiciones, tamaños, espaciados—, que
+  necesitaría render y comparación visual.
 - Manejo de variables de entorno / secretos entre Vercel, Render y Supabase.
 - El bundle está partido en dos desde el 2026-08-27: **302 kB / 91 kB gzip** de
   carga inicial y **355 kB / 103 kB gzip** del gráfico, que se pide aparte. Antes
