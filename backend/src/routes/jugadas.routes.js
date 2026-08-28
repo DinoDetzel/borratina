@@ -1,5 +1,6 @@
 import { Router } from 'express';
 
+import { config } from '../config.js';
 import { query, withTransaction } from '../db.js';
 import { AppError } from '../middleware/errors.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
@@ -20,10 +21,12 @@ const COLUMNAS = [
 const CAMPOS = COLUMNAS.join(', ');
 const CAMPOS_J = COLUMNAS.map((c) => `j.${c}`).join(', ');
 
+// La zona sale de `config` y no escrita acá: es la del club, y el vendedor que
+// lee "la carga cierra el ..." tiene que leer la misma hora que ve en pantalla.
 const FECHA_LARGA = new Intl.DateTimeFormat('es-AR', {
   dateStyle: 'short',
   timeStyle: 'short',
-  timeZone: 'America/Argentina/Buenos_Aires',
+  timeZone: config.zonaHoraria,
 });
 
 /**

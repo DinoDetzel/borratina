@@ -90,13 +90,25 @@ Convenciones:
   013). `anulada_por` es el estado de hoy —el `CHECK` obliga a limpiarla al
   restaurar—, así que el historial vive en la tabla aparte. Un historial al que a
   veces le falta una entrada no sirve como historial.
-- **La zona horaria del club es del sistema, no del servidor.** `config.zonaHoraria`
-  (`TZ_CLUB`, por defecto `America/Argentina/Buenos_Aires`) se le pasa al pool en
-  `db.js`, así que las conexiones leen los `timestamptz` en hora argentina aunque
-  el Postgres corra en UTC. Sin eso, todo lo que sea "qué día es" —la fecha del
-  código de comprobante, el agrupado diario del gráfico— se corre tres horas y una
-  jugada de las 21:30 cae en el día siguiente. No cambia lo que se guarda, solo
-  cómo se lee.
+- **La zona horaria del club es del sistema, no del servidor ni del teléfono.**
+  `config.zonaHoraria` (`TZ_CLUB`, por defecto `America/Argentina/Buenos_Aires`)
+  rige en los tres lugares donde se decide "qué día es":
+  - el **pool** (`db.js`), así las conexiones leen los `timestamptz` en hora del
+    club aunque el Postgres corra en UTC;
+  - los **mensajes con fecha** del backend (`jugadas.routes.js`) y el período que
+    calcula el seed;
+  - el **frontend**, que la recibe con el usuario en `/auth/login` y `/auth/me` y
+    formatea todo ahí (`fijarZonaClub` en `utilidades.js`). Se manda y no se
+    duplica del lado del cliente para que siga habiendo una sola fuente de verdad.
+
+  Sin esto, una jugada de las 21:30 cae en el día siguiente, y un vendedor con el
+  teléfono en otra zona ve un día distinto del que lleva impreso el comprobante.
+  No cambia lo que se guarda, solo cómo se lee.
+
+  La excepción es la fecha del **código de comprobante**, que va escrita dentro de
+  `generar_codigo_jugada()` (migración 012) y no sigue a `TZ_CLUB`: sale impresa
+  en un papel y no puede depender de una variable de entorno. Si el club alguna
+  vez se mudara de zona, eso pide su propia migración.
 
 ## Estructura del frontend
 
@@ -138,24 +150,30 @@ Convenciones:
 ## Tests
 
 Con `node:test`, el runner que viene con Node 20. Sin dependencias de desarrollo
-agregadas: un corredor externo habría sido la primera, para correr unos setenta
-asserts.
+agregadas: un corredor externo habría sido la primera.
 
 - **Backend** (`npm test` en `backend/`): la regla de ganadores, la normalización
-  de números y el código de comprobante. Lo que justifica la suite es el bloque
-  de **paridad**, que corre `condicionGanadora()` (SQL, contra un Postgres real)
-  y `esGanadora()` (JS) sobre los mismos casos y compara. Sin `DATABASE_URL` esos
-  se saltean en vez de fallar.
+  de números, el código de comprobante y el freno de intentos de login. Lo que
+  justifica la suite es el bloque de **paridad**, que corre `condicionGanadora()`
+  (SQL, contra un Postgres real) y `esGanadora()` (JS) sobre los mismos casos y
+  compara. Sin `DATABASE_URL` esos se saltean en vez de fallar.
+- **Rutas** (`test/rutas.test.js`): los permisos y los candados de estado, contra
+  la API levantada de verdad. Quién ve qué, qué no se toca después del sorteo, un
+  solo sorteo abierto a la vez. **Piden `TEST_DATABASE_URL`**, con una base
+  descartable: escriben, y reusar `DATABASE_URL` sería un tiro al pie el día que
+  alguien la tenga apuntando a Supabase. Sin esa variable —o si no responde— se
+  saltean.
 - **Frontend** (`npm test` en `frontend/`): sincronía entre las dos versiones del
-  comprobante. Compara los **fuentes** de `comprobanteImagen.js` y
-  `Comprobante.jsx` para que consuman los mismos datos y digan los mismos textos.
-  No hace falta DOM ni navegador.
+  comprobante (compara los **fuentes** de `comprobanteImagen.js` y
+  `Comprobante.jsx`) y el formato de fechas, que fija la zona a mano porque en
+  UTC el error no se ve. No hace falta DOM ni navegador.
 
-El patrón en los dos casos es el mismo: **lo que se testea es lo que está escrito
-dos veces**, porque es lo que se desincroniza sin que nada avise.
+El patrón de los dos primeros es el mismo: **lo que se testea es lo que está
+escrito dos veces**, porque es lo que se desincroniza sin que nada avise. Los de
+rutas van por otro motivo: son reglas que viven en un `WHERE` y en un `if`, donde
+ningún `CHECK` de la base las respalda.
 
-Sin cubrir: las rutas del backend, que se verifican a mano, y cómo se **ve** el
-comprobante, que está anotado como pendiente aparte.
+Sin cubrir: cómo se **ve** el comprobante, que está anotado como pendiente aparte.
 
 ## Pendiente de definir
 
