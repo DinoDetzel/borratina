@@ -233,6 +233,16 @@ importe.
 baja, `GET /auth/me` falla y la sesión se cierra sola. Cualquier 401 en cualquier
 request dispara lo mismo.
 
+**Una fecha sin hora nunca va derecho a `new Date()`.** `new Date('2026-08-15')`
+es medianoche **UTC**, y formateada en la zona local cae en el día anterior en
+cualquier lugar al oeste de Greenwich: acá el gráfico de ventas mostraba 14/08.
+El backend manda el día como texto justamente para que no se corra (ver
+`/dashboard/ventas`), y el cuidado se perdía en la última línea. `fechaHora`,
+`fechaDia` y `fechaCorta` pasan por `aFecha()`, que le completa la hora local a
+las fechas sueltas y deja pasar tal cual a los timestamps completos, que llevan
+zona adentro. Los tests están en `test/fechas.test.js` y fijan la zona a mano: en
+UTC el error no se ve, así que uno que dependiera de la máquina pasaría en CI.
+
 **El login avisa cuando el servidor está despertando.** El backend duerme sin
 tráfico (free tier de Render) y el primer request del día tarda hasta un minuto.
 Sin aviso, el botón se queda en "Ingresando…", la espera se lee como que la app se

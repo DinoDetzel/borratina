@@ -46,6 +46,11 @@ ticket descuadrado se ve a simple vista la primera vez que se manda uno.
 
 **2026-08-27**
 
+- **Las fechas del gráfico salían corridas un día.** `fechaCorta()` metía el día
+  del backend —texto `AAAA-MM-DD`, mandado así justamente para que no se corriera—
+  en un `new Date()`, que lo lee como medianoche UTC: en Buenos Aires el eje decía
+  14/08 donde el backend decía 15/08. Ahora pasa por `aFecha()`. Detalle en
+  `frontend/README.md` → "Una fecha sin hora nunca va derecho a `new Date()`".
 - **Los tests del comprobante.** Sincronía entre el canvas y el JSX: que consuman
   los mismos datos y digan los mismos textos. No hizo falta DOM ni navegador, se
   comparan los fuentes. Queda afuera cómo se ven, que pasó a ser su propio
