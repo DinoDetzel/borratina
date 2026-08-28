@@ -51,7 +51,7 @@ backend/
 ├── db/
 │   ├── migrate.js               # runner de migraciones
 │   ├── seed.js                  # admin + vendedores de prueba
-│   └── migrations/              # 001 … 012, ver memories/esquema-base-datos.md
+│   └── migrations/              # 001 … 013, ver memories/esquema-base-datos.md
 └── src/
     ├── server.js                # arranque HTTP
     ├── app.js                   # Express + montaje de rutas
@@ -79,6 +79,11 @@ Convenciones:
 - Toda query va parametrizada. Nunca interpolar valores en el string SQL.
 - La normalización de números vive **solo** en `utils/numeros.js`; las rutas no ordenan
   a mano.
+- **Toda operación que cambie `jugadas.anulada` escribe su evento** en
+  `jugadas_eventos`, y **en la misma transacción** que el `UPDATE` (migración
+  013). `anulada_por` es el estado de hoy —el `CHECK` obliga a limpiarla al
+  restaurar—, así que el historial vive en la tabla aparte. Un historial al que a
+  veces le falta una entrada no sirve como historial.
 - **La zona horaria del club es del sistema, no del servidor.** `config.zonaHoraria`
   (`TZ_CLUB`, por defecto `America/Argentina/Buenos_Aires`) se le pasa al pool en
   `db.js`, así que las conexiones leen los `timestamptz` en hora argentina aunque
@@ -117,6 +122,34 @@ Convenciones:
   contraste. Si se agregan series, revalidar antes de elegir hues a ojo.
 - El estado nunca se comunica solo con color: los chips llevan la palabra al
   lado del punto, y el gráfico tiene vista de tabla equivalente.
+- **El gráfico se carga con `React.lazy` y es el único import diferido.** Recharts
+  es casi todo el peso y solo lo usa `GraficoVentas`, en el panel del admin: sin
+  el corte, el vendedor se bajaba la librería entera para cargar una jugada. Son
+  302 kB / 91 kB gzip de carga inicial contra 355 kB / 103 kB del gráfico aparte.
+  No conviene multiplicar los `lazy` a ciegas — este vale porque el corte cae
+  justo entre las dos pantallas.
+
+## Tests
+
+Con `node:test`, el runner que viene con Node 20. Sin dependencias de desarrollo
+agregadas: un corredor externo habría sido la primera, para correr unos setenta
+asserts.
+
+- **Backend** (`npm test` en `backend/`): la regla de ganadores, la normalización
+  de números y el código de comprobante. Lo que justifica la suite es el bloque
+  de **paridad**, que corre `condicionGanadora()` (SQL, contra un Postgres real)
+  y `esGanadora()` (JS) sobre los mismos casos y compara. Sin `DATABASE_URL` esos
+  se saltean en vez de fallar.
+- **Frontend** (`npm test` en `frontend/`): sincronía entre las dos versiones del
+  comprobante. Compara los **fuentes** de `comprobanteImagen.js` y
+  `Comprobante.jsx` para que consuman los mismos datos y digan los mismos textos.
+  No hace falta DOM ni navegador.
+
+El patrón en los dos casos es el mismo: **lo que se testea es lo que está escrito
+dos veces**, porque es lo que se desincroniza sin que nada avise.
+
+Sin cubrir: las rutas del backend, que se verifican a mano, y cómo se **ve** el
+comprobante, que está anotado como pendiente aparte.
 
 ## Pendiente de definir
 
@@ -124,20 +157,6 @@ Convenciones:
 > de producto, la urgencia y el orden— está en `memories/pendientes.md`, que es el
 > único índice.
 
-- Testing: **el backend tiene tests desde el 2026-08-26**, con `node:test` (viene
-  con Node 20, no agrega dependencias). Cubren `utils/`: la regla de ganadores
-  —incluida la paridad entre la versión SQL y la JS, contra un Postgres real—,
-  la normalización de números y el código de comprobante. `npm test` en
-  `backend/`, detalle en su README.
-
-  **El frontend también tiene, desde el 2026-08-27**, con el mismo runner: un
-  test de sincronía entre las dos versiones del comprobante, que compara los
-  fuentes de `comprobanteImagen.js` y `Comprobante.jsx` para que consuman los
-  mismos datos y digan los mismos textos. No hace falta DOM ni navegador.
-
-  Lo que **no** está cubierto: las rutas del backend, que se siguen verificando a
-  mano, y **cómo se ve** el comprobante —posiciones, tamaños, espaciados—, que
-  necesitaría render y comparación visual.
 - **Variables de entorno y secretos entre Vercel, Render y Supabase.** Estaba
   anotado en una línea desde el principio; el inventario se hizo el 2026-08-27 y
   quedó más chico de lo que parecía.
@@ -170,17 +189,3 @@ Convenciones:
 
   Se vuelve urgente si entra alguien más al proyecto o si hay que rotar el
   secreto de verdad. Consultado el 2026-08-27: se deja para después.
-- El bundle está partido en dos desde el 2026-08-27: **302 kB / 91 kB gzip** de
-  carga inicial y **355 kB / 103 kB gzip** del gráfico, que se pide aparte. Antes
-  era un solo archivo de 657 kB (195 gzip) y el build avisaba que pasaba los
-  500 kB. Las tipografías (~228 kB en nueve `.woff2`) van aparte desde siempre.
-
-  El corte es `React.lazy` sobre `GraficoVentas` en `AdminDashboard.jsx`, que es
-  el único lugar que toca Recharts. Es el único import diferido del proyecto y no
-  conviene multiplicarlos a ciegas: acá vale porque el corte cae justo entre las
-  dos pantallas — el vendedor no ve gráficos nunca.
-- El rastro de las anulaciones **ya está** (migración 013, 2026-08-27): el
-  historial vive en `jugadas_eventos` y no en `jugadas`, porque el
-  `CHECK chk_jugadas_anulacion` obliga a limpiar `anulada_por` al restaurar y esa
-  columna es el estado de hoy, no el pasado. Quien agregue una operación que
-  cambie `anulada` tiene que escribir su evento en la misma transacción.
