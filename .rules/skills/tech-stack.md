@@ -41,6 +41,12 @@ Reglas de implementación para la API:
 - Autenticación stateless con JWT (login → token → header `Authorization: Bearer`).
 - Un solo pozo/sorteo activo por mes, compartido entre todos los vendedores.
 - Sin registro de pagos de premios dentro del sistema (se maneja fuera).
+- **El login se frena a 10 fallos por cuenta, 15 minutos** (`utils/intentos-de-login.js`),
+  en memoria y sin dependencias nuevas. Se cuenta **por usuario y no por IP**: los
+  vendedores comparten la red del club, así que por IP un solo atacante los deja a
+  todos afuera en horario de venta, y detrás del proxy de Render `req.ip` es el del
+  proxy salvo que se configure `trust proxy`. Frenar por IP queda para si alguna vez
+  hace falta cubrir el rociado sobre muchas cuentas, y exige `trust proxy` antes.
 
 ## Estructura del backend
 

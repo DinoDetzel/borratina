@@ -71,7 +71,7 @@ Todo cuelga de `/api`. Salvo `login` y `health`, todos piden
 ### Auth
 | Método | Ruta | Rol | Qué hace |
 |---|---|---|---|
-| POST | `/auth/login` | — | `{ usuario, password }` → `{ token, usuario }` |
+| POST | `/auth/login` | — | `{ usuario, password }` → `{ token, usuario }`. Frenado a 10 fallos por cuenta |
 | GET | `/auth/me` | cualquiera | Datos del usuario logueado |
 | GET | `/auth/usuarios` | admin | Lista usuarios |
 | POST | `/auth/usuarios` | admin | Da de alta un vendedor o admin |
@@ -320,6 +320,27 @@ mientras la carga esté abierta.
 anuladas × precio_jugada`, y `resultado = recaudación − pozo` es lo que gana o
 pierde el organizador. El dashboard los muestra separados a propósito: si se
 vende poco, el premio se paga igual.
+
+**El login se frena por cuenta, no por IP.** A los 10 fallos seguidos, esa cuenta
+queda 15 minutos sin poder entrar (429). Sin eso, la única barrera para probar
+contraseñas es lo que tarda bcrypt —unos 70 ms— y las contraseñas las pone el
+admin a mano, así que son cortas.
+
+Se cuenta por usuario a propósito: los vendedores comparten la red del club y los
+datos móviles, así que por IP un solo atacante los dejaría a **todos** afuera en
+pleno horario de venta. Además, detrás del proxy de Render `req.ip` es el del
+proxy salvo que se configure `trust proxy`, y mal puesto el bloqueo nace siendo
+global. Lo que hay que frenar —probar contraseñas contra una cuenta concreta— no
+se esquiva cambiando de IP.
+
+Un usuario que no existe también cuenta: si no, probar nombres inventados sería
+gratis y el freno delataría cuáles están registrados. Acertar la contraseña
+limpia el contador. El estado vive en memoria (`src/utils/intentos-de-login.js`)
+y se pierde en cada redeploy, que con una sola instancia en Render alcanza.
+
+Lo que **no** cubre: probar una misma contraseña contra muchas cuentas distintas.
+Ahí haría falta un segundo freno por IP, y entonces sí hay que configurar
+`trust proxy` primero.
 
 ## Deploy en Render
 

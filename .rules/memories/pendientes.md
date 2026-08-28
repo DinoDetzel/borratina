@@ -51,6 +51,10 @@ ticket descuadrado se ve a simple vista la primera vez que se manda uno.
   en un `new Date()`, que lo lee como medianoche UTC: en Buenos Aires el eje decía
   14/08 donde el backend decía 15/08. Ahora pasa por `aFecha()`. Detalle en
   `frontend/README.md` → "Una fecha sin hora nunca va derecho a `new Date()`".
+- **El login no tenía freno de fuerza bruta.** 10 fallos por cuenta y 15 minutos
+  de espera, contados **por usuario y no por IP** para no dejar afuera a todos los
+  vendedores que comparten la red del club. Detalle en [[tech-stack]] →
+  "Arquitectura general".
 - **Los tests del comprobante.** Sincronía entre el canvas y el JSX: que consuman
   los mismos datos y digan los mismos textos. No hizo falta DOM ni navegador, se
   comparan los fuentes. Queda afuera cómo se ven, que pasó a ser su propio
