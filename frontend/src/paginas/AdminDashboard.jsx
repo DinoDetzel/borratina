@@ -1,10 +1,20 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { api } from '../api.js';
-import GraficoVentas from '../componentes/GraficoVentas.jsx';
 import { Bolillas, Cargando, Chip, MensajeError, Ficha, Vacio } from '../componentes/comunes.jsx';
 import { numero, periodoLargo, pesos } from '../utilidades.js';
+
+/**
+ * El gráfico se pide aparte y recién cuando hace falta.
+ *
+ * Recharts es casi todo el peso del bundle y **solo se usa acá**. Cargándolo con
+ * el resto, el vendedor —que nunca ve un gráfico— se bajaba la librería entera
+ * para cargar una jugada, parado en la calle y con datos móviles. Es el único
+ * import diferido del proyecto y por eso vale: el corte cae justo entre las dos
+ * pantallas.
+ */
+const GraficoVentas = lazy(() => import('../componentes/GraficoVentas.jsx'));
 
 /**
  * Cuántos vendedores entran en la tarjeta del panel.
@@ -181,7 +191,20 @@ export default function AdminDashboard() {
           <p style={{ color: 'var(--tinta-2)', fontSize: '0.85rem', margin: '0.2rem 0 0.75rem' }}>
             Jugadas cargadas por día en {periodoLargo(resumen.periodo)}.
           </p>
-          <GraficoVentas serie={serie} />
+          {/* El alto del fallback es el mismo que el de `.grafico-caja`: si no,
+              la tarjeta arranca chata y pega un salto cuando llega el gráfico. */}
+          <Suspense
+            fallback={
+              <div
+                className="grafico-caja"
+                style={{ display: 'grid', placeItems: 'center', color: 'var(--tinta-2)' }}
+              >
+                Cargando el gráfico…
+              </div>
+            }
+          >
+            <GraficoVentas serie={serie} />
+          </Suspense>
         </div>
 
         <div className="tarjeta">

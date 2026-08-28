@@ -7,17 +7,51 @@ React + Vite. Consume la API de `../backend`.
 ```bash
 npm install
 npm run dev     # http://localhost:5173
+npm run lint
+npm test        # node --test test/
 ```
+
+Los tests son de **sincronía entre las dos versiones del comprobante**, el canvas
+y el JSX (ver más abajo). No hay tests de componentes: no hace falta DOM ni
+runner de navegador, se comparan los fuentes.
 
 Necesita el backend corriendo en `http://localhost:3000`. En desarrollo no hace
 falta configurar nada: Vite redirige `/api` al backend (ver `vite.config.js`), así
-que no hay CORS ni URLs hardcodeadas.
+que no hay CORS ni URLs hardcodeadas. Con `BACKEND_URL` se apunta el proxy a otro
+lado, que sirve para probar la app contra una base de prueba sin tocar la de
+desarrollo.
+
+### Probar desde el teléfono (HTTPS local)
+
+Compartir la foto del comprobante usa la Web Share API, que **solo existe en
+contexto seguro**: sobre `http://` con la IP de la red el navegador ni la expone.
+Si hay certificados puestos en `certs/`, Vite levanta en HTTPS solo:
+
+```bash
+openssl req -x509 -newkey rsa:2048 -nodes -sha256 -days 825 \
+  -keyout certs/clave.pem -out certs/certificado.pem \
+  -subj "/CN=Borratina LAN" \
+  -addext "subjectAltName=IP:<tu-ip>,IP:127.0.0.1,DNS:localhost"
+```
+
+La IP tiene que estar en el `subjectAltName`: sin eso los navegadores rechazan el
+certificado aunque el nombre coincida. `certs/` va en el `.gitignore` — son
+certificados de andar por casa y no se versionan.
 
 ## Las dos pantallas
 
 **Vendedor** (`/cargar`) — deliberadamente simple, es lo único que ve: formulario
 de carga, el comprobante que se imprime al cargar, y el listado de sus propias
 jugadas. Sin estadísticas: eso es del admin.
+
+**Consultar comprobante** (`/comprobante`) — de los dos roles. Se escribe el
+código que trae el comprador y sale la jugada: si el sorteo todavía no se jugó,
+cuándo se juega; si ya salió, si ganó, **cuánto cobra** y cuáles de sus números
+estaban en el extracto. Es la pantalla del mostrador, y por eso la tiene el
+vendedor: el que atiende al que viene a reclamar es él, no el admin. La
+visibilidad es la de siempre —cada vendedor encuentra solo lo suyo— y la impone
+el backend, que responde 404 también para un código ajeno, para no confirmar que
+existe.
 
 ### Está pensada para el teléfono
 
@@ -69,9 +103,10 @@ de tipografía hecho para otra cosa. El ancho fijo de 720px se escala con `zoom`
 en pantallas angostas, que es la única forma de achicarlo sin deformar las
 proporciones del diseño.
 
-Las tipografías (Yellowtail y Barlow) van **con la app y no desde un CDN**: el
-vendedor imprime en la calle y el comprobante tiene que verse igual sin conexión.
-Están en `src/fuentes/`, solo el subconjunto latino, ~164 kB en total.
+Las tipografías del comprobante (Yellowtail y Barlow) van **con la app y no desde
+un CDN**: el vendedor imprime en la calle y el comprobante tiene que verse igual
+sin conexión. Están en `src/fuentes/` junto con las de la app (Inter y Oswald),
+solo el subconjunto latino: nueve archivos, ~228 kB en total.
 
 Al imprimir se oculta todo por `visibility` menos el comprobante. Tiene que ser
 `visibility` y no `display`, porque el comprobante cuelga del formulario de
@@ -97,11 +132,18 @@ peor que ninguno. El costo es que la maqueta está escrita dos veces —canvas y
 JSX—: **si se toca una, hay que tocar la otra.** Las medidas son las mismas y en
 el mismo orden para que compararlas sea directo.
 
+`npm test` cubre la mitad que se puede automatizar: que las dos consuman los
+mismos datos y digan los mismos textos. Lo que sigue sin red es **cómo se ven** —
+posiciones, tamaños, espaciados—, así que después de tocar la maqueta hay que
+mirar la foto y el papel.
+
 **Ojo al probar en el teléfono:** la Web Share API exige contexto seguro. Sobre
 `https://` (producción) anda; sobre `http://<ip-de-la-lan>` el navegador ni
-expone `navigator.share` y el botón cae en descargar el PNG. Para probarlo de
-verdad en Android: `chrome://flags/#unsafely-treat-insecure-origin-as-secure`,
-agregar ahí el origen y reiniciar el navegador.
+expone `navigator.share` y el botón cae en descargar el PNG. Lo más parecido a
+producción es levantar Vite en HTTPS con certificados propios (ver "Probar desde
+el teléfono", arriba). La otra vía, si no querés generar certificados, es
+`chrome://flags/#unsafely-treat-insecure-origin-as-secure` en Android: agregar ahí
+el origen y reiniciar el navegador.
 
 `whatsapp.js` arma el enlace `wa.me` del texto. Si el teléfono del comprador se
 puede normalizar, abre su chat directo; si no, WhatsApp pide elegir el contacto.
@@ -132,13 +174,25 @@ una grilla: ahí la separación la da el `gap`, y el margen extra deja la primer
 tarjeta desalineada del resto. Por eso está anulado en `.grilla` y `.panel-fila`.
 
 **Admin** — panel con el pozo, evolución de ventas e historial (`/admin`), gestión
-de sorteos (`/admin/sorteos`), detalle de un sorteo (`/admin/sorteos/:id`),
-buscador de jugadas con corregir y anular (`/admin/jugadas`) y alta de cuentas
+de sorteos (`/admin/sorteos`), detalle de un sorteo (`/admin/sorteos/:id`), todas
+las cuentas y qué cargó cada una (`/admin/vendedores`) y alta de cuentas
 (`/admin/usuarios`).
 
 El detalle de un sorteo es la pantalla que se mira cuando se sortea: el extracto,
 si hubo ganadores o quedó vacante, quiénes cobran y todas las jugadas cargadas,
-con los números que estaban en el extracto en verde.
+con los números que estaban en el extracto en verde. **El buscador de jugadas vive
+acá**, y desde acá se anula, se restaura, se corrige y se reenvía el comprobante.
+
+Antes había además una pantalla `/admin/jugadas` con la lista de todas las jugadas
+y un selector de sorteo. Decía lo mismo que el detalle, así que se eliminó: el
+sorteo se elige entrando al sorteo, no desde un desplegable.
+
+`/admin/vendedores` y `/admin/usuarios` no son la misma pantalla. La segunda es el
+ABM de cuentas; la primera contesta quién **no** está vendiendo, así que lista
+también las inactivas y las que no cargaron nada. Lleva el sorteo en la URL
+(`?sorteo=`) para poder llegar desde el panel sin perder cuál estaba elegido y
+para que el enlace se pueda compartir. Como el detalle de un sorteo, no va en la
+barra de navegación: se llega desde el panel.
 
 ## Estructura
 
@@ -149,20 +203,34 @@ src/
 ├── api.js             # cliente HTTP, token, manejo de 401
 ├── auth.jsx           # contexto de sesión
 ├── utilidades.js      # formato de números, pesos, fechas y períodos
+├── comprobanteImagen.js  # dibuja el comprobante en un canvas, para compartirlo
+├── whatsapp.js        # enlace wa.me + Web Share API
 ├── estilos.css        # tokens de color y estilos
+├── fuentes.css        # @font-face de las tipografías locales
+├── fuentes/           # los .woff2: Inter, Oswald, Barlow, Yellowtail
 ├── componentes/
-│   ├── comunes.jsx        # Bolillas, Chip, fichas, mensajes
+│   ├── comunes.jsx        # Bolillas, Chip, Ficha, Dialogo, mensajes
 │   ├── Comprobante.jsx    # el ticket del comprador (imprimible)
-│   └── GraficoVentas.jsx  # evolución diaria + su tabla equivalente
+│   ├── BotonCompartir.jsx # manda el comprobante, esté a la vista o no
+│   ├── CampoFechaHora.jsx # date + lista de horas, en vez de datetime-local
+│   ├── CamposExtracto.jsx # los 20 casilleros del extracto
+│   └── GraficoVentas.jsx  # evolución diaria + su tabla equivalente (lazy)
 └── paginas/
     ├── Login.jsx
     ├── Vendedor.jsx
+    ├── ConsultarComprobante.jsx  # buscar por código: si ganó y cuánto cobra
     ├── AdminDashboard.jsx
     ├── AdminSorteos.jsx
     ├── AdminSorteoDetalle.jsx
-    ├── AdminJugadas.jsx
+    ├── AdminVendedores.jsx
     └── AdminUsuarios.jsx
 ```
+
+`BotonCompartir` recibe **el comprobante ya armado** (el que se acaba de emitir) o
+**el código** de una jugada de la lista, y en ese caso se lo pide al servidor al
+tocarlo. Es a propósito: la lista no trae los datos del sorteo —pozo, fecha,
+precio— y armarlo con el sorteo que está en pantalla saldría mal justo en el caso
+que importa, porque una jugada del mes pasado llevaría impreso el pozo de este mes.
 
 ## Lo que hay que tener en cuenta al tocar esto
 
@@ -174,6 +242,33 @@ importe.
 **El token se revalida al abrir la app.** Si está vencido o la cuenta fue dada de
 baja, `GET /auth/me` falla y la sesión se cierra sola. Cualquier 401 en cualquier
 request dispara lo mismo.
+
+**Las fechas se muestran en la zona del club, no en la del teléfono.** La manda
+el backend junto con el usuario (`/auth/login` y `/auth/me`) y la fija
+`fijarZonaClub()`; `TZ_CLUB` sigue siendo la única fuente de verdad y no hay que
+acordarse de cambiarla en dos lados. Un vendedor de viaje, o con el teléfono mal
+configurado, tiene que seguir viendo el día que lleva impreso el comprobante:
+ese papel es con lo que se reclama un premio.
+
+**Y una fecha sin hora no es un instante.** `new Date('2026-08-15')` es
+medianoche **UTC**, así que formatearla en cualquier otra zona la corre al día
+anterior: el gráfico de ventas mostraba 14/08. El backend manda el día como texto
+justamente para que no se corra (ver `/dashboard/ventas`), y el cuidado se perdía
+en la última línea. `utilidades.js` separa los dos casos: un timestamp completo
+se lee en la zona del club, y una fecha suelta en UTC, que acá equivale a no
+aplicarle ninguna.
+
+Los tests están en `test/fechas.test.js` y fijan la zona a mano: en UTC el error
+no se ve, así que uno que dependiera de la máquina pasaría en CI y dejaría el
+bug suelto justo donde importa.
+
+**El login avisa cuando el servidor está despertando.** El backend duerme sin
+tráfico (free tier de Render) y el primer request del día tarda hasta un minuto.
+Sin aviso, el botón se queda en "Ingresando…", la espera se lee como que la app se
+colgó, el vendedor recarga y con eso vuelve a empezar la cuenta. A los 6 segundos
+—bastante más que un login normal, así que en el uso diario no llega a aparecer—
+sale un cartel debajo del botón, no arriba del formulario: es sobre lo que está
+pasando recién ahora, no sobre lo que hay que completar.
 
 **El sistema de diseño está declarado en `:root`, en `estilos.css`, y todo lo
 demás lo consume desde ahí.** Los nombres viejos (`--tinta`, `--linea`,
@@ -195,6 +290,18 @@ fila son de texto, no botones con borde.
 nueva se define sobre un fondo crema y no tiene equivalentes oscuros; inventarlos
 habría sido diseñar otra cosa.
 
+**El gráfico se carga aparte del resto.** `AdminDashboard` lo trae con
+`React.lazy`, así que Recharts —que es casi todo el peso del bundle y no se usa
+en ningún otro lado— viaja en su propio archivo. Sin eso, el vendedor se bajaba
+la librería entera de gráficos para cargar una jugada, parado en la calle y con
+datos móviles: la carga inicial pasó de 195 kB gzip a 91 kB.
+
+Es **el único import diferido del proyecto**, y conviene que siga siéndolo salvo
+que aparezca otro corte igual de limpio. Acá vale porque cae justo entre las dos
+pantallas: el vendedor nunca ve un gráfico. El `fallback` del `Suspense` lleva la
+misma altura que `.grafico-caja` a propósito — si no, la tarjeta arranca chata y
+pega un salto cuando el gráfico llega.
+
 **El color del gráfico está validado** para contraste (≥3:1 sobre la superficie)
 con `scripts/validate_palette.js` de la skill de dataviz. El gráfico lee
 `--serie-1` como variable CSS, así que cambiar el color se hace en un solo lugar.
@@ -206,7 +313,15 @@ palabra al lado del punto de color, y el gráfico tiene una vista de tabla
 equivalente.
 
 **Se imprime solo el comprobante.** La regla `@media print` de `estilos.css`
-esconde todo lo que tenga la clase `no-imprimir`.
+esconde **toda la página** (`body * { visibility: hidden }`) y vuelve a mostrar
+únicamente `.comprobante-club`. Antes se listaban a mano los bloques a ocultar con
+una clase `no-imprimir` y salía impresa la pantalla entera —el pozo, el
+formulario, los avisos— cada vez que aparecía algo nuevo que nadie se había
+acordado de marcar.
+
+Por eso **no hay nada que marcar para excluir de la impresión**: lo que no sea el
+comprobante ya queda afuera. Si aparece una clase `no-imprimir` en algún lado, es
+un resto de aquel enfoque y no hace nada.
 
 ## Deploy en Vercel
 

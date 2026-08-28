@@ -119,7 +119,143 @@ Registro de decisiones de producto tomadas durante el diseño inicial del proyec
   Confirmado 2026-07-31. Es el comportamiento que ya tenía el backend, así que no
   hizo falta cambiar nada.
 
-## Pendiente
+## El sistema piensa en la hora del club, no en la del servidor
 
-- Nada bloqueante. Lo que queda anotado como deuda está en
-  `skills/tech-stack.md` (testing automatizado, peso del bundle).
+- **Confirmado 2026-08-04.** Todo lo que sea "qué día es" se resuelve en
+  `America/Argentina/Buenos_Aires`, aunque el Postgres y el Render corran en UTC.
+  Con el servidor en UTC, una jugada cargada a las 21:30 caía al día siguiente:
+  salía impreso en el código del comprobante y movía de día las ventas del
+  gráfico. Tres horas por noche, que es cuando más se vende.
+- La zona es configurable por `TZ_CLUB`, con la de Buenos Aires por defecto. Se
+  aplica en dos lugares y a propósito: el pool la fija para toda la sesión
+  (`src/db.js`) y la función que genera el código la lleva **escrita adentro**
+  (migración 012), porque ese código sale impreso en un papel que la gente guarda
+  para reclamar un premio y no puede depender de cómo arrancó el servidor.
+- **Los comprobantes ya emitidos con la fecha corrida no se tocaron.** Siguen
+  siendo válidos: se buscan por el código entero, que no cambió. Detalle en
+  [[esquema-base-datos]].
+
+## Restaurar una jugada después del sorteo ✅ RESUELTO
+
+> Detectado en revisión de código (2026-08-04) y cerrado el mismo día.
+
+`PATCH /api/jugadas/:id` ya bloqueaba el cambio de números una vez finalizado el
+sorteo, con un argumento explícito: con el extracto a la vista, editar una jugada
+es elegir quién gana. **Restaurar caía en lo mismo y no tenía candado.** Y no
+hace falta inventar una jugada para aprovecharlo: alcanza con anular varias
+mientras el sorteo está abierto —legítimo y habitual— y restaurar después la que
+salió. Equivale a elegir al ganador entre las cargadas.
+
+- `POST /:id/restaurar` lleva ahora la misma condición que el PATCH, y **dentro
+  del `UPDATE`**, no como chequeo previo: si el admin carga el extracto justo
+  entre la lectura y la escritura, no se cuela igual.
+- `errorDeRestauracion()` distingue los tres motivos, como `errorDeCarga()`. Si
+  la jugada además no estaba anulada, gana ese mensaje: es el útil.
+- El botón **Restaurar** sigue apareciendo en sorteos finalizados, porque el
+  criterio del sistema es explicar por qué no se puede en vez de esconder el
+  control. Al principio eso se cumplía mal: el motivo llegaba como error del
+  backend *después* de apretarlo, o sea que la forma de enterarte era chocarte.
+  Desde el 2026-08-26 el botón va atenuado y al tocarlo abre un cartel con el
+  motivo, sin viaje al servidor.
+- Va como botón normal y **no deshabilitado**, a propósito: un `button` con
+  `disabled` no recibe eventos de mouse, así que el navegador nunca muestra su
+  `title`, y en el teléfono directamente no hay hover con el que llegar al
+  motivo. Por lo mismo el aviso es un cartel y no un tooltip.
+
+Regla de negocio actualizada en [[reglas-de-negocio]] → "Anulación y corrección".
+
+## Anular después del sorteo ✅ SIGUE PERMITIDO
+
+> **Confirmado 2026-08-26.** Se evaluó restringirlo, como se restringió
+> restaurar, y se decidió que **no**: anular sigue siendo posible con el sorteo
+> finalizado. No hubo cambio de código; lo que cambió es que ahora está decidido.
+
+`POST /:id/anular` (`jugadas.routes.js:398`) no mira el estado del sorteo — el
+`WHERE` es solo `id` y `anulada`— y así se queda. Del lado del front, anular una
+jugada que está cobrando abre un cartel con a quién le sacás el premio y qué pasa
+con el reparto.
+
+**Por qué se permite.** Anular post-extracto solo puede *quitar* cobradores, no
+elegirlos, que es la diferencia con restaurar: restaurar podía fabricar un
+ganador, anular no. Y hay un caso real detrás — un comprobante que nunca se pagó
+y se detecta tarde. Cerrarlo obligaría a resolver a mano algo que el sistema
+puede registrar.
+
+**Inocuo no es**, y por eso se decidió con lo otro ya hecho: con pozo fijo y
+reparto entre N, anular a un ganador sube a los demás de `pozo/N` a `pozo/(N-1)`
+y mueve la recaudación. Lo que volvía eso peligroso era que pasara de un click y
+sin enterarse; con el cartel de por medio, la consecuencia se ve antes de
+confirmar.
+
+**El rastro, acá, es permanente.** Es el argumento que terminó de cerrar la
+discusión: como restaurar está bloqueado una vez sorteado, `anulada_por` y
+`anulada_at` de una anulación post-sorteo **no se pueden borrar nunca**. El
+agujero del rastro (ver abajo) afecta a las anulaciones de sorteos abiertos, no a
+estas. La operación más delicada es, justamente, la única que queda auditada para
+siempre.
+
+**Opciones anotadas, en orden de costo:**
+
+| # | Qué | Costo | Toca |
+|---|---|---|---|
+| 2 | ⛔ **Descartada (2026-08-26).** Permitir `anular` post-sorteo, pero devolver el impacto (si ganaba, cuántos ganadores quedan y cuánto cobra cada uno) | medio | 1 ruta + `utils/ganadores.js` |
+| 3 | ✅ **Hecha (2026-08-26).** Confirmación obligatoria en el front cuando `j.gano`, con el monto en el texto | bajo | 1 pantalla |
+| 4 | Que la anulación deje rastro aunque se restaure | alto | migración + constraint o tabla de eventos |
+
+> La numeración arranca en 2 a propósito: la opción 1 era el candado de restaurar
+> y ya está hecha.
+
+La 2 se descartó porque la 3 ya cubre lo que resolvía. El impacto se muestra
+**antes** de anular, que es cuando sirve para no hacerlo; devolverlo después, con
+la anulación consumada, informa algo que ya no se puede evitar. Si alguna vez se
+necesita el número exacto del servidor —por concurrencia, o para registrarlo—,
+el planteo queda acá.
+
+**Lo que hace la opción 3.** El cartel nombra a quién le sacás el premio, cuánto
+cobra, y **qué les pasa a los demás**: con el pozo fijo, sacar a un ganador no
+libera plata, la reparte entre los que quedan, que pasan de `pozo/N` a
+`pozo/(N-1)`. Eso mueve plata de gente ajena al error que se está corrigiendo y
+no se deduce mirando la pantalla. Si era el único ganador, avisa que el sorteo
+pasa a vacante.
+
+**Anular se confirma siempre, no solo cuando gana** (2026-08-26, pedido del
+usuario). Al principio la anulación común salía derecho, con el argumento de que
+el cartel en todas se termina apretando sin leer. Ese argumento no se sostiene
+cuando la acción no se puede deshacer: una vez sorteado, restaurar está
+bloqueado, así que anular por error una jugada cualquiera tampoco tiene vuelta
+atrás. El riesgo de que se vuelva un trámite se ataca con el texto —qué jugada,
+de quién, y si se puede restaurar o no— y no sacando el freno.
+
+El criterio no es original de acá: `PATCH /api/sorteos/:id/resultado`
+(`sorteos.routes.js:299-352`) resuelve el mismo dilema —corregir el extracto
+*también* cambia quién cobra— y en vez de bloquear hace visible la consecuencia
+con `dejaron_de_ganar`. Anular queda igual: no se prohíbe, se muestra lo que
+provoca.
+
+## El rastro de la anulación ✅ RESUELTO
+
+> **Cerrado el 2026-08-27** con la migración 013. Era la opción 4 de la tabla de
+> arriba y el último pendiente de producto que quedaba.
+
+`restaurar` nulificaba `anulada_por` y `anulada_at`, así que después no quedaba
+constancia de que la jugada hubiera estado anulada ni de quién lo hizo. No era un
+descuido de la ruta: el `CHECK chk_jugadas_anulacion` (`001_init.sql:91-94`)
+**obliga** a nulificarlos cuando `anulada = false`. Mientras eso fuera así, los
+controles de anular eran controles sin registro.
+
+- El historial se mudó a **`jugadas_eventos`** en vez de relajar el `CHECK`. Cada
+  anulación y cada restauración deja una fila con quién y cuándo, y sobrevive a
+  las que vengan después. El porqué de la tabla aparte está en
+  [[esquema-base-datos]].
+- Los eventos se escriben **en la misma transacción** que el `UPDATE`.
+- **Restaurar dejó de escribir `editada_por`**, que hasta ahora pisaba a quien
+  hubiera corregido el nombre del comprador. Quién restauró vive en el evento.
+- El listado trae `veces_anulada`, y una jugada activa que estuvo anulada lo dice
+  en pantalla: **"Estuvo anulada y se restauró"**. Antes no se distinguía en nada
+  de una que nunca se tocó, que era el punto de todo esto.
+- Una cuenta que dejó eventos **ya no se puede borrar**: `DELETE /auth/usuarios/:id`
+  los cuenta y responde 409. Sin eso, un admin que anuló y restauró no dejaba nada
+  en `jugadas` y la cuenta figuraba como borrable.
+
+Lo que no se recupera es lo anterior a la migración: una anulación revertida
+antes del 2026-08-27 se perdió y no hay de dónde sacarla.
