@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 
+import { config } from '../config.js';
 import { query } from '../db.js';
 import { AppError } from '../middleware/errors.js';
 import { firmarToken, requireAuth, requireAdmin } from '../middleware/auth.js';
@@ -71,12 +72,19 @@ router.post('/login', async (req, res) => {
   }
 
   delete usuario.password_hash;
-  res.json({ token: firmarToken(usuario), usuario });
+  res.json({ token: firmarToken(usuario), usuario, zona_horaria: config.zonaHoraria });
 });
 
-/** GET /api/auth/me → datos del usuario logueado (para rehidratar el frontend). */
+/**
+ * GET /api/auth/me → datos del usuario logueado (para rehidratar el frontend).
+ *
+ * Viaja también la zona del club. El frontend formatea las fechas ahí y no en la
+ * del dispositivo: si no, un vendedor con el teléfono en otra zona vería un día
+ * distinto del que lleva impreso el comprobante. Va con el usuario, y no en un
+ * endpoint aparte, porque es lo primero que la app pide al abrirse.
+ */
 router.get('/me', requireAuth, (req, res) => {
-  res.json({ usuario: req.user });
+  res.json({ usuario: req.user, zona_horaria: config.zonaHoraria });
 });
 
 /**

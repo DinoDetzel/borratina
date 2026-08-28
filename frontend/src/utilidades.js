@@ -18,47 +18,72 @@ export const pesos = (monto) => (monto == null ? '—' : PESOS.format(monto));
 export const numero = (n) => (n == null ? '—' : new Intl.NumberFormat('es-AR').format(n));
 
 /**
- * Convierte a Date lo que manda la API, sin que se corra el día.
+ * La zona del club, que es en la que se muestra **todo** lo que sea "qué día es".
  *
- * Una fecha **sin hora** ('AAAA-MM-DD') el navegador la parsea como medianoche
- * UTC, y al formatearla en la zona local cae en el día anterior en cualquier
- * lugar al oeste de Greenwich: acá, '2026-08-15' se mostraba como 14/08.
+ * No es la del dispositivo a propósito: un vendedor con el teléfono en otra zona
+ * —de viaje, o mal configurado— vería un día distinto del que lleva impreso el
+ * comprobante, y el comprobante es el papel con el que se reclama un premio.
  *
- * Eso es justo lo que el backend evita mandando el día del gráfico como texto y
- * no como fecha (ver `/dashboard/ventas`), así que el cuidado se perdía en la
- * última línea. Completarla con la hora la ancla al día local, que es el día que
- * el vendedor cargó.
+ * La manda el backend junto con el usuario (`/auth/login` y `/auth/me`), así
+ * `TZ_CLUB` sigue siendo la única fuente de verdad y no hay que acordarse de
+ * cambiarla en dos lados. El valor de acá es solo el que rige hasta que llega la
+ * primera respuesta.
+ */
+let zonaClub = 'America/Argentina/Buenos_Aires';
+
+/** La fija el contexto de auth apenas el backend contesta. */
+export const fijarZonaClub = (zona) => {
+  if (zona) zonaClub = zona;
+};
+
+/**
+ * Separa las dos cosas distintas que manda la API, que se leen distinto.
  *
- * Los timestamps completos llevan zona adentro y no necesitan nada: se pasan tal
- * cual.
+ * Un **timestamp completo** es un instante: existe una hora real y hay que
+ * mirarla desde algún lado. Se lee en la zona del club.
+ *
+ * Una **fecha sin hora** ('AAAA-MM-DD', como el día del gráfico de ventas) no es
+ * un instante: ya viene resuelta, el backend la agrupó y lo que queda es
+ * mostrarla. Se lee en UTC, que acá equivale a no aplicarle ninguna zona, y así
+ * el día que se muestra es exactamente el que llegó. Pasarla por la zona del
+ * club la correría un día, que es el bug que tenía el eje del gráfico.
  */
 const soloFecha = /^\d{4}-\d{2}-\d{2}$/;
-const aFecha = (iso) => new Date(soloFecha.test(iso) ? `${iso}T00:00` : iso);
+
+const leer = (iso) =>
+  soloFecha.test(iso)
+    ? { fecha: new Date(`${iso}T00:00:00Z`), zona: 'UTC' }
+    : { fecha: new Date(iso), zona: zonaClub };
 
 export function fechaHora(iso) {
   if (!iso) return '—';
-  return aFecha(iso).toLocaleString('es-AR', {
+  const { fecha, zona } = leer(iso);
+  return fecha.toLocaleString('es-AR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: zona,
   });
 }
 
 /** Solo el día: cuando la hora exacta no le importa a nadie. */
 export function fechaDia(iso) {
   if (!iso) return '—';
-  return aFecha(iso).toLocaleDateString('es-AR', {
+  const { fecha, zona } = leer(iso);
+  return fecha.toLocaleDateString('es-AR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+    timeZone: zona,
   });
 }
 
 export function fechaCorta(iso) {
   if (!iso) return '—';
-  return aFecha(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+  const { fecha, zona } = leer(iso);
+  return fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', timeZone: zona });
 }
 
 /**

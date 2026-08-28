@@ -41,14 +41,40 @@ Contra Supabase, `DATABASE_SSL=true`.
 ## Tests
 
 ```bash
-npm test          # node --test test/
+npm test                                        # node --test test/
+TEST_DATABASE_URL=postgresql://... npm test     # + los tests de rutas
 ```
 
 Corren con el runner de Node (`node:test`), sin dependencias agregadas.
 
 Cubren lo que **no** se puede revisar a ojo: la regla de quién gana, la
-normalización de los números y el código de comprobante. No son tests de las
-rutas — eso sigue siendo verificación manual.
+normalización de los números, el código de comprobante y el freno de intentos de
+login.
+
+### Tests de rutas
+
+`test/rutas.test.js` levanta la API de verdad y verifica los permisos y los
+candados de estado: que un vendedor con `?vendedor_id=3` siga viendo solo lo
+suyo, que una jugada ajena dé 404 y no 403, que el dashboard sea del admin, que
+no se abran dos sorteos a la vez, y que con el extracto cargado no se puedan
+cambiar los números ni restaurar una anulada —pero sí anular, y sí corregir el
+nombre del comprador—.
+
+Son reglas que viven en un `WHERE` y en un `if`: ningún `CHECK` de la base las
+respalda, y se rompen sin que falle nada. Son también las que el `.rules`
+argumenta con más cuidado, así que eran justo las que convenía atar.
+
+**Piden `TEST_DATABASE_URL` con una base descartable.** Estos tests escriben:
+crean cuentas, abren un sorteo y lo finalizan. Van detrás de su propia variable
+para que no haya forma de correrlos sin querer contra Supabase. La base necesita
+las migraciones corridas y **ningún sorteo abierto** (el índice único parcial no
+deja abrir un segundo). Sin la variable, o si no responde, se saltean.
+
+Con Docker, alcanza con el Postgres de más arriba:
+
+```bash
+TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5433/borratina npm test
+```
 
 **Lo importante es `test/ganadores.test.js`.** La regla vive escrita dos veces
 —`condicionGanadora()` en SQL y `esGanadora()` en JS— y nada en el sistema avisa
@@ -150,9 +176,21 @@ y tiene que quedarle por escrito en el papel.
 que se sortea. Va la fecha completa y el frontend imprime solo el día: la hora del
 cierre es asunto interno y en el papel no significa nada.
 
+Los cuatro últimos campos —`periodo`, `estado`, `vendedor` y `fecha`— **no se
+imprimen en el ticket**: van en el payload y las dos maquetas los ignoran. Están
+para quien arme otra vista.
+
 `GET /jugadas/comprobante/:codigo` lo recupera después, para cuando el comprador
 se presenta con el papel en la mano. Acepta el código con o sin guion y en
-minúsculas. Si el sorteo ya está finalizado, agrega `sorteado: true` y `gano`.
+minúsculas. Es lo que consume la pantalla **Consultar comprobante**, que está
+para los dos roles.
+
+Si el sorteo ya está finalizado agrega `sorteado: true` y `gano`, y **cuando esa
+jugada gana** también `cantidad_ganadores` y `premio`. Con el pozo fijo, el
+premio depende de entre cuántos se reparte, así que decir "ganaste" sin el monto
+deja a medias la pregunta que el comprador va a hacer igual. El recuento se paga
+solo en ese caso: una consulta cualquiera no lo dispara, y `null` ahí no
+significa cero ganadores sino que no hace falta.
 
 ### Dashboard (todo admin)
 | Método | Ruta | Qué hace |

@@ -163,13 +163,22 @@ resultado   = recaudación − pozo
   se confunden entre sí al leerlos de un papel o dictarlos por teléfono. **La
   parte de la fecha sí lleva dígitos**, incluidos 0 y 1: ahí el contexto
   desambigua, y por eso cada mitad se valida por separado.
-- El comprobante incluye: código, los 4 números jugados (formateados a dos
-  dígitos), nombre y teléfono del comprador, período del sorteo, importe pagado,
-  vendedor y fecha de carga. Y dos cosas que son la venta en sí: **el pozo** —el
-  premio que el comprador está comprando, y que tiene que quedarle por escrito— y
-  **el día en que se sortea**, que es el del cierre de la ventana de carga.
-- Presentando el código se puede recuperar la jugada. Si el sorteo ya se
-  finalizó, además se informa si esa jugada ganó.
+- **En el papel se imprimen**: el código, los 4 números jugados (formateados a
+  dos dígitos), el nombre y el teléfono del comprador, el importe pagado, y las
+  dos cosas que son la venta en sí: **el pozo** —el premio que el comprador está
+  comprando, y que tiene que quedarle por escrito— y **el día en que se sortea**,
+  que es el del cierre de la ventana de carga.
+
+  > La API devuelve además el período, el estado del sorteo, el vendedor y la
+  > fecha de carga. **Ninguno de esos cuatro va en el ticket**: son datos del
+  > payload, no del papel. Antes esta lista los mezclaba y prometía un
+  > comprobante que no existe.
+
+- Presentando el código se puede recuperar la jugada, desde **Consultar
+  comprobante**, que está para los dos roles: al comprador que viene a reclamar
+  lo atiende el vendedor, no el admin. Si el sorteo ya se finalizó, la pantalla
+  dice si ganó y **cuánto cobra** —con el pozo fijo, "ganaste" sin el monto deja
+  la pregunta a medias— y marca cuáles de sus números salieron.
 - Además de imprimirse, **se manda por WhatsApp**: como foto del ticket o como
   texto con el número de comprobante. Las dos formas hacen falta y por qué está
   en el README del frontend.

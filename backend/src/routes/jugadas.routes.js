@@ -1,5 +1,6 @@
 import { Router } from 'express';
 
+import { config } from '../config.js';
 import { query, withTransaction } from '../db.js';
 import { AppError } from '../middleware/errors.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
@@ -20,10 +21,12 @@ const COLUMNAS = [
 const CAMPOS = COLUMNAS.join(', ');
 const CAMPOS_J = COLUMNAS.map((c) => `j.${c}`).join(', ');
 
+// La zona sale de `config` y no escrita acá: es la del club, y el vendedor que
+// lee "la carga cierra el ..." tiene que leer la misma hora que ve en pantalla.
 const FECHA_LARGA = new Intl.DateTimeFormat('es-AR', {
   dateStyle: 'short',
   timeStyle: 'short',
-  timeZone: 'America/Argentina/Buenos_Aires',
+  timeZone: config.zonaHoraria,
 });
 
 /**
@@ -290,6 +293,24 @@ router.get('/comprobante/:codigo', requireAuth, async (req, res) => {
       fila.extracto,
     );
 
+  // Cuánto cobra. Con el pozo fijo, el premio depende de entre cuántos se
+  // reparte, así que "ganaste" sin el monto deja la pregunta a medias: el
+  // comprador la va a hacer igual, parado enfrente.
+  //
+  // Se cuenta solo si esta jugada ganó: es la única vez que el número sirve, y
+  // así una consulta cualquiera no paga el recuento.
+  let ganadores = null;
+  if (gano) {
+    const { rows: conteo } = await query(
+      `SELECT COUNT(*)::int AS cantidad
+       FROM jugadas j
+       JOIN sorteos s ON s.id = j.sorteo_id
+       WHERE j.sorteo_id = $1 AND j.anulada = false AND ${condicionGanadora('j', 's')}`,
+      [fila.sorteo_id],
+    );
+    ganadores = conteo[0].cantidad;
+  }
+
   res.json({
     comprobante: armarComprobante(fila, {
       periodo: fila.periodo,
@@ -301,6 +322,9 @@ router.get('/comprobante/:codigo', requireAuth, async (req, res) => {
     sorteado,
     extracto: fila.extracto,
     gano: sorteado ? gano : null,
+    // Solo cuando esta jugada gana. `null` no significa cero ganadores.
+    cantidad_ganadores: ganadores,
+    premio: ganadores ? fila.pozo / ganadores : null,
   });
 });
 

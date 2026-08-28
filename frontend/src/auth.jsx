@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 
 import { api, alExpirarSesion, borrarToken, guardarToken, leerToken } from './api.js';
+import { fijarZonaClub } from './utilidades.js';
 
 const ContextoAuth = createContext(null);
 
@@ -16,7 +17,12 @@ export function ProveedorAuth({ children }) {
 
     api
       .yo()
-      .then(({ usuario }) => setUsuario(usuario))
+      // La zona del club viene con el usuario: todo lo que se muestre se
+      // formatea ahí y no en la del dispositivo. Ver `fijarZonaClub`.
+      .then(({ usuario, zona_horaria }) => {
+        fijarZonaClub(zona_horaria);
+        setUsuario(usuario);
+      })
       .catch(() => borrarToken())
       .finally(() => setCargando(false));
   }, []);
@@ -25,8 +31,11 @@ export function ProveedorAuth({ children }) {
   useEffect(() => alExpirarSesion(() => setUsuario(null)), []);
 
   const iniciarSesion = async (nombreUsuario, password) => {
-    const { token, usuario } = await api.login(nombreUsuario, password);
+    const { token, usuario, zona_horaria } = await api.login(nombreUsuario, password);
     guardarToken(token);
+    // Se fija ya en el login y no recién en el `/auth/me` del próximo arranque:
+    // la primera pantalla después de entrar ya muestra fechas.
+    fijarZonaClub(zona_horaria);
     setUsuario(usuario);
     return usuario;
   };

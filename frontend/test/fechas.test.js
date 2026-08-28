@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { fechaCorta, fechaDia, fechaHora } from '../src/utilidades.js';
+import { fechaCorta, fechaDia, fechaHora, fijarZonaClub } from '../src/utilidades.js';
 
 /**
  * `/dashboard/ventas` manda el día como texto 'AAAA-MM-DD' y no como fecha,
@@ -45,17 +45,47 @@ describe('un día sin hora se lee como el día que es', () => {
   });
 });
 
-describe('un timestamp completo sí se lee en la zona de quien mira', () => {
-  // Lo de arriba no puede lograrse ignorando la zona: una hora con `Z` adentro
-  // es un instante, y a las 21:30 UTC en Buenos Aires son las 18:30 del mismo
-  // día. Si esto se rompe, el arreglo se pasó de rosca.
-  it('convierte el instante a hora local', () => {
-    enZona('America/Argentina/Buenos_Aires', () => {
-      assert.match(fechaHora('2026-08-15T21:30:00.000Z'), /^15\/08\/2026, 06:30/);
-    });
-    enZona('UTC', () => {
-      assert.match(fechaHora('2026-08-15T21:30:00.000Z'), /^15\/08\/2026, 09:30/);
-    });
+describe('un timestamp completo sí se lee como instante', () => {
+  // Lo de arriba no puede lograrse ignorando la hora: algo con `Z` adentro es un
+  // instante, y a las 21:30 UTC en el club son las 18:30 del mismo día. Si esto
+  // se rompe, el arreglo se pasó de rosca.
+  it('convierte el instante a la hora del club', () => {
+    assert.match(fechaHora('2026-08-15T21:30:00.000Z'), /^15\/08\/2026, 06:30/);
+  });
+});
+
+describe('las fechas se muestran en la zona del club, no en la del dispositivo', () => {
+  /**
+   * Un vendedor de viaje, o con el teléfono mal configurado, tiene que seguir
+   * viendo el día que lleva impreso el comprobante. Por eso la zona la manda el
+   * backend (`TZ_CLUB`) y no se toma del navegador.
+   */
+  it('un instante se lee igual desde cualquier dispositivo', () => {
+    const nocheDelDomingo = '2026-08-16T01:55:00.000Z'; // 22:55 del sábado en el club
+    const esperado = /^15\/08\/2026, 10:55 p/;
+
+    for (const zonaDelTelefono of ZONAS) {
+      enZona(zonaDelTelefono, () => {
+        assert.match(
+          fechaHora(nocheDelDomingo),
+          esperado,
+          `se corrió con el teléfono en ${zonaDelTelefono}`,
+        );
+      });
+    }
+  });
+
+  it('cambiar TZ_CLUB cambia de verdad lo que se muestra', () => {
+    // Si esto no cambiara, la variable sería decorativa: es lo que pasaba antes,
+    // cuando solo la respetaba el pool de Postgres.
+    const instante = '2026-08-16T01:55:00.000Z';
+    try {
+      fijarZonaClub('UTC');
+      assert.match(fechaHora(instante), /^16\/08\/2026, 01:55/);
+    } finally {
+      fijarZonaClub('America/Argentina/Buenos_Aires');
+    }
+    assert.match(fechaHora(instante), /^15\/08\/2026, 10:55 p/);
   });
 });
 

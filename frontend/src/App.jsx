@@ -4,6 +4,7 @@ import { useAuth } from './auth.jsx';
 import { Cargando } from './componentes/comunes.jsx';
 import Login from './paginas/Login.jsx';
 import Vendedor from './paginas/Vendedor.jsx';
+import ConsultarComprobante from './paginas/ConsultarComprobante.jsx';
 import AdminDashboard from './paginas/AdminDashboard.jsx';
 import AdminSorteos from './paginas/AdminSorteos.jsx';
 import AdminSorteoDetalle from './paginas/AdminSorteoDetalle.jsx';
@@ -28,14 +29,20 @@ function Protegida({ soloAdmin = false, children }) {
 function Navegacion() {
   const { esAdmin } = useAuth();
 
+  // Consultar es de los dos roles: el que atiende al comprador que viene a
+  // reclamar es el vendedor, no el admin.
   const enlaces = esAdmin
     ? [
         ['/admin', 'Panel'],
         ['/admin/sorteos', 'Sorteos'],
         ['/admin/usuarios', 'Usuarios'],
         ['/cargar', 'Cargar jugada'],
+        ['/comprobante', 'Consultar'],
       ]
-    : [['/cargar', 'Cargar jugada']];
+    : [
+        ['/cargar', 'Cargar jugada'],
+        ['/comprobante', 'Consultar'],
+      ];
 
   // Con un solo destino la barra de navegación no aporta nada.
   if (enlaces.length === 1) return null;
@@ -106,6 +113,19 @@ export default function App() {
           <Protegida>
             <Estructura>
               <Vendedor />
+            </Estructura>
+          </Protegida>
+        }
+      />
+
+      {/* De los dos roles: el vendedor es el que atiende al comprador que se
+          presenta con el papel. El backend le muestra solo las suyas. */}
+      <Route
+        path="/comprobante"
+        element={
+          <Protegida>
+            <Estructura>
+              <ConsultarComprobante />
             </Estructura>
           </Protegida>
         }

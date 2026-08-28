@@ -9,6 +9,7 @@
  */
 import bcrypt from 'bcryptjs';
 
+import { config } from '../src/config.js';
 import { pool, withTransaction } from '../src/db.js';
 
 const USUARIOS = [
@@ -23,7 +24,15 @@ const PRECIO_JUGADA = 2000;
 /** El premio anunciado. Es fijo: no depende de cuántas jugadas se vendan. */
 const POZO = 1_500_000;
 
-const periodoActual = () => new Date().toISOString().slice(0, 7); // 'AAAA-MM'
+/**
+ * El período del mes en curso, 'AAAA-MM', en hora del club.
+ *
+ * Con `toISOString()` esto salía en UTC: un 31 a la noche caía en el mes
+ * siguiente y el seed abría el sorteo equivocado. `en-CA` da 'AAAA-MM-DD', que
+ * es lo único que hace falta recortar.
+ */
+const periodoActual = () =>
+  new Date().toLocaleDateString('en-CA', { timeZone: config.zonaHoraria }).slice(0, 7);
 
 /**
  * La ventana de carga del sorteo de prueba: desde hoy hasta que termine el mes.
