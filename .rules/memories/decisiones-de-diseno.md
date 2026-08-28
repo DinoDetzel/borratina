@@ -17,7 +17,7 @@ Registro de decisiones de producto tomadas durante el diseño inicial del proyec
 
 ## Resultado del sorteo
 
-- El número ganador se **carga a mano** por el admin, en base al resultado oficial
+- El extracto ganador se **carga a mano** por el admin, en base al resultado oficial
   de la quiniela (no se genera dentro del sistema).
 
 ## Corrección de errores
@@ -84,12 +84,30 @@ Registro de decisiones de producto tomadas durante el diseño inicial del proyec
 
 ## Comparación de números: orden libre
 
-- **Confirmado (2026-07-30): el orden de los 4 números NO importa.** Una jugada gana
-  si tiene los mismos 4 números que el sorteo en cualquier orden.
-- Implementación elegida: **normalizar ascendentemente** los números al guardarlos,
-  tanto en `jugadas` como en el resultado de `sorteos`. Así el match sigue siendo una
-  comparación posicional barata y el índice compuesto sigue sirviendo.
-- Esto cierra el pendiente que arrastraba el esquema desde el borrador v1.
+> ⚠ **La implementación que describía esta sección quedó vieja con la migración
+> 007, y estuvo un mes diciendo lo contrario que los otros tres archivos.** Decía
+> que el sorteo tenía 4 números, que el extracto se normalizaba y que el match era
+> posicional: las tres cosas dejaron de ser ciertas. Se corrige acá y se deja
+> anotado el error, porque es el que la regla maestra del índice viene
+> advirtiendo: lo que se escribe dos veces se contradice.
+>
+> **La decisión de fondo —que el orden no importa— sigue en pie.** Lo que cambió
+> es cómo se cumple.
+
+- **Confirmado (2026-07-30): el orden de los 4 números NO importa.** Eso no cambió
+  nunca y es lo que sigue rigiendo.
+- Los **4 números de la jugada** se guardan normalizados ascendentemente. Es lo que
+  mantiene utilizable `idx_jugadas_numeros` para el buscador por combinación exacta.
+- El **extracto del sorteo no se normaliza** (migración 007): se guarda como se
+  publicó. Son dos tratamientos distintos a propósito.
+- El match **no es posicional**: la jugada tiene que estar contenida en el extracto
+  de 20 **como multiconjunto**, contando los repetidos. Vive en
+  `backend/src/utils/ganadores.js`.
+- Esto cerró el pendiente que arrastraba el esquema desde el borrador v1.
+
+La regla completa, con ejemplos, está en [[reglas-de-negocio]] → "Cómo se gana".
+El porqué de los dos tratamientos, en [[esquema-base-datos]] → "El resultado es un
+extracto de 20".
 
 ## Ingreso al sistema
 
@@ -126,11 +144,17 @@ Registro de decisiones de producto tomadas durante el diseño inicial del proyec
   Con el servidor en UTC, una jugada cargada a las 21:30 caía al día siguiente:
   salía impreso en el código del comprobante y movía de día las ventas del
   gráfico. Tres horas por noche, que es cuando más se vende.
-- La zona es configurable por `TZ_CLUB`, con la de Buenos Aires por defecto. Se
-  aplica en dos lugares y a propósito: el pool la fija para toda la sesión
-  (`src/db.js`) y la función que genera el código la lleva **escrita adentro**
-  (migración 012), porque ese código sale impreso en un papel que la gente guarda
-  para reclamar un premio y no puede depender de cómo arrancó el servidor.
+- La zona es configurable por `TZ_CLUB`, con la de Buenos Aires por defecto, y
+  **rige en todo lo que se muestra** (2026-08-27): el pool la fija para la sesión
+  (`src/db.js`), los mensajes con fecha del backend la usan, y el frontend la
+  recibe con el usuario en `/auth/login` y `/auth/me`. Se manda en vez de
+  duplicarla del lado del cliente para que siga habiendo una sola fuente de verdad.
+  - Antes de eso solo la respetaba el pool, así que la variable era decorativa:
+    ponerla en otra cosa cambiaba la sesión de la base y nada de lo que la gente
+    lee. Un vendedor con el teléfono en otra zona veía un día distinto del impreso.
+  - La excepción es la función que genera el código, que lleva la zona **escrita
+    adentro** (migración 012): ese código sale impreso en un papel que la gente
+    guarda para reclamar un premio y no puede depender de cómo arrancó el servidor.
 - **Los comprobantes ya emitidos con la fecha corrida no se tocaron.** Siguen
   siendo válidos: se buscan por el código entero, que no cambió. Detalle en
   [[esquema-base-datos]].

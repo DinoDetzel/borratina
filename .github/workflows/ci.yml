@@ -26,6 +26,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Va primero y sin dependencias: es el job más rápido del workflow y el único
+  # que revisa que la documentación no le esté mintiendo a quien la lee.
+  rules:
+    name: Consistencia de .rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: .github/scripts/consistencia-rules.sh
+
   backend:
     name: Backend
     runs-on: ubuntu-latest

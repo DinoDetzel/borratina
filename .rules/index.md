@@ -2,16 +2,33 @@
 
 Mapa de navegación del proyecto. Define las reglas maestras que rigen a los demás archivos.
 
-## Estructura del workspace
+## Los cinco archivos
 
-1. **`skills/`** → **[CAPACIDADES TÉCNICAS]**
-   El *cómo* construimos: stack, arquitectura, convenciones, permisos.
-2. **`memories/`** → **[HISTORIAL Y PROCESOS]**
-   El *qué* estamos haciendo: reglas de negocio del juego, decisiones tomadas, esquema de datos, pendientes priorizados.
-3. **`index.md`** → Este archivo.
+**`skills/`** → el *cómo* se construye.
 
-**Por dónde empezar:** qué falta y en qué orden está en
-[[pendientes]]. El porqué de cada uno vive en el archivo donde se planteó.
+| Archivo | Qué contesta |
+|---|---|
+| [[tech-stack]] | Stack, arquitectura, permisos por endpoint, convenciones, tests |
+
+**`memories/`** → el *qué* y el *porqué*.
+
+| Archivo | Qué contesta |
+|---|---|
+| [[reglas-de-negocio]] | Cómo funciona el juego: cómo se gana, el pozo, el sorteo, el comprobante |
+| [[decisiones-de-diseno]] | Qué se decidió, cuándo y por qué — incluido lo que se descartó |
+| [[esquema-base-datos]] | Las tablas y el porqué de cada migración |
+| [[pendientes]] | Qué falta y en qué orden |
+
+**Por dónde empezar:** qué falta está en [[pendientes]]. El porqué de cada cosa
+vive en el archivo donde se planteó, y desde ahí se enlaza.
+
+> **Ojo con `reglas-de-negocio` y `decisiones-de-diseno`:** la línea entre los dos
+> no está bien trazada y hay temas que viven en los dos —los números repetidos, la
+> anulación, la hora del club—. Eso ya causó una contradicción real: la sección
+> "Comparación de números" de [[decisiones-de-diseno]] estuvo un mes describiendo
+> el modelo anterior a la migración 007 mientras los otros tres archivos decían lo
+> correcto. Ante una discrepancia sobre **cómo funciona hoy**, mandan
+> [[reglas-de-negocio]] y [[esquema-base-datos]].
 
 ## Resumen del proyecto
 
@@ -20,22 +37,18 @@ Los vendedores cargan jugadas (números + datos del comprador) a través de una 
 y el sistema guarda todo en una base de datos para determinar ganadores cuando sale
 el resultado del sorteo mensual.
 
-## Estado actual
+**El sistema está en producción**, con comprobantes reales en manos de
+compradores. Eso **cambia qué migraciones son aceptables**: nada que reescriba
+códigos de comprobante ya emitidos. Ver [[esquema-base-datos]] → migración 012.
 
-| Área | Estado |
-|---|---|
-| Reglas de negocio del juego | ✅ Definidas — se gana con **4 dentro de un extracto de 20**, orden libre y los repetidos cuentan |
-| Decisiones de diseño (roles, permisos, flujos) | ✅ Cerradas — salvo anular post-sorteo y el rastro de la anulación, a definir |
-| Esquema de base de datos | ✅ v3 — 12 migraciones aplicadas en `backend/db/migrations/` |
-| Backend (API) | ✅ Operativo — Express + `pg`, probado end-to-end contra Postgres |
-| Frontend | ✅ Operativo — React + Vite, verificado en navegador y en teléfono |
-| Autenticación | ✅ JWT + middlewares de rol en el backend, sesión persistida en el front |
-| Comprobantes | ✅ Código único por jugada; se imprime y se manda por WhatsApp |
-| En producción | ✅ Sí, con comprobantes reales en manos de compradores |
-
-> Que ya esté en uso **cambia qué migraciones son aceptables**: nada que
-> reescriba códigos de comprobante ya emitidos. Ver [[esquema-base-datos]] →
-> migración 012.
+> Acá **no va una tabla de estado**. Había una, con el conteo de migraciones y
+> qué estaba cerrado y qué no, y envejeció exactamente como avisa
+> [[pendientes]]: llegó a contar doce migraciones cuando ya había trece, y a
+> decir "a definir" sobre dos cosas ya decididas. Era estado duplicado de otros
+> archivos, y la copia de acá era la única sin nadie que la mantuviera.
+>
+> Lo que falta está en [[pendientes]]. Cuántas migraciones hay, en
+> `backend/db/migrations/`. Qué stack se usa, en [[tech-stack]].
 
 ## Reglas maestras
 
@@ -46,4 +59,5 @@ el resultado del sorteo mensual.
 - Antes de escribir código nuevo, revisar `memories/` para no contradecir una decisión ya tomada.
 - Los 4 números de una **jugada** se guardan siempre normalizados en orden ascendente, y nada inserta en `jugadas` sin pasar por `utils/numeros.js`. El **extracto del sorteo no se normaliza**: se guarda como se publicó. Son dos tratamientos distintos a propósito — ver [[esquema-base-datos]].
 - La regla de quién gana vive **solo** en `backend/src/utils/ganadores.js`, en dos formas que tienen que dar siempre lo mismo: `condicionGanadora()` (SQL) y `esGanadora()` (JS). Si se toca una, se toca la otra.
-- Todo lo que sea "qué día es" se resuelve en la **zona horaria del club**, no en la del servidor: `TZ_CLUB` en `config.js`, aplicada en `db.js` y dentro de `generar_codigo_jugada()`.
+- Todo lo que sea "qué día es" se resuelve en la **zona horaria del club**, no en la del servidor ni en la del teléfono: `TZ_CLUB` en `config.js`, aplicada en el pool (`db.js`), en los mensajes con fecha del backend, y en el frontend, que la recibe con el usuario. La **única excepción** es la fecha del código de comprobante, que lleva la zona escrita adentro de `generar_codigo_jugada()` (migración 012) porque sale impresa en un papel. Detalle en [[tech-stack]].
+- Los archivos de `.rules` se enlazan entre sí por nombre, entre corchetes dobles. El CI verifica que ninguno apunte a un archivo inexistente, que cada migración tenga su fila en [[esquema-base-datos]], y que las rutas de código que se mencionan existan (`.github/scripts/consistencia-rules.sh`).

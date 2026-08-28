@@ -27,7 +27,7 @@ Dos roles dentro de `usuarios`: `vendedor` y `admin`. Los compradores **no** son
 | Ver jugadas de otros vendedores | ❌ | ✅ |
 | Editar / anular una jugada | ❌ | ✅ |
 | Crear / cerrar un sorteo | ❌ | ✅ |
-| Cargar el número ganador del sorteo | ❌ | ✅ |
+| Cargar el extracto del sorteo (20 números) | ❌ | ✅ |
 
 Reglas de implementación para la API:
 - Todo endpoint de escritura sobre `jugadas` (crear) requiere JWT válido con rol `vendedor` o `admin`.
@@ -69,12 +69,15 @@ backend/
     ├── utils/
     │   ├── numeros.js           # normalizar / validar los 4 números
     │   ├── ganadores.js         # la regla "4 dentro de 20", en SQL y en JS
-    │   └── comprobante.js       # normalizar el código + armar el comprobante
+    │   ├── comprobante.js       # normalizar el código + armar el comprobante
+    │   └── intentos-de-login.js # freno de fuerza bruta, por cuenta
     └── routes/
         ├── auth.routes.js
         ├── sorteos.routes.js
         ├── jugadas.routes.js
         └── dashboard.routes.js
+
+test/                            # node:test — ver "Tests", más abajo
 ```
 
 Convenciones:
@@ -128,7 +131,7 @@ frontend/
     ├── fuentes/             # woff2 propios: Inter, Oswald, Barlow, Yellowtail
     ├── componentes/         # comunes, Comprobante, GraficoVentas,
     │                        # BotonCompartir, CampoFechaHora, CamposExtracto
-    └── paginas/             # Login, Vendedor, Admin*
+    └── paginas/             # Login, Vendedor, ConsultarComprobante, Admin*
 ```
 
 Convenciones:
@@ -187,6 +190,18 @@ para tocar un `.css`.
 
 El workflow además exige `# skipped 0` y un piso de tests corridos, como respaldo
 por si algo se escapa por una vía que no previmos.
+
+### La documentación también se verifica
+
+`.github/scripts/consistencia-rules.sh` ata lo que de `.rules/` es comprobable
+por máquina: que ningún enlace entre corchetes apunte a un archivo inexistente,
+que cada migración del disco tenga su fila en [[esquema-base-datos]], que ningún
+`.md` afirme un número de migraciones que no sea el real, y que las rutas de
+código citadas existan.
+
+El criterio no se puede chequear con `grep`, pero las afirmaciones sobre el repo
+sí, y son las que se cuelan justamente por aburridas: el índice llegó a contar
+doce migraciones cuando había trece. Corre solo, sin base ni dependencias.
 
 Sin cubrir: cómo se **ve** el comprobante, que está anotado como pendiente aparte.
 

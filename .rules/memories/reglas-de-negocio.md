@@ -72,7 +72,7 @@ Jugar un número repetido es entonces una apuesta más difícil que jugar 4 dist
 |---|---|---|
 | `abierto` | Los vendedores pueden cargar jugadas | Admin abre el sorteo del mes |
 | `cerrado` | Ya no se cargan jugadas, todavía no salió el resultado | Admin cierra la carga |
-| `finalizado` | Se cargó el número ganador y se calcularon los ganadores | Admin carga el resultado |
+| `finalizado` | Se cargó el extracto y se calcularon los ganadores | Admin carga el resultado |
 
 - Las transiciones son **solo hacia adelante**: `abierto` → `cerrado` → `finalizado`.
 - Una jugada solo puede cargarse mientras el sorteo está `abierto` **y además la
