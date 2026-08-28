@@ -48,11 +48,24 @@ const alcanzable = pool
 
 const activo = Boolean(urlDePrueba) && alcanzable;
 
-const saltear = activo
-  ? false
-  : urlDePrueba
-    ? 'TEST_DATABASE_URL no responde'
-    : 'sin TEST_DATABASE_URL';
+const motivo = urlDePrueba ? 'TEST_DATABASE_URL no responde' : 'sin TEST_DATABASE_URL';
+
+/**
+ * Saltear es lo correcto local —nadie quiere levantar un Postgres para tocar un
+ * `.css`— pero en CI es un agujero: un `describe` salteado registra **cero**
+ * tests, no tests salteados, así que la suite adelgaza sin que ningún contador
+ * lo note y el build queda verde con treinta y pico de asserts mudos.
+ *
+ * En CI, entonces, esto revienta en vez de callarse.
+ */
+if (process.env.CI && !activo) {
+  throw new Error(
+    `Los tests de rutas no pueden saltearse en CI (${motivo}). ` +
+      'El workflow tiene que levantar un Postgres y pasar TEST_DATABASE_URL.',
+  );
+}
+
+const saltear = activo ? false : motivo;
 
 /** Un período lejano, para no pisarse con datos reales si la base no está vacía. */
 const PERIODO = '2099-12';

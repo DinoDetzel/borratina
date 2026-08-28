@@ -173,6 +173,21 @@ escrito dos veces**, porque es lo que se desincroniza sin que nada avise. Los de
 rutas van por otro motivo: son reglas que viven en un `WHERE` y en un `if`, donde
 ningún `CHECK` de la base las respalda.
 
+### En CI se corren todos, sin excepción
+
+`.github/workflows/ci.yml` levanta un Postgres de servicio y le pasa las dos
+variables, así que en GitHub la suite corre entera.
+
+Y **cuando la variable `CI` está puesta, los tests que dependen de la base dejan
+de saltearse y fallan**. Es la parte que importa: un `describe` salteado registra
+*cero* tests, no tests salteados, así que la suite adelgaza sin que ningún
+contador se entere y el build queda verde con sesenta y pico de asserts mudos.
+Local siguen salteándose, que es lo correcto — nadie quiere levantar un Postgres
+para tocar un `.css`.
+
+El workflow además exige `# skipped 0` y un piso de tests corridos, como respaldo
+por si algo se escapa por una vía que no previmos.
+
 Sin cubrir: cómo se **ve** el comprobante, que está anotado como pendiente aparte.
 
 ## Pendiente de definir

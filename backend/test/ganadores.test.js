@@ -90,6 +90,14 @@ describe('paridad entre la regla SQL y la JS', async () => {
         .catch(() => false)
     : false;
 
+  // Local se saltean; en CI no. Este bloque es el que justifica la suite, y un
+  // build verde porque nadie le pasó la base es peor que uno rojo.
+  if (process.env.CI && !disponible) {
+    throw new Error(
+      'Los tests de paridad no pueden saltearse en CI: falta DATABASE_URL o la base no responde.',
+    );
+  }
+
   after(async () => {
     if (pool) await pool.end();
   });

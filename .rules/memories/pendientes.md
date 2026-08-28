@@ -29,19 +29,12 @@ distinta cada semana. Se nombran por lo que son.
 |---|---|---|
 | Secretos y variables entre Vercel, Render y Supabase | **BAJA** | [[tech-stack]] → Pendiente de definir |
 | Ver el comprobante renderizado, no solo su contenido | **BAJA** | `frontend/README.md` → la imagen en canvas |
-| Que los tests de rutas y de paridad corran solos en CI | **BAJA** | [[tech-stack]] → Tests |
 
 ## Por qué están donde están
 
 **Los secretos entre Vercel, Render y Supabase.** Llevan tiempo anotados y sin
 síntoma: hoy se cargan a mano en cada panel y funciona. Se volvería urgente si
 entra alguien más al proyecto o si hay que rotar el `JWT_SECRET`.
-
-**Que los tests corran solos.** Los de rutas piden `TEST_DATABASE_URL` y los de
-paridad `DATABASE_URL`; sin esas variables se saltean **en silencio**, que es lo
-correcto para trabajar local pero deja abierta la puerta a que nunca corran. Un
-workflow que levante un Postgres y las ponga cierra eso. Hoy no hay CI de ningún
-tipo, así que empezar por acá es empezar por el medio.
 
 **Ver el comprobante renderizado.** Los tests de sincronía cubren que las dos
 versiones digan lo mismo, pero no que se vean igual: posiciones, tamaños y
@@ -52,6 +45,13 @@ ticket descuadrado se ve a simple vista la primera vez que se manda uno.
 ## Cerrados
 
 **2026-08-27**
+
+- **Los tests ahora corren solos.** `.github/workflows/ci.yml`, con un Postgres
+  de servicio. Lo que de verdad cerró el agujero no fue el workflow sino que
+  **con `CI` puesto los tests dejan de saltearse y fallan**: un `describe`
+  salteado registra *cero* tests, así que la suite adelgazaba sin que ningún
+  contador lo notara. El workflow exige además `# skipped 0` y un piso de tests
+  corridos. Detalle en [[tech-stack]] → "En CI se corren todos".
 
 - **Las fechas del gráfico salían corridas un día.** `fechaCorta()` metía el día
   del backend —texto `AAAA-MM-DD`, mandado así justamente para que no se corriera—

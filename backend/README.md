@@ -76,6 +76,17 @@ Con Docker, alcanza con el Postgres de más arriba:
 TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5433/borratina npm test
 ```
 
+### En CI no se saltea nada
+
+`.github/workflows/ci.yml` levanta un Postgres de servicio y pasa las dos
+variables. Y **cuando `CI` está puesta, los tests que dependen de la base fallan
+en vez de saltearse**: un `describe` salteado registra *cero* tests, no tests
+salteados, así que sin ese freno la suite adelgazaba en silencio y el build
+quedaba verde con la mitad muda. Local se siguen salteando, que es lo correcto.
+
+El workflow corre además las migraciones dos veces, para verificar que el runner
+sea idempotente como promete.
+
 **Lo importante es `test/ganadores.test.js`.** La regla vive escrita dos veces
 —`condicionGanadora()` en SQL y `esGanadora()` en JS— y nada en el sistema avisa
 si se separan: el listado usa una y el comprobante la otra, así que una jugada

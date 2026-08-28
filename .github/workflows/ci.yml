@@ -1,0 +1,169 @@
+# CI de la borratina.
+#
+# Lo que este workflow viene a resolver no es "correr los tests": es que corran
+# **todos**. Los de paridad piden `DATABASE_URL` y los de rutas `TEST_DATABASE_URL`,
+# y sin esas variables se saltean en silencio. Eso está bien para trabajar local
+# —nadie quiere levantar un Postgres para tocar un `.css`— pero deja abierta la
+# puerta a que nunca corran, que es exactamente lo que pasaba: 64 de los 119
+# asserts solo se ejecutaban si alguien se acordaba.
+#
+# Por eso hay un Postgres de servicio y, sobre todo, por eso el paso de tests
+# **falla si el contador de salteados no es cero**. Sin esa verificación, alguien
+# rompe la conexión, el workflow queda en verde con la mitad de la suite muda, y
+# volvemos al problema original con un badge que dice lo contrario.
+
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+# Un push nuevo sobre la misma rama cancela el anterior: no tiene sentido esperar
+# el resultado de un commit que ya quedó atrás.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # La misma versión mayor que Supabase, para que un `<@` o un `num_nulls`
+        # no se comporten distinto acá que en producción.
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: borratina
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/borratina
+      DATABASE_SSL: 'false'
+      JWT_SECRET: secreto-de-ci-no-usar-en-ningun-lado
+      # Apunta a la misma base que DATABASE_URL, y acá está bien: es un contenedor
+      # descartable que nace y muere con el job. La variable existe aparte para que
+      # nadie corra los tests de rutas —que escriben— contra Supabase sin querer.
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/borratina
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # La que declara `engines` en el package.json.
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar
+        working-directory: backend
+        run: npm ci
+
+      - name: Migrar
+        working-directory: backend
+        run: npm run migrate
+
+      - name: Migrar de nuevo, que no tiene que hacer nada
+        working-directory: backend
+        # El runner promete ser idempotente ("correrlo dos veces no repite nada").
+        # Es barato verificarlo, y una migración que se aplica dos veces contra
+        # producción no avisa hasta que ya rompió algo.
+        run: |
+          set -o pipefail
+          npm run migrate 2>&1 | tee segunda-corrida.txt
+          if ! grep -q 'Sin migraciones pendientes' segunda-corrida.txt; then
+            echo "::error::La segunda corrida de migraciones hizo algo. El runner tiene que ser idempotente."
+            exit 1
+          fi
+
+      - name: Tests
+        working-directory: backend
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee salida.txt
+
+      - name: Exigir que la suite haya corrido entera
+        working-directory: backend
+        # Dos comprobaciones, porque un test puede desaparecer de dos formas
+        # distintas y solo una se ve en el contador de salteados.
+        #
+        # El freno principal está en los propios archivos: con `CI` puesto,
+        # `rutas.test.js` y el bloque de paridad revientan en vez de saltearse.
+        # Esto es el cinturón además de los tirantes.
+        env:
+          # Piso, no cantidad exacta: agregar tests no tiene que romper el build.
+          # Si alguna vez se borran tests a propósito, se baja a mano y queda en
+          # el diff, que es donde se discute.
+          MINIMO: '97'
+        run: |
+          salteados=$(sed -n 's/^# skipped //p' salida.txt | head -1)
+          corridos=$(sed -n 's/^# tests //p' salida.txt | head -1)
+          echo "Corridos: ${corridos:-?}   Salteados: ${salteados:-?}"
+
+          if [ "$salteados" != "0" ]; then
+            echo "::error::Se saltearon ${salteados} tests. Acá tienen que correr todos."
+            exit 1
+          fi
+
+          # Un `describe` salteado registra CERO tests, no tests salteados: la
+          # suite adelgaza y el contador de arriba no se entera. Por eso el piso.
+          if [ "${corridos:-0}" -lt "$MINIMO" ]; then
+            echo "::error::Corrieron ${corridos:-0} tests y se esperaban al menos ${MINIMO}."
+            echo "::error::Probablemente una suite entera dejó de registrarse: revisá que"
+            echo "::error::DATABASE_URL y TEST_DATABASE_URL lleguen bien al job."
+            exit 1
+          fi
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Tests
+        working-directory: frontend
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee salida.txt
+
+      - name: Exigir que no se haya salteado ninguno
+        working-directory: frontend
+        # Acá hoy no hay nada que dependa del entorno, así que el contador tiene
+        # que dar cero siempre. Sirve para que un `.skip` puesto "por un rato" no
+        # se quede a vivir.
+        run: |
+          salteados=$(sed -n 's/^# skipped //p' salida.txt | head -1)
+          echo "Salteados: ${salteados:-no se pudo leer}"
+          if [ "$salteados" != "0" ]; then
+            echo "::error::Se saltearon ${salteados:-?} tests del frontend."
+            exit 1
+          fi
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
