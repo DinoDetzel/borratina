@@ -138,7 +138,38 @@ Convenciones:
   Lo que **no** está cubierto: las rutas del backend, que se siguen verificando a
   mano, y **cómo se ve** el comprobante —posiciones, tamaños, espaciados—, que
   necesitaría render y comparación visual.
-- Manejo de variables de entorno / secretos entre Vercel, Render y Supabase.
+- **Variables de entorno y secretos entre Vercel, Render y Supabase.** Estaba
+  anotado en una línea desde el principio; el inventario se hizo el 2026-08-27 y
+  quedó más chico de lo que parecía.
+
+  | Variable | Dónde vive | ¿Secreta? |
+  |---|---|---|
+  | `DATABASE_URL` | Render + `.env` local | **sí**, lleva la contraseña de Supabase |
+  | `JWT_SECRET` | Render + `.env` local | **sí** |
+  | `CORS_ORIGIN` | Render | no, pero si está mal el front queda mudo |
+  | `DATABASE_SSL`, `JWT_EXPIRES_IN`, `PORT`, `TZ_CLUB` | Render | no |
+  | `VITE_API_URL` | Vercel | no |
+  | `BACKEND_URL` | solo en desarrollo | no |
+
+  **Son dos secretos, no una constelación.** El `.env` está ignorado por git y el
+  local apunta a un Postgres de desarrollo, no a Supabase. Lo que falta no es un
+  gestor de secretos —para dos valores y un solo desarrollador, eso agrega una
+  dependencia externa y un punto de falla para resolver un problema que no
+  existe— sino documentación operativa. Tres huecos concretos:
+
+  1. **No hay un solo lugar que diga qué va dónde.** Hoy se deduce cruzando el
+     `.env.example` con la sección de deploy de cada README. Si cambia el dominio
+     de Vercel, hay que acordarse de que `CORS_ORIGIN` vive en Render.
+  2. **El frontend no tiene `.env.example`.** `VITE_API_URL` es obligatoria en
+     Vercel —sin ella el front pega a `/api` del mismo dominio, que ahí no
+     existe— y solo está mencionada en prosa.
+  3. **No está escrito cómo rotar el `JWT_SECRET`.** El mecanismo sí; la
+     consecuencia operativa no: cambiarlo **cierra todas las sesiones abiertas de
+     golpe**. Hacerlo un martes a las 21 deja a los vendedores afuera en pleno
+     horario de venta.
+
+  Se vuelve urgente si entra alguien más al proyecto o si hay que rotar el
+  secreto de verdad. Consultado el 2026-08-27: se deja para después.
 - El bundle está partido en dos desde el 2026-08-27: **302 kB / 91 kB gzip** de
   carga inicial y **355 kB / 103 kB gzip** del gráfico, que se pide aparte. Antes
   era un solo archivo de 657 kB (195 gzip) y el build avisaba que pasaba los
