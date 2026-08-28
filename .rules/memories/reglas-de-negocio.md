@@ -154,7 +154,8 @@ resultado   = recaudación − pozo
 
 - Los primeros seis dígitos son la **fecha en que se cargó la jugada**, no la de
   hoy: un comprobante regenerado o cargado con fecha anterior conserva la de la
-  venta.
+  venta. Y es la fecha **en la hora del club**: con el servidor en UTC, una venta
+  de las 21:30 se llevaba impreso el día siguiente.
 - La segunda parte es **aleatoria, no correlativa**: si fuera un número
   secuencial, cualquiera podría adivinar los comprobantes ajenos probando
   números cercanos.
@@ -164,9 +165,14 @@ resultado   = recaudación − pozo
   desambigua, y por eso cada mitad se valida por separado.
 - El comprobante incluye: código, los 4 números jugados (formateados a dos
   dígitos), nombre y teléfono del comprador, período del sorteo, importe pagado,
-  vendedor y fecha de carga.
+  vendedor y fecha de carga. Y dos cosas que son la venta en sí: **el pozo** —el
+  premio que el comprador está comprando, y que tiene que quedarle por escrito— y
+  **el día en que se sortea**, que es el del cierre de la ventana de carga.
 - Presentando el código se puede recuperar la jugada. Si el sorteo ya se
   finalizó, además se informa si esa jugada ganó.
+- Además de imprimirse, **se manda por WhatsApp**: como foto del ticket o como
+  texto con el número de comprobante. Las dos formas hacen falta y por qué está
+  en el README del frontend.
 - La visibilidad es la misma que para el resto: un vendedor solo puede consultar
   los comprobantes de las jugadas que él cargó; el admin, todos.
 
@@ -174,9 +180,24 @@ resultado   = recaudación − pozo
 
 - Una jugada cargada **no puede ser modificada ni anulada por el vendedor**.
 - Solo el **admin** puede editar o anular una jugada, desde su panel.
-- Anular es **reversible** y **no borra la fila**: se marca la jugada, se registra
-  qué admin lo hizo y cuándo. Nunca se hace `DELETE` sobre `jugadas`.
+- Anular **no borra la fila**: se marca la jugada, se registra qué admin lo hizo y
+  cuándo. Nunca se hace `DELETE` sobre `jugadas`.
 - Una jugada anulada deja de contar tanto para el pozo como para los ganadores.
+- Anular es **reversible, pero solo mientras el sorteo no esté finalizado.** Con
+  el extracto cargado, restaurar una anulada es elegir quién cobra: bastaría con
+  anular varias jugadas mientras el sorteo está abierto —cosa legítima y
+  habitual— y restaurar después la que salió. Es la misma razón por la que no se
+  pueden cambiar los números después del sorteo.
+- **Anular sí es posible después del sorteo** (confirmado 2026-08-26). Quitar un
+  cobrador no es lo mismo que elegirlo —esa es la diferencia con restaurar, que
+  podía fabricar un ganador— y hay un caso real detrás: un comprobante que nunca
+  se pagó y se detecta tarde.
+- Antes de anular, el sistema **muestra lo que provoca**: a quién le saca el
+  premio, cuánto cobraba, y que los demás pasan de `pozo/N` a `pozo/(N-1)`. No se
+  prohíbe la operación, se hace visible la consecuencia — el mismo criterio con
+  el que se corrige el extracto.
+- Toda anulación queda **registrada a nombre de quien la hizo**, y después del
+  sorteo ese registro es permanente, porque ya no se puede restaurar.
 
 ## Visibilidad
 

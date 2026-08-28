@@ -41,7 +41,7 @@ function Navegacion() {
   if (enlaces.length === 1) return null;
 
   return (
-    <nav className="nav no-imprimir">
+    <nav className="nav">
       {enlaces.map(([a, texto]) => (
         <NavLink
           key={a}
@@ -63,7 +63,7 @@ function Cabecera() {
   const { usuario, cerrarSesion } = useAuth();
 
   return (
-    <header className="cabecera no-imprimir">
+    <header className="cabecera">
       <span className="marca">al Rojo Vivo!!! - Borratina</span>
       <span className="quien">
         {usuario.nombre}

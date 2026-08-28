@@ -17,9 +17,27 @@ export const pesos = (monto) => (monto == null ? '—' : PESOS.format(monto));
 
 export const numero = (n) => (n == null ? '—' : new Intl.NumberFormat('es-AR').format(n));
 
+/**
+ * Convierte a Date lo que manda la API, sin que se corra el día.
+ *
+ * Una fecha **sin hora** ('AAAA-MM-DD') el navegador la parsea como medianoche
+ * UTC, y al formatearla en la zona local cae en el día anterior en cualquier
+ * lugar al oeste de Greenwich: acá, '2026-08-15' se mostraba como 14/08.
+ *
+ * Eso es justo lo que el backend evita mandando el día del gráfico como texto y
+ * no como fecha (ver `/dashboard/ventas`), así que el cuidado se perdía en la
+ * última línea. Completarla con la hora la ancla al día local, que es el día que
+ * el vendedor cargó.
+ *
+ * Los timestamps completos llevan zona adentro y no necesitan nada: se pasan tal
+ * cual.
+ */
+const soloFecha = /^\d{4}-\d{2}-\d{2}$/;
+const aFecha = (iso) => new Date(soloFecha.test(iso) ? `${iso}T00:00` : iso);
+
 export function fechaHora(iso) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleString('es-AR', {
+  return aFecha(iso).toLocaleString('es-AR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -31,7 +49,7 @@ export function fechaHora(iso) {
 /** Solo el día: cuando la hora exacta no le importa a nadie. */
 export function fechaDia(iso) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('es-AR', {
+  return aFecha(iso).toLocaleDateString('es-AR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -40,7 +58,7 @@ export function fechaDia(iso) {
 
 export function fechaCorta(iso) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+  return aFecha(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
 }
 
 /**

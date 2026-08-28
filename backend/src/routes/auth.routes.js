@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { query } from '../db.js';
 import { AppError } from '../middleware/errors.js';
 import { firmarToken, requireAuth, requireAdmin } from '../middleware/auth.js';
+import { limpiarIntentos, registrarFallo, verificarIntentos } from '../utils/intentos-de-login.js';
 
 const router = Router();
 
@@ -28,10 +29,17 @@ router.post('/login', async (req, res) => {
     throw new AppError(400, 'Usuario y contraseña son obligatorios.');
   }
 
+  const clave = normalizarUsuario(nombreUsuario);
+
+  // Antes de la base y antes de bcrypt: un intento frenado no cuesta nada. Se
+  // cuenta por cuenta y no por IP, para no dejar afuera a todos los vendedores
+  // cuando comparten la red del club — el porqué completo está en el módulo.
+  verificarIntentos(clave);
+
   const { rows } = await query(
     `SELECT id, nombre, usuario, rol, activo, password_hash
      FROM usuarios WHERE usuario = $1`,
-    [normalizarUsuario(nombreUsuario)],
+    [clave],
   );
   const usuario = rows[0];
 
@@ -42,11 +50,21 @@ router.post('/login', async (req, res) => {
   if (!usuario) {
     // Hasheamos igual para que el tiempo de respuesta no delate si existe.
     await bcrypt.compare(password, '$2b$10$invalidinvalidinvalidinvalidinvalidinvalidinvalidinva');
+    // También se cuenta contra un usuario que no existe: si no, probar nombres
+    // inventados sería gratis y el freno delataría cuáles están registrados.
+    registrarFallo(clave);
     throw credencialesInvalidas;
   }
 
   const coincide = await bcrypt.compare(password, usuario.password_hash);
-  if (!coincide) throw credencialesInvalidas;
+  if (!coincide) {
+    registrarFallo(clave);
+    throw credencialesInvalidas;
+  }
+
+  // Acertó la contraseña: el contador se limpia acá y no después del chequeo de
+  // `activo`. Lo que se frena es adivinar contraseñas, y esta ya no se adivinó.
+  limpiarIntentos(clave);
 
   if (!usuario.activo) {
     throw new AppError(403, 'La cuenta está desactivada. Contactá al administrador.');
@@ -188,10 +206,13 @@ router.delete('/usuarios/:id', requireAuth, requireAdmin, async (req, res) => {
   if (!existe[0]) throw new AppError(404, 'No existe ese usuario.');
 
   const { rows: uso } = await query(
+    // Los eventos cuentan como "tocó algo" por dos motivos: son historial que se
+    // perdería, y además la FK de jugadas_eventos impediría el DELETE igual.
+    // Mejor un 409 que explica que un error de clave foránea.
     `SELECT
-       COUNT(*) FILTER (WHERE vendedor_id = $1)::int AS cargadas,
-       COUNT(*) FILTER (WHERE anulada_por = $1 OR editada_por = $1)::int AS tocadas
-     FROM jugadas`,
+       (SELECT COUNT(*) FROM jugadas WHERE vendedor_id = $1)::int AS cargadas,
+       (SELECT COUNT(*) FROM jugadas WHERE anulada_por = $1 OR editada_por = $1)::int
+       + (SELECT COUNT(*) FROM jugadas_eventos WHERE usuario_id = $1)::int AS tocadas`,
     [id],
   );
   const { cargadas, tocadas } = uso[0];

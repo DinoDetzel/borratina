@@ -23,6 +23,8 @@
 | `009_sin_email.sql` | Se elimina `usuarios.email` |
 | `010_corregir_extracto.sql` | El extracto se puede corregir, y queda quién, cuándo y qué decía antes |
 | `011_correccion_de_jugada.sql` | `jugadas.numeros_anteriores`: qué decía la jugada antes de corregirla |
+| `012_fecha_del_codigo_en_hora_argentina.sql` | La fecha del código de comprobante se calcula en hora del club, no en UTC |
+| `013_historial_de_anulaciones.sql` | `jugadas_eventos`: quién anuló y quién restauró, aunque la jugada vuelva a estar activa |
 
 ## El resultado es un extracto de 20
 
@@ -145,6 +147,60 @@ Decisiones:
 > tipo de migración deja de serlo**: invalidaría los papeles que la gente tiene
 > en la mano.
 
+## La fecha del código va en hora del club (migración 012)
+
+`to_char()` sobre un `TIMESTAMPTZ` usa la zona de la sesión, y el Postgres corre
+en UTC: una jugada cargada un domingo a las 21:55 se llevaba impreso el lunes.
+Tres horas por día, todas las noches, que es justo cuando más se vende.
+
+```sql
+CREATE OR REPLACE FUNCTION generar_codigo_jugada(fecha TIMESTAMPTZ DEFAULT now())
+RETURNS TEXT AS $$ ... to_char(fecha AT TIME ZONE 'America/Argentina/Buenos_Aires', 'YYMMDD') ... $$;
+```
+
+- **La zona va escrita dentro de la función**, no librada a la configuración de
+  la sesión: el código sale impreso en un papel que la gente guarda para reclamar
+  un premio y no puede depender de cómo arrancó el servidor. La sesión igual fija
+  la zona (ver `src/db.js`), pero para todo lo demás — el agrupado por día del
+  gráfico de ventas se corría igual.
+- **Los códigos ya emitidos NO se tocaron**, al revés que en la 004. Para entonces
+  el sistema ya estaba en uso y había comprobantes en manos de compradores. Uno
+  con la fecha corrida sigue siendo válido: se busca por el código entero, que no
+  cambió, y la fecha real de la venta está en `created_at`. Regenerarlos habría
+  roto el papel.
+
+## El historial de anulaciones va aparte (migración 013)
+
+```sql
+CREATE TABLE jugadas_eventos (
+    id SERIAL PRIMARY KEY,
+    jugada_id INTEGER NOT NULL REFERENCES jugadas(id),
+    tipo VARCHAR(20) NOT NULL,
+    usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT chk_jugadas_eventos_tipo CHECK (tipo IN ('anulada', 'restaurada'))
+);
+```
+
+- **Tabla aparte y no relajar el `CHECK`.** Conservar `anulada_por` con
+  `anulada = false` volvería ambigua esa columna: dejaría de significar "quién la
+  tiene anulada" para pasar a "quién la anuló alguna vez", y hay código leyéndola
+  con el primer sentido. Así quedan separadas dos preguntas distintas: `jugadas`
+  dice **cómo está hoy**, `jugadas_eventos` **qué le fue pasando**.
+- `chk_jugadas_anulacion` **se conserva igual**: sigue garantizando que el estado
+  actual sea coherente, que es para lo que servía.
+- Los eventos se escriben **dentro de la misma transacción** que el `UPDATE`. Un
+  historial al que a veces le falta una entrada no sirve como historial.
+- Restaurar dejó de escribir `editada_por`. Antes lo hacía y pisaba a quien
+  hubiera corregido el nombre del comprador; ahora quién restauró vive en el
+  evento, que es su lugar.
+- La FK sin `ON DELETE` es a propósito: una cuenta que dejó eventos no se puede
+  borrar. `DELETE /auth/usuarios/:id` los cuenta y responde 409, así que el freno
+  llega como mensaje y no como error de clave foránea.
+- El backfill traslada las anulaciones **vigentes**, que son las únicas
+  recuperables. Lo que se anuló y se restauró antes de esta migración se perdió y
+  no hay de dónde sacarlo.
+
 ## Cambios respecto de v1
 
 | # | Cambio | Motivo |
@@ -157,6 +213,13 @@ Decisiones:
 | 6 | `finalizado` exige resultado cargado; los 4 números van juntos o ninguno | Evita sorteos finalizados a medias |
 
 ## Tablas
+
+> ⚠️ **Esto es el `001_init.sql`, no el esquema de hoy.** Se conserva como punto
+> de partida: las secciones de arriba son los deltas que le aplicaron las
+> migraciones 002 a 012. Leído solo, miente en varias cosas —`usuarios.email` ya
+> no existe, `sorteos` no tiene `numero_1..4` sino `numeros` (20), y `pozo_total`
+> se llama `pozo` y no se calcula—. **Para saber cómo está una tabla hoy, mirar
+> las migraciones o la base.**
 
 ```sql
 -- Vendedores y administradores
@@ -253,9 +316,14 @@ CREATE INDEX idx_jugadas_comprador_trgm
 
 ## Normalización de números (clave del diseño)
 
-Como el orden no importa, tanto la jugada como el resultado se guardan **ordenados
-ascendentemente**. Así el match se reduce a una comparación posicional trivial que
-sigue usando `idx_jugadas_numeros`.
+Como el orden no importa, **los 4 números de la jugada** se guardan ordenados
+ascendentemente. Eso es lo que mantiene utilizable `idx_jugadas_numeros` para
+buscar por combinación exacta.
+
+> El **extracto no se normaliza** desde la migración 007: se guarda como salió
+> publicado. Lo que decía antes esta sección —que ambos lados iban normalizados y
+> el match era posicional— valía con un resultado de 4 números. Ver "El resultado
+> es un extracto de 20", más arriba.
 
 ```js
 // backend/src/utils/numeros.js
@@ -269,16 +337,29 @@ normalizar([7, 23, 45, 88]);  // → [7, 23, 45, 88]  ← misma jugada
 > antes. El `CHECK` de orden es la red de seguridad que hace fallar el INSERT si
 > alguien se saltea `normalizar()`.
 
-## Cálculo del pozo
+## El pozo no se calcula
+
+Desde la migración 005 el pozo es un **dato de entrada**: lo define el admin al
+abrir el sorteo y no depende de cuánto se venda. Ver "El pozo es un dato, no un
+cálculo", más arriba.
+
+Lo que sí se calcula es la **recaudación**, y es otro número:
 
 ```
-pozo_total = cantidad_jugadas_no_anuladas × precio_jugada
+recaudación = jugadas NO anuladas × precio_jugada
+resultado   = recaudación − pozo        ← lo que gana o pierde el organizador
 ```
 
-En vivo mientras el sorteo está abierto; se persiste en `sorteos.pozo_total` al
-finalizarlo para congelar el histórico.
+> Antes acá decía `pozo_total = jugadas × precio_jugada`, congelado al finalizar.
+> Eso dejó de ser cierto con la 005 y la columna ni siquiera se llama así.
 
 ## Determinar ganadores
+
+Gana la jugada no anulada cuyos 4 números están **contenidos en el extracto de 20
+como multiconjunto** (los repetidos cuentan). La condición no se escribe a mano en
+cada query: sale de `condicionGanadora('j', 's')` en
+`backend/src/utils/ganadores.js`, que tiene además una gemela en JS, `esGanadora()`,
+para cuando los datos ya están en memoria. **Si se toca una, hay que tocar la otra.**
 
 ```sql
 SELECT j.*, u.nombre AS vendedor
@@ -287,31 +368,37 @@ JOIN usuarios u ON u.id = j.vendedor_id
 JOIN sorteos s ON s.id = j.sorteo_id
 WHERE s.id = $1
   AND j.anulada = false
-  AND j.numero_1 = s.numero_1
-  AND j.numero_2 = s.numero_2
-  AND j.numero_3 = s.numero_3
-  AND j.numero_4 = s.numero_4;
+  AND <condicionGanadora('j', 's')>;
 ```
 
-Funciona como comparación de conjuntos porque **ambos lados están normalizados**.
-
-Si devuelve N filas → premio por ganador = `pozo_total / N`.
+Si devuelve N filas → premio por ganador = `pozo / N`.
 Si devuelve 0 filas → sorteo vacante.
+
+> La versión anterior comparaba `j.numero_1 = s.numero_1` y así hasta el cuarto.
+> Servía cuando el sorteo tenía 4 números; con el extracto de 20 (migración 007)
+> el match dejó de ser posicional.
 
 ## Consultas de referencia para el dashboard del admin
 
-**Pozo acumulado del sorteo actual:**
+> Son el **boceto** de cada consulta, no lo que corre hoy: las que se ejecutan
+> están en `backend/src/routes/dashboard.routes.js` y traen más columnas. Se
+> mantienen acá porque explican la forma de cada una.
+
+**Recaudación del sorteo actual:**
 ```sql
-SELECT s.precio_jugada,
+SELECT s.precio_jugada, s.pozo,
        COUNT(j.id) AS jugadas,
-       COUNT(j.id) * s.precio_jugada AS pozo_actual
+       COUNT(j.id) * s.precio_jugada AS recaudacion
 FROM sorteos s
 LEFT JOIN jugadas j ON j.sorteo_id = s.id AND j.anulada = false
 WHERE s.id = $1
-GROUP BY s.id, s.precio_jugada;
+GROUP BY s.id, s.precio_jugada, s.pozo;
 ```
-> `LEFT JOIN` a propósito: un sorteo recién abierto sin jugadas debe devolver pozo 0,
+> `LEFT JOIN` a propósito: un sorteo recién abierto sin jugadas debe devolver 0,
 > no una fila vacía (bug del v1, que usaba `JOIN`).
+>
+> El **pozo se lee de la columna**, no se calcula: es un dato de entrada desde la
+> migración 005. Antes esta query lo devolvía como `pozo_actual` multiplicando.
 
 **Jugadas y recaudación por vendedor (de un sorteo):**
 ```sql
@@ -327,12 +414,10 @@ ORDER BY cantidad_jugadas DESC;
 
 **Historial de sorteos y ganadores:**
 ```sql
-SELECT s.periodo, s.numero_1, s.numero_2, s.numero_3, s.numero_4,
-       s.pozo_total, COUNT(j.id) AS cantidad_ganadores
+SELECT s.periodo, s.numeros, s.pozo, COUNT(j.id) AS cantidad_ganadores
 FROM sorteos s
 LEFT JOIN jugadas j ON j.sorteo_id = s.id AND j.anulada = false
-    AND j.numero_1 = s.numero_1 AND j.numero_2 = s.numero_2
-    AND j.numero_3 = s.numero_3 AND j.numero_4 = s.numero_4
+    AND <condicionGanadora('j', 's')>
 WHERE s.estado = 'finalizado'
 GROUP BY s.id
 ORDER BY s.periodo DESC;
@@ -340,7 +425,8 @@ ORDER BY s.periodo DESC;
 
 **Buscador de jugadas (por número o comprador):**
 ```sql
--- por número: los 4 números del filtro se normalizan en la app antes de la query
+-- por número: los 4 números del filtro se normalizan en la app antes de la query,
+-- que es lo que deja usar idx_jugadas_numeros
 SELECT * FROM jugadas
 WHERE sorteo_id = $1 AND anulada = false
   AND numero_1 = $2 AND numero_2 = $3 AND numero_3 = $4 AND numero_4 = $5;
@@ -359,15 +445,21 @@ WHERE sorteo_id = $1 AND anulada = false
 GROUP BY dia
 ORDER BY dia;
 ```
+> `date_trunc` sobre un `timestamptz` corta el día **en la zona de la sesión**.
+> Por eso el pool la fija en la del club (`src/db.js`): con el Postgres en UTC,
+> las ventas de después de las 21 se iban al día siguiente.
 
 ## Flujo general
 
-1. Admin abre un sorteo nuevo del mes (`sorteos`, estado `abierto`).
+1. Admin abre un sorteo nuevo del mes (`sorteos`, estado `abierto`), y ahí define
+   el **pozo**, el precio de la jugada y la **ventana de carga**.
    El índice único parcial impide abrir un segundo sorteo si ya hay uno abierto.
-2. Vendedores (logueados con JWT) cargan jugadas mientras el sorteo esté `abierto`.
-   Los números se normalizan antes de insertar.
-3. Admin cierra la carga (estado `cerrado`).
-4. Sale el resultado oficial de quiniela → admin lo carga a mano (normalizado) →
-   estado `finalizado`, se congela `pozo_total` y se calculan ganadores y reparto.
+2. Vendedores (logueados con JWT) cargan jugadas mientras el sorteo esté `abierto`
+   **y la ventana esté vigente** — las dos condiciones se evalúan dentro del
+   `INSERT`. Los números se normalizan antes de insertar.
+3. Admin cierra la carga (estado `cerrado`), o la ventana vence sola.
+4. Sale el extracto oficial de quiniela → el admin carga los 20 números a mano,
+   **sin normalizar** → estado `finalizado`, y se calculan ganadores y reparto
+   sobre el pozo, que era fijo desde el paso 1.
 
 Reglas del juego en [[reglas-de-negocio]]. Permisos por endpoint en [[tech-stack]].

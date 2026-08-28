@@ -38,6 +38,31 @@ Contra Supabase, `DATABASE_SSL=true`.
 | vendedor | `vendedor1` | `vende1234` |
 | vendedor | `vendedor2` | `vende1234` |
 
+## Tests
+
+```bash
+npm test          # node --test test/
+```
+
+Corren con el runner de Node (`node:test`), sin dependencias agregadas.
+
+Cubren lo que **no** se puede revisar a ojo: la regla de quién gana, la
+normalización de los números y el código de comprobante. No son tests de las
+rutas — eso sigue siendo verificación manual.
+
+**Lo importante es `test/ganadores.test.js`.** La regla vive escrita dos veces
+—`condicionGanadora()` en SQL y `esGanadora()` en JS— y nada en el sistema avisa
+si se separan: el listado usa una y el comprobante la otra, así que una jugada
+podría figurar ganadora en la pantalla y perdedora en el papel. El bloque de
+paridad corre **las dos sobre los mismos casos y compara**, incluidas 200
+combinaciones al azar sobre un rango chico, que es donde aparecen los repetidos.
+
+Ese bloque necesita un Postgres de verdad, porque la mitad SQL depende de `<@` y
+`unnest`. Si no hay `DATABASE_URL` los tests de paridad **se saltean** en vez de
+fallar: el resto de la suite no tiene por qué exigir una base. Los datos van por
+`VALUES`, así que no tocan ninguna tabla — alcanza con que la base exista, ni
+siquiera hace falta correr las migraciones.
+
 ## Endpoints
 
 Todo cuelga de `/api`. Salvo `login` y `health`, todos piden
@@ -46,7 +71,7 @@ Todo cuelga de `/api`. Salvo `login` y `health`, todos piden
 ### Auth
 | Método | Ruta | Rol | Qué hace |
 |---|---|---|---|
-| POST | `/auth/login` | — | `{ usuario, password }` → `{ token, usuario }` |
+| POST | `/auth/login` | — | `{ usuario, password }` → `{ token, usuario }`. Frenado a 10 fallos por cuenta |
 | GET | `/auth/me` | cualquiera | Datos del usuario logueado |
 | GET | `/auth/usuarios` | admin | Lista usuarios |
 | POST | `/auth/usuarios` | admin | Da de alta un vendedor o admin |
@@ -78,7 +103,7 @@ Todo cuelga de `/api`. Salvo `login` y `health`, todos piden
 | GET | `/jugadas/:id` | cualquiera | Una jugada |
 | PATCH | `/jugadas/:id` | admin | Corrige una jugada |
 | POST | `/jugadas/:id/anular` | admin | Anula (reversible, no borra) |
-| POST | `/jugadas/:id/restaurar` | admin | Revierte una anulación |
+| POST | `/jugadas/:id/restaurar` | admin | Revierte una anulación (no, si el sorteo ya se finalizó) |
 
 Filtros de `GET /jugadas`: `sorteo_id`, `vendedor_id` (solo admin), `comprador`,
 `codigo`, `numeros` (ej: `numeros=7,23,45,88`), `incluir_anuladas`,
@@ -87,6 +112,10 @@ Filtros de `GET /jugadas`: `sorteo_id`, `vendedor_id` (solo admin), `comprador`,
 Cada jugada del listado trae `gano`, que es **`null` mientras el sorteo no esté
 finalizado** — distinto de `false`. Con un extracto de 20 números no hay forma de
 compararlo a ojo, así que el dato viene resuelto desde la base.
+
+Las anuladas traen además `anulada_por_nombre`, que sale de un `LEFT JOIN` sobre
+`usuarios`. `anulada_por` a secas es un id y en pantalla no le dice nada a nadie:
+con varios admins, lo que hace falta saber es quién fue.
 
 `solo_ganadoras=true` es la lista con la que se pagan los premios: excluye las
 anuladas aunque sus números coincidan.
@@ -101,7 +130,12 @@ HTML: el maquetado (imprimir, mandar por WhatsApp) es del frontend.
   "codigo": "260815-K7M3XQ",
   "numeros": ["07", "23", "45", "88"],
   "comprador": { "nombre": "Dora Silva", "telefono": "351-9876" },
-  "sorteo": { "periodo": "2026-08", "estado": "abierto" },
+  "sorteo": {
+    "periodo": "2026-08",
+    "estado": "abierto",
+    "pozo": 1500000,
+    "sortea_el": "2026-08-31T23:59:00.000Z"
+  },
   "importe": 2000,
   "vendedor": "Vendedor Uno",
   "fecha": "2026-07-30T22:02:14.006Z",
@@ -112,6 +146,10 @@ HTML: el maquetado (imprimir, mandar por WhatsApp) es del frontend.
 El comprobante incluye el **pozo**: es el premio que el comprador está comprando
 y tiene que quedarle por escrito en el papel.
 
+`sortea_el` es el cierre de la ventana de carga (`finaliza_at`), que es el día en
+que se sortea. Va la fecha completa y el frontend imprime solo el día: la hora del
+cierre es asunto interno y en el papel no significa nada.
+
 `GET /jugadas/comprobante/:codigo` lo recupera después, para cuando el comprador
 se presenta con el papel en la mano. Acepta el código con o sin guion y en
 minúsculas. Si el sorteo ya está finalizado, agrega `sorteado: true` y `gano`.
@@ -120,10 +158,21 @@ minúsculas. Si el sorteo ya está finalizado, agrega `sorteado: true` y `gano`.
 | Método | Ruta | Qué hace |
 |---|---|---|
 | GET | `/dashboard/resumen` | Estado del sorteo, pozo y totales |
-| GET | `/dashboard/por-vendedor` | Jugadas y recaudación por vendedor |
+| GET | `/dashboard/por-vendedor` | Jugadas y recaudación por vendedor (los que cargaron) |
+| GET | `/dashboard/vendedores` | Todas las cuentas, hayan cargado o no |
 | GET | `/dashboard/ventas` | Serie diaria para el gráfico de evolución |
 | GET | `/dashboard/historial` | Sorteos finalizados, ganadores y reparto |
 | GET | `/dashboard/numeros-mas-jugados` | Combinaciones más repetidas |
+
+Todos aceptan `?sorteo_id=`; sin él usan el sorteo abierto, y si no hay ninguno,
+el más reciente.
+
+`por-vendedor` y `vendedores` contestan preguntas opuestas. El primero es el
+podio del panel: quién más cargó. El segundo es la lista entera —incluidas las
+cuentas inactivas, las del admin y las que **no cargaron nada**— porque ahí la
+pregunta es quién *no* está vendiendo, y un ausente es el dato. Trae además el
+total histórico y la última carga de cada cuenta, para distinguir al que nunca
+cargó nada del que este mes no cargó.
 
 ## Lo que hay que tener en cuenta al tocar esto
 
@@ -189,6 +238,21 @@ justo cuando importa.
 
 **Anular no borra.** Se marca la fila y se registra qué admin lo hizo y cuándo.
 
+**El historial de anulaciones vive en `jugadas_eventos`** (migración 013), no en
+`jugadas`. Es que son dos preguntas distintas: `jugadas.anulada_por` dice **quién
+la tiene anulada hoy** —y el `CHECK` obliga a limpiarla al restaurar, así que se
+pierde— mientras que la tabla de eventos dice **qué le fue pasando**, y eso
+sobrevive a las restauraciones. Sin ella, anular y restaurar no dejaba huella.
+
+Anular y restaurar escriben su evento **dentro de la misma transacción** que el
+`UPDATE`: un historial al que a veces le falta una entrada no sirve como
+historial. Si agregás otra operación que cambie `anulada`, tiene que anotar su
+evento igual, o el historial vuelve a mentir.
+
+`GET /jugadas/:id` devuelve el `historial` **solo al admin**. El listado no lo
+trae entero —serían N consultas— pero sí `veces_anulada`, que es lo que permite
+distinguir una jugada activa que estuvo anulada de una que nunca se tocó.
+
 **Una cuenta con historial no se borra, se desactiva.** `DELETE
 /auth/usuarios/:id` solo pasa si esa cuenta no cargó, no anuló y no corrigió
 ninguna jugada; si tocó algo, responde 409 y sugiere desactivarla. Borrarla sería
@@ -216,6 +280,26 @@ Si alguna vez se cambia el alfabeto, hay que cambiarlo también en `ALFABETO` de
 código entero contra el alfabeto: la parte de la fecha lleva `0` y `1`, que el
 alfabeto no incluye, así que cada mitad se valida por separado.
 
+**El día se decide en la hora del club, no en la del servidor.** Postgres corre en
+UTC y ahí todo lo que pase un `timestamptz` a fecha se corre tres horas: una
+jugada de las 21:30 de un martes cae en el miércoles. Eso salía impreso en el
+código del comprobante y también movía de día las ventas del gráfico.
+
+Se arregla en dos lugares y los dos hacen falta:
+
+- El **pool** le pasa `-c timezone=…` a cada conexión (`src/db.js`), tomándolo de
+  `config.zonaHoraria` (`TZ_CLUB`, por defecto Buenos Aires). Eso cubre el
+  `date_trunc('day', …)` del gráfico y cualquier otra lectura por día.
+- La función `generar_codigo_jugada()` lleva la zona **escrita adentro**
+  (migración 012), no librada a la sesión: ese código sale impreso en un papel que
+  la gente guarda para reclamar un premio y no puede depender de cómo arrancó el
+  servidor.
+
+Nada de esto cambia lo que se guarda —las fechas entran en ISO con `Z`— solo cómo
+se lee de vuelta. Y **los códigos ya emitidos no se regeneraron**: para la 012 el
+sistema ya estaba en uso. Uno con la fecha corrida sigue siendo válido, porque se
+busca por el código entero y la fecha real está en `created_at`.
+
 **La ventana de carga la hace cumplir la base, no el frontend.** El
 `INSERT ... SELECT` de `POST /jugadas` incluye
 `now() BETWEEN s.inicia_at AND s.finaliza_at`, así que la condición se evalúa con
@@ -236,6 +320,27 @@ mientras la carga esté abierta.
 anuladas × precio_jugada`, y `resultado = recaudación − pozo` es lo que gana o
 pierde el organizador. El dashboard los muestra separados a propósito: si se
 vende poco, el premio se paga igual.
+
+**El login se frena por cuenta, no por IP.** A los 10 fallos seguidos, esa cuenta
+queda 15 minutos sin poder entrar (429). Sin eso, la única barrera para probar
+contraseñas es lo que tarda bcrypt —unos 70 ms— y las contraseñas las pone el
+admin a mano, así que son cortas.
+
+Se cuenta por usuario a propósito: los vendedores comparten la red del club y los
+datos móviles, así que por IP un solo atacante los dejaría a **todos** afuera en
+pleno horario de venta. Además, detrás del proxy de Render `req.ip` es el del
+proxy salvo que se configure `trust proxy`, y mal puesto el bloqueo nace siendo
+global. Lo que hay que frenar —probar contraseñas contra una cuenta concreta— no
+se esquiva cambiando de IP.
+
+Un usuario que no existe también cuenta: si no, probar nombres inventados sería
+gratis y el freno delataría cuáles están registrados. Acertar la contraseña
+limpia el contador. El estado vive en memoria (`src/utils/intentos-de-login.js`)
+y se pierde en cada redeploy, que con una sola instancia en Render alcanza.
+
+Lo que **no** cubre: probar una misma contraseña contra muchas cuentas distintas.
+Ahí haría falta un segundo freno por IP, y entonces sí hay que configurar
+`trust proxy` primero.
 
 ## Deploy en Render
 

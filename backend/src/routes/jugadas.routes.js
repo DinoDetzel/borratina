@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
 import { AppError } from '../middleware/errors.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { validarNumeros } from '../utils/numeros.js';
@@ -25,6 +25,20 @@ const FECHA_LARGA = new Intl.DateTimeFormat('es-AR', {
   timeStyle: 'short',
   timeZone: 'America/Argentina/Buenos_Aires',
 });
+
+/**
+ * Anota una anulación o una restauración en el historial (migración 013).
+ *
+ * `jugadas` guarda cómo está la jugada **hoy** —y el CHECK obliga a limpiar
+ * `anulada_por` al restaurar—, así que sin esto no quedaría constancia de que
+ * estuvo anulada. Va siempre dentro de la transacción de quien la llama: un
+ * historial al que a veces le falta una entrada no sirve como historial.
+ */
+const registrarEvento = (client, jugadaId, tipo, usuarioId) =>
+  client.query(
+    'INSERT INTO jugadas_eventos (jugada_id, tipo, usuario_id) VALUES ($1, $2, $3)',
+    [jugadaId, tipo, usuarioId],
+  );
 
 /**
  * Cuando el INSERT no engancha ningún sorteo hay tres motivos posibles y al
@@ -204,7 +218,16 @@ router.get('/', requireAuth, async (req, res) => {
     // que la pantalla necesita el dato ya resuelto.
     // `sorteo_estado` va explícito y no deducido de `gano`: la pantalla lo
     // necesita para saber si todavía se pueden corregir los números.
+    // `anulada_por` es un id y no le dice nada a nadie en pantalla: va también
+    // el nombre. LEFT JOIN porque la enorme mayoría de las jugadas no está
+    // anulada y ahí la columna es NULL.
     `SELECT ${CAMPOS_J}, u.nombre AS vendedor, s.estado AS sorteo_estado,
+            anulador.nombre AS anulada_por_nombre,
+            -- Cuántas veces se anuló, esté anulada ahora o no. Una jugada activa
+            -- con esto en 1 o más estuvo anulada y alguien la restauró, que es
+            -- justamente lo que antes no se veía en ningún lado.
+            (SELECT COUNT(*) FROM jugadas_eventos e
+              WHERE e.jugada_id = j.id AND e.tipo = 'anulada')::int AS veces_anulada,
             CASE WHEN s.estado = 'finalizado'
                  THEN (j.anulada = false AND ${condicionGanadora('j', 's')})
                  ELSE NULL
@@ -213,6 +236,7 @@ router.get('/', requireAuth, async (req, res) => {
      FROM jugadas j
      JOIN usuarios u ON u.id = j.vendedor_id
      JOIN sorteos s ON s.id = j.sorteo_id
+     LEFT JOIN usuarios anulador ON anulador.id = j.anulada_por
      ${where}
      ORDER BY j.created_at DESC
      LIMIT $${params.length - 1} OFFSET $${params.length}`,
@@ -297,7 +321,24 @@ router.get('/:id', requireAuth, async (req, res) => {
     throw new AppError(404, 'No existe esa jugada.');
   }
 
-  res.json({ jugada });
+  // Quién la anuló y quién la restauró, en orden. Solo para el admin: al
+  // vendedor no le corresponde saber qué hizo un admin con su jugada, y en su
+  // pantalla no hay dónde mostrarlo.
+  const historial =
+    req.user.rol === 'admin'
+      ? (
+          await query(
+            `SELECT e.tipo, e.created_at, u.nombre AS usuario
+             FROM jugadas_eventos e
+             JOIN usuarios u ON u.id = e.usuario_id
+             WHERE e.jugada_id = $1
+             ORDER BY e.created_at`,
+            [jugada.id],
+          )
+        ).rows
+      : undefined;
+
+  res.json({ jugada, ...(historial ? { historial } : {}) });
 });
 
 /**
@@ -396,41 +437,100 @@ router.patch('/:id', requireAuth, requireAdmin, async (req, res) => {
  * No borra la fila: la marca y deja registrado quién y cuándo.
  */
 router.post('/:id/anular', requireAuth, requireAdmin, async (req, res) => {
-  const { rows } = await query(
-    `UPDATE jugadas
-     SET anulada = true, anulada_por = $1, anulada_at = now(), updated_at = now()
-     WHERE id = $2 AND anulada = false
-     RETURNING ${CAMPOS}`,
-    [req.user.id, req.params.id],
-  );
+  // El UPDATE y el evento van juntos o no van: un historial al que a veces le
+  // falta una entrada no sirve como historial.
+  const jugada = await withTransaction(async (client) => {
+    const { rows } = await client.query(
+      `UPDATE jugadas
+       SET anulada = true, anulada_por = $1, anulada_at = now(), updated_at = now()
+       WHERE id = $2 AND anulada = false
+       RETURNING ${CAMPOS}`,
+      [req.user.id, req.params.id],
+    );
 
-  if (!rows[0]) {
+    if (!rows[0]) return null;
+
+    await registrarEvento(client, rows[0].id, 'anulada', req.user.id);
+    return rows[0];
+  });
+
+  if (!jugada) {
     const { rows: existe } = await query('SELECT anulada FROM jugadas WHERE id = $1', [req.params.id]);
     if (!existe[0]) throw new AppError(404, 'No existe esa jugada.');
     throw new AppError(409, 'La jugada ya estaba anulada.');
   }
 
-  res.json({ jugada: rows[0] });
+  res.json({ jugada });
 });
 
-/** POST /api/jugadas/:id/restaurar → revierte una anulación. Solo admin. */
-router.post('/:id/restaurar', requireAuth, requireAdmin, async (req, res) => {
+/**
+ * Por qué no entró la restauración: la jugada no existe, no estaba anulada, o su
+ * sorteo ya se sorteó. Se averigua recién en el camino de error.
+ */
+async function errorDeRestauracion(jugadaId) {
   const { rows } = await query(
-    `UPDATE jugadas
-     SET anulada = false, anulada_por = NULL, anulada_at = NULL,
-         editada_por = $1, updated_at = now()
-     WHERE id = $2 AND anulada = true
-     RETURNING ${CAMPOS}`,
-    [req.user.id, req.params.id],
+    `SELECT j.anulada, s.periodo
+     FROM jugadas j JOIN sorteos s ON s.id = j.sorteo_id
+     WHERE j.id = $1`,
+    [jugadaId],
   );
+  const fila = rows[0];
 
-  if (!rows[0]) {
-    const { rows: existe } = await query('SELECT anulada FROM jugadas WHERE id = $1', [req.params.id]);
-    if (!existe[0]) throw new AppError(404, 'No existe esa jugada.');
-    throw new AppError(409, 'La jugada no está anulada.');
-  }
+  if (!fila) return new AppError(404, 'No existe esa jugada.');
+  // Antes que el sorteo: si además no estaba anulada, eso es lo que hay que decir.
+  if (!fila.anulada) return new AppError(409, 'La jugada no está anulada.');
 
-  res.json({ jugada: rows[0] });
+  return new AppError(
+    409,
+    `El sorteo de ${fila.periodo} ya tiene el extracto cargado: una jugada anulada ` +
+      'no se puede restaurar después del sorteo, porque eso cambia quién cobra. ' +
+      'Si la anulación fue un error, hay que resolverlo fuera del sistema.',
+  );
+}
+
+/**
+ * POST /api/jugadas/:id/restaurar → revierte una anulación. Solo admin.
+ *
+ * **No se puede restaurar una vez sorteado**, por el mismo motivo que no se
+ * pueden cambiar los números: con el extracto a la vista, restaurar es elegir
+ * quién cobra. Y no hace falta inventar una jugada para aprovecharlo — alcanza
+ * con anular varias mientras el sorteo está abierto, que es legítimo y habitual,
+ * y restaurar después la que salió.
+ *
+ * Anular sigue abierto post-sorteo: quitar un cobrador no es lo mismo que
+ * elegirlo, y hay casos reales (un comprobante que nunca se pagó y se detecta
+ * tarde). Queda pendiente de definir si eso también se restringe.
+ */
+router.post('/:id/restaurar', requireAuth, requireAdmin, async (req, res) => {
+  // La condición del sorteo va dentro del UPDATE y no en un chequeo previo: si el
+  // admin carga el extracto justo entre la lectura y la escritura, no se cuela
+  // una restauración con el resultado ya a la vista.
+  const jugada = await withTransaction(async (client) => {
+    const { rows } = await client.query(
+      // `anulada_por` y `anulada_at` se nulifican porque el CHECK lo exige: son
+      // el estado de hoy, no el historial. Quién anuló queda en jugadas_eventos
+      // (migración 013), que es lo que sobrevive a esta restauración.
+      `UPDATE jugadas
+       SET anulada = false, anulada_por = NULL, anulada_at = NULL,
+           updated_at = now()
+       WHERE id = $1 AND anulada = true
+         AND EXISTS (
+           SELECT 1 FROM sorteos s
+           WHERE s.id = jugadas.sorteo_id AND s.estado <> 'finalizado'
+         )
+       RETURNING ${CAMPOS}`,
+      [req.params.id],
+    );
+
+    if (!rows[0]) return null;
+
+    await registrarEvento(client, rows[0].id, 'restaurada', req.user.id);
+    return rows[0];
+  });
+
+  if (!jugada) throw await errorDeRestauracion(req.params.id);
+
+  res.json({ jugada });
 });
 
 export default router;
