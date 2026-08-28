@@ -44,6 +44,15 @@ certificados de andar por casa y no se versionan.
 de carga, el comprobante que se imprime al cargar, y el listado de sus propias
 jugadas. Sin estadísticas: eso es del admin.
 
+**Consultar comprobante** (`/comprobante`) — de los dos roles. Se escribe el
+código que trae el comprador y sale la jugada: si el sorteo todavía no se jugó,
+cuándo se juega; si ya salió, si ganó, **cuánto cobra** y cuáles de sus números
+estaban en el extracto. Es la pantalla del mostrador, y por eso la tiene el
+vendedor: el que atiende al que viene a reclamar es él, no el admin. La
+visibilidad es la de siempre —cada vendedor encuentra solo lo suyo— y la impone
+el backend, que responde 404 también para un código ajeno, para no confirmar que
+existe.
+
 ### Está pensada para el teléfono
 
 El vendedor la usa parado en la calle, con una mano. Por eso:
@@ -209,6 +218,7 @@ src/
 └── paginas/
     ├── Login.jsx
     ├── Vendedor.jsx
+    ├── ConsultarComprobante.jsx  # buscar por código: si ganó y cuánto cobra
     ├── AdminDashboard.jsx
     ├── AdminSorteos.jsx
     ├── AdminSorteoDetalle.jsx
@@ -233,15 +243,24 @@ importe.
 baja, `GET /auth/me` falla y la sesión se cierra sola. Cualquier 401 en cualquier
 request dispara lo mismo.
 
-**Una fecha sin hora nunca va derecho a `new Date()`.** `new Date('2026-08-15')`
-es medianoche **UTC**, y formateada en la zona local cae en el día anterior en
-cualquier lugar al oeste de Greenwich: acá el gráfico de ventas mostraba 14/08.
-El backend manda el día como texto justamente para que no se corra (ver
-`/dashboard/ventas`), y el cuidado se perdía en la última línea. `fechaHora`,
-`fechaDia` y `fechaCorta` pasan por `aFecha()`, que le completa la hora local a
-las fechas sueltas y deja pasar tal cual a los timestamps completos, que llevan
-zona adentro. Los tests están en `test/fechas.test.js` y fijan la zona a mano: en
-UTC el error no se ve, así que uno que dependiera de la máquina pasaría en CI.
+**Las fechas se muestran en la zona del club, no en la del teléfono.** La manda
+el backend junto con el usuario (`/auth/login` y `/auth/me`) y la fija
+`fijarZonaClub()`; `TZ_CLUB` sigue siendo la única fuente de verdad y no hay que
+acordarse de cambiarla en dos lados. Un vendedor de viaje, o con el teléfono mal
+configurado, tiene que seguir viendo el día que lleva impreso el comprobante:
+ese papel es con lo que se reclama un premio.
+
+**Y una fecha sin hora no es un instante.** `new Date('2026-08-15')` es
+medianoche **UTC**, así que formatearla en cualquier otra zona la corre al día
+anterior: el gráfico de ventas mostraba 14/08. El backend manda el día como texto
+justamente para que no se corra (ver `/dashboard/ventas`), y el cuidado se perdía
+en la última línea. `utilidades.js` separa los dos casos: un timestamp completo
+se lee en la zona del club, y una fecha suelta en UTC, que acá equivale a no
+aplicarle ninguna.
+
+Los tests están en `test/fechas.test.js` y fijan la zona a mano: en UTC el error
+no se ve, así que uno que dependiera de la máquina pasaría en CI y dejaría el
+bug suelto justo donde importa.
 
 **El login avisa cuando el servidor está despertando.** El backend duerme sin
 tráfico (free tier de Render) y el primer request del día tarda hasta un minuto.
